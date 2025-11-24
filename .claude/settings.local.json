@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/YMH/Desktop/drillControl/**)",
+      "mcp__desktop-commander__start_search",
+      "Bash(python vk701_simulator.py:*)",
+      "Bash(python modbus_tcp_simulator.py:*)",
+      "Bash(python zmotion_simulator.py:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Read(//d/**)",
+      "Bash(cd:*)",
+      "Bash(git init:*)",
+      "mcp__desktop-commander__list_directory",
+      "mcp__desktop-commander__get_more_search_results",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

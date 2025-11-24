@@ -1,0 +1,857 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>SensorPage</class>
+ <widget class="QWidget" name="SensorPage">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1000</width>
+    <height>750</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>传感器采集控制系统</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">/* 全局字体与背景 */
+QWidget {
+    font-family: &quot;Segoe UI&quot;, &quot;Microsoft YaHei&quot;, sans-serif;
+    font-size: 10pt;
+    color: #333333;
+    background-color: #f0f2f5;
+}
+
+/* 分组框 - 卡片式设计 */
+QGroupBox {
+    background-color: #ffffff;
+    border: 1px solid #dcdfe6;
+    border-radius: 6px;
+    margin-top: 12px; /* 为标题留出空间 */
+    padding-top: 10px;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    left: 10px;
+    padding: 0 5px;
+    background-color: #f0f2f5; /* 标题背景色与主背景融合，产生浮动标签效果 */
+	color: #606266;
+}
+
+/* 标签 */
+QLabel {
+    color: #606266;
+    background-color: transparent;
+}
+
+/* 输入框通用样式 */
+QLineEdit, QSpinBox, QTextEdit {
+    border: 1px solid #dcdfe6;
+    border-radius: 4px;
+    padding: 4px 8px;
+    background-color: #ffffff;
+    color: #333;
+    selection-background-color: #409eff;
+}
+
+QLineEdit:focus, QSpinBox:focus, QTextEdit:focus {
+    border: 1px solid #409eff;
+}
+
+QLineEdit:disabled, QSpinBox:disabled {
+    background-color: #f5f7fa;
+    color: #c0c4cc;
+}
+
+/* 按钮通用样式 */
+QPushButton {
+    border: 1px solid #dcdfe6;
+    border-radius: 4px;
+    padding: 6px 15px;
+    background-color: #ffffff;
+    color: #606266;
+    font-weight: bold;
+}
+
+QPushButton:hover {
+    background-color: #ecf5ff;
+    border-color: #c6e2ff;
+    color: #409eff;
+}
+
+QPushButton:pressed {
+    background-color: #dcdfe6;
+}
+
+QPushButton:disabled {
+    background-color: #f5f7fa;
+    border-color: #e4e7ed;
+    color: #c0c4cc;
+}
+
+/* 特定功能按钮颜色重写 - 在具体控件ID中定义，这里作为兜底 */
+</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout_main">
+   <property name="spacing">
+    <number>15</number>
+   </property>
+   <property name="leftMargin">
+    <number>20</number>
+   </property>
+   <property name="topMargin">
+    <number>20</number>
+   </property>
+   <property name="rightMargin">
+    <number>20</number>
+   </property>
+   <property name="bottomMargin">
+    <number>20</number>
+   </property>
+   <item>
+    <widget class="QLabel" name="label_title">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>40</height>
+      </size>
+     </property>
+     <property name="styleSheet">
+      <string>font-size: 22px; 
+font-weight: bold; 
+color: #303133; 
+background-color: transparent;
+margin-bottom: 10px;</string>
+     </property>
+     <property name="text">
+      <string>传感器采集配置与控制中心</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_content">
+     <property name="spacing">
+      <number>20</number>
+     </property>
+     <item>
+      <layout class="QVBoxLayout" name="verticalLayout_left">
+       <property name="spacing">
+        <number>15</number>
+       </property>
+       <item>
+        <widget class="QGroupBox" name="groupBox_vk701">
+         <property name="title">
+          <string>VK701 震动传感器 (3通道)</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_vk701">
+          <property name="verticalSpacing">
+           <number>12</number>
+          </property>
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_vk701_address">
+            <property name="text">
+             <string>服务器地址:</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QLineEdit" name="le_vk701_address">
+            <property name="text">
+             <string>192.168.1.10</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QLabel" name="label_vk701_port">
+            <property name="text">
+             <string>端口:</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="3">
+           <widget class="QSpinBox" name="spin_vk701_port">
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="maximum">
+             <number>65535</number>
+            </property>
+            <property name="value">
+             <number>8234</number>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_vk701_cardid">
+            <property name="text">
+             <string>采集卡号:</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QSpinBox" name="spin_vk701_cardid">
+            <property name="minimum">
+             <number>0</number>
+            </property>
+            <property name="maximum">
+             <number>10</number>
+            </property>
+            <property name="value">
+             <number>0</number>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="2">
+           <widget class="QLabel" name="label_vk701_frequency">
+            <property name="text">
+             <string>采样频率 (Hz):</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="3">
+           <widget class="QSpinBox" name="spin_vk701_frequency">
+            <property name="minimum">
+             <number>100</number>
+            </property>
+            <property name="maximum">
+             <number>100000</number>
+            </property>
+            <property name="singleStep">
+             <number>100</number>
+            </property>
+            <property name="value">
+             <number>5000</number>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0" colspan="2">
+           <widget class="QPushButton" name="btn_vk701_connect">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>32</height>
+             </size>
+            </property>
+            <property name="styleSheet">
+             <string>QPushButton {
+	background-color: #67c23a;
+	color: white;
+	border: none;
+}
+QPushButton:hover {
+	background-color: #85ce61;
+}
+QPushButton:pressed {
+	background-color: #5daf34;
+}</string>
+            </property>
+            <property name="text">
+             <string>连接设备</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="2" colspan="2">
+           <widget class="QPushButton" name="btn_vk701_disconnect">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>32</height>
+             </size>
+            </property>
+            <property name="styleSheet">
+             <string>QPushButton {
+	background-color: #f56c6c;
+	color: white;
+	border: none;
+}
+QPushButton:hover {
+	background-color: #f78989;
+}
+QPushButton:disabled {
+	background-color: #fab6b6;
+}</string>
+            </property>
+            <property name="text">
+             <string>断开连接</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="groupBox_mdb">
+         <property name="title">
+          <string>Modbus TCP 传感器 (力/扭矩)</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_mdb">
+          <property name="verticalSpacing">
+           <number>12</number>
+          </property>
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_mdb_address">
+            <property name="text">
+             <string>服务器地址:</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QLineEdit" name="le_mdb_address">
+            <property name="text">
+             <string>192.168.1.200</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QLabel" name="label_mdb_port">
+            <property name="text">
+             <string>端口:</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="3">
+           <widget class="QSpinBox" name="spin_mdb_port">
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="maximum">
+             <number>65535</number>
+            </property>
+            <property name="value">
+             <number>502</number>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_mdb_frequency">
+            <property name="text">
+             <string>采样频率 (Hz):</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QSpinBox" name="spin_mdb_frequency">
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="maximum">
+             <number>1000</number>
+            </property>
+            <property name="value">
+             <number>10</number>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0" colspan="2">
+           <widget class="QPushButton" name="btn_mdb_connect">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>32</height>
+             </size>
+            </property>
+            <property name="styleSheet">
+             <string>QPushButton {
+	background-color: #67c23a;
+	color: white;
+	border: none;
+}
+QPushButton:hover {
+	background-color: #85ce61;
+}</string>
+            </property>
+            <property name="text">
+             <string>连接设备</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="2" colspan="2">
+           <widget class="QPushButton" name="btn_mdb_disconnect">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>32</height>
+             </size>
+            </property>
+            <property name="styleSheet">
+             <string>QPushButton {
+	background-color: #f56c6c;
+	color: white;
+	border: none;
+}
+QPushButton:hover {
+	background-color: #f78989;
+}
+QPushButton:disabled {
+	background-color: #fab6b6;
+}</string>
+            </property>
+            <property name="text">
+             <string>断开连接</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="groupBox_motor">
+         <property name="title">
+          <string>ZMotion 电机控制器</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_motor">
+          <property name="verticalSpacing">
+           <number>12</number>
+          </property>
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_motor_address">
+            <property name="text">
+             <string>控制器地址:</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QLineEdit" name="le_motor_address">
+            <property name="text">
+             <string>192.168.1.11</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QLabel" name="label_motor_frequency">
+            <property name="text">
+             <string>采样频率 (Hz):</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="3">
+           <widget class="QSpinBox" name="spin_motor_frequency">
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="maximum">
+             <number>1000</number>
+            </property>
+            <property name="value">
+             <number>100</number>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0" colspan="2">
+           <widget class="QPushButton" name="btn_motor_connect">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>32</height>
+             </size>
+            </property>
+            <property name="styleSheet">
+             <string>QPushButton {
+	background-color: #67c23a;
+	color: white;
+	border: none;
+}
+QPushButton:hover {
+	background-color: #85ce61;
+}</string>
+            </property>
+            <property name="text">
+             <string>连接控制器</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="2" colspan="2">
+           <widget class="QPushButton" name="btn_motor_disconnect">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>32</height>
+             </size>
+            </property>
+            <property name="styleSheet">
+             <string>QPushButton {
+	background-color: #f56c6c;
+	color: white;
+	border: none;
+}
+QPushButton:hover {
+	background-color: #f78989;
+}
+QPushButton:disabled {
+	background-color: #fab6b6;
+}</string>
+            </property>
+            <property name="text">
+             <string>断开连接</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <spacer name="verticalSpacer_left">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QVBoxLayout" name="verticalLayout_right">
+       <property name="spacing">
+        <number>15</number>
+       </property>
+       <item>
+        <widget class="QGroupBox" name="groupBox_status">
+         <property name="title">
+          <string>实时状态监控</string>
+         </property>
+         <property name="styleSheet">
+          <string>QGroupBox {
+	background-color: #2b3137; 
+	color: #ffffff;
+	border: 1px solid #444;
+}
+QLabel {
+	color: #e0e0e0;
+}</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_status">
+          <property name="spacing">
+           <number>10</number>
+          </property>
+          <property name="leftMargin">
+           <number>20</number>
+          </property>
+          <property name="topMargin">
+           <number>30</number>
+          </property>
+          <property name="rightMargin">
+           <number>20</number>
+          </property>
+          <property name="bottomMargin">
+           <number>20</number>
+          </property>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_round">
+            <item>
+             <widget class="QLabel" name="label_round_title">
+              <property name="text">
+               <string>当前轮次 ID:</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_round_id">
+              <property name="styleSheet">
+               <string>font-size: 16px; font-weight: bold; color: #409eff;</string>
+              </property>
+              <property name="text">
+               <string>0</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_status">
+            <item>
+             <widget class="QLabel" name="label_status_title">
+              <property name="text">
+               <string>系统状态:</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_status">
+              <property name="styleSheet">
+               <string>font-size: 16px; font-weight: bold; color: #67c23a;</string>
+              </property>
+              <property name="text">
+               <string>就绪</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <widget class="Line" name="line_status">
+            <property name="styleSheet">
+             <string>background-color: #555;</string>
+            </property>
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_statistics">
+            <property name="styleSheet">
+             <string>font-family: &quot;Consolas&quot;, monospace; color: #aaa;</string>
+            </property>
+            <property name="text">
+             <string>统计信息: 数据包 0 | 丢包率 0%</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="groupBox_control">
+         <property name="title">
+          <string>作业控制</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_control">
+          <property name="verticalSpacing">
+           <number>15</number>
+          </property>
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_operator">
+            <property name="text">
+             <string>操作员:</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QLineEdit" name="le_operator">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>32</height>
+             </size>
+            </property>
+            <property name="placeholderText">
+             <string>输入操作员姓名</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_note_label">
+            <property name="text">
+             <string>实验备注:</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTop|Qt::AlignTrailing</set>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QTextEdit" name="te_note">
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>80</height>
+             </size>
+            </property>
+            <property name="placeholderText">
+             <string>输入本轮次的备注信息...</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0" colspan="2">
+           <layout class="QHBoxLayout" name="horizontalLayout_rounds">
+            <item>
+             <widget class="QPushButton" name="btn_new_round">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>36</height>
+               </size>
+              </property>
+              <property name="styleSheet">
+               <string>QPushButton {
+	background-color: #409eff;
+	color: white;
+	border: none;
+}
+QPushButton:hover {
+	background-color: #66b1ff;
+}</string>
+              </property>
+              <property name="text">
+               <string>新建轮次</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="btn_end_round">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>36</height>
+               </size>
+              </property>
+              <property name="styleSheet">
+               <string>QPushButton {
+	background-color: #909399;
+	color: white;
+	border: none;
+}
+QPushButton:hover {
+	background-color: #a6a9ad;
+}</string>
+              </property>
+              <property name="text">
+               <string>结束轮次</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="3" column="0" colspan="2">
+           <layout class="QHBoxLayout" name="horizontalLayout_main_actions">
+            <item>
+             <widget class="QPushButton" name="btn_start_all">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>50</height>
+               </size>
+              </property>
+              <property name="styleSheet">
+               <string>QPushButton {
+	background-color: #67c23a;
+	color: white;
+	font-size: 16px;
+	border-radius: 6px;
+    border: none;
+}
+QPushButton:hover {
+	background-color: #85ce61;
+}
+QPushButton:pressed {
+	background-color: #5daf34;
+    padding-top: 8px;
+}</string>
+              </property>
+              <property name="text">
+               <string>▶ 启动所有采集</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="btn_stop_all">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>50</height>
+               </size>
+              </property>
+              <property name="styleSheet">
+               <string>QPushButton {
+	background-color: #f56c6c;
+	color: white;
+	font-size: 16px;
+	border-radius: 6px;
+    border: none;
+}
+QPushButton:hover {
+	background-color: #f78989;
+}
+QPushButton:disabled {
+	background-color: #fab6b6;
+}
+QPushButton:pressed {
+	background-color: #dd6161;
+    padding-top: 8px;
+}</string>
+              </property>
+              <property name="text">
+               <string>■ 停止所有采集</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <spacer name="verticalSpacer_right">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

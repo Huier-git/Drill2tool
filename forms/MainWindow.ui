@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1280</width>
+    <height>800</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>钻机采集控制系统</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QHBoxLayout" name="horizontalLayout">
+    <property name="spacing">
+     <number>0</number>
+    </property>
+    <property name="leftMargin">
+     <number>0</number>
+    </property>
+    <property name="topMargin">
+     <number>0</number>
+    </property>
+    <property name="rightMargin">
+     <number>0</number>
+    </property>
+    <property name="bottomMargin">
+     <number>0</number>
+    </property>
+    <item>
+     <!-- 侧边栏 - 页面导航 -->
+     <widget class="QListWidget" name="listWidget_pages">
+      <property name="maximumSize">
+       <size>
+        <width>200</width>
+        <height>16777215</height>
+       </size>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">
+        QListWidget {
+         background-color: #2c3e50;
+         color: white;
+         font-size: 14px;
+         border: none;
+        }
+        QListWidget::item {
+         padding: 15px;
+         border-bottom: 1px solid #34495e;
+        }
+        QListWidget::item:selected {
+         background-color: #3498db;
+        }
+        QListWidget::item:hover {
+         background-color: #34495e;
+        }
+       </string>
+      </property>
+      <item>
+       <property name="text">
+        <string>📊 数据采集</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>🎮 钻机控制</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>💾 数据库管理</string>
+       </property>
+      </item>
+     </widget>
+    </item>
+    <item>
+     <!-- 主内容区 - StackedWidget -->
+     <widget class="QStackedWidget" name="stackedWidget_pages">
+      <property name="currentIndex">
+       <number>0</number>
+      </property>
+      <!-- 数据采集页面 -->
+      <widget class="QWidget" name="page_dataCollection">
+       <layout class="QVBoxLayout" name="verticalLayout_1">
+        <property name="spacing">
+         <number>0</number>
+        </property>
+        <property name="leftMargin">
+         <number>0</number>
+        </property>
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <property name="rightMargin">
+         <number>0</number>
+        </property>
+        <property name="bottomMargin">
+         <number>0</number>
+        </property>
+        <item>
+         <widget class="SensorPage" name="sensorPage"/>
+        </item>
+       </layout>
+      </widget>
+      <!-- 钻机控制页面 -->
+      <widget class="QWidget" name="page_drillControl">
+       <layout class="QVBoxLayout" name="verticalLayout_2">
+        <item>
+         <widget class="QLabel" name="label_page2">
+          <property name="text">
+           <string>钻机控制页面 - 待实现</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+          <property name="font">
+           <font>
+            <pointsize>16</pointsize>
+           </font>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <!-- 数据库管理页面 -->
+      <widget class="QWidget" name="page_database">
+       <layout class="QVBoxLayout" name="verticalLayout_3">
+        <item>
+         <widget class="QLabel" name="label_page3">
+          <property name="text">
+           <string>数据库管理页面 - 待实现</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+          <property name="font">
+           <font>
+            <pointsize>16</pointsize>
+           </font>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1280</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menu_file">
+    <property name="title">
+     <string>文件</string>
+    </property>
+    <addaction name="action_exit"/>
+   </widget>
+   <widget class="QMenu" name="menu_help">
+    <property name="title">
+     <string>帮助</string>
+    </property>
+    <addaction name="action_about"/>
+   </widget>
+   <addaction name="menu_file"/>
+   <addaction name="menu_help"/>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+  <action name="action_exit">
+   <property name="text">
+    <string>退出</string>
+   </property>
+  </action>
+  <action name="action_about">
+   <property name="text">
+    <string>关于</string>
+   </property>
+  </action>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>SensorPage</class>
+   <extends>QWidget</extends>
+   <header>ui/SensorPage.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

@@ -1,0 +1,46 @@
+# Qt编译输出
+build/
+*.o
+*.obj
+moc_*.cpp
+ui_*.h
+qrc_*.cpp
+*.pro.user
+*.pro.user.*
+.qmake.stash
+
+# 调试文件
+*.exe
+*.dll
+*.pdb
+*.ilk
+
+# IDE配置
+.vscode/
+.idea/
+.vs/
+
+# 临时文件
+*~
+*.bak
+*.swp
+*.tmp
+
+# 编译生成
+Makefile
+Makefile.Debug
+Makefile.Release
+object_script.*
+
+# 数据库文件（根据需要调整）
+database/*.db
+database/*.db-shm
+database/*.db-wal
+
+# Python缓存
+__pycache__/
+*.pyc
+*.pyo
+
+# 日志文件
+*.log
