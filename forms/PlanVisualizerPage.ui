@@ -1,0 +1,441 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>PlanVisualizerPage</class>
+ <widget class="QWidget" name="PlanVisualizerPage">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1400</width>
+    <height>900</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>钻杆规划可视化</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <!-- 顶部控制栏 -->
+    <widget class="QWidget" name="controlBar">
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>80</height>
+      </size>
+     </property>
+     <layout class="QHBoxLayout" name="controlLayout">
+      <item>
+       <widget class="QGroupBox" name="planModeGroup">
+        <property name="title">
+         <string>规划模式</string>
+        </property>
+        <layout class="QHBoxLayout" name="planModeLayout">
+         <item>
+          <widget class="QRadioButton" name="serialRadio">
+           <property name="text">
+            <string>串行规划</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="optimizedRadio">
+           <property name="text">
+            <string>优化规划</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QGroupBox" name="paramsGroup">
+        <property name="title">
+         <string>参数设置</string>
+        </property>
+        <layout class="QHBoxLayout" name="paramsLayout">
+         <item>
+          <widget class="QLabel" name="pipesLabel">
+           <property name="text">
+            <string>钻杆数量:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QSpinBox" name="pipesSpinBox">
+           <property name="minimum">
+            <number>1</number>
+           </property>
+           <property name="maximum">
+            <number>10</number>
+           </property>
+           <property name="value">
+            <number>1</number>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget name="spacer1" class="QWidget">
+           <property name="minimumWidth">
+            <number>10</number>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="zoomLabel">
+           <property name="text">
+            <string>缩放:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QSpinBox" name="zoomSpinBox">
+           <property name="minimum">
+            <number>1</number>
+           </property>
+           <property name="maximum">
+            <number>5</number>
+           </property>
+           <property name="value">
+            <number>2</number>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="runButton">
+        <property name="text">
+         <string>运行规划</string>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>100</width>
+          <height>40</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string>QPushButton { background-color: #4CAF50; color: white; font-weight: bold; border-radius: 5px; }
+QPushButton:hover { background-color: #45a049; }
+QPushButton:pressed { background-color: #3d8b40; }</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="replanButton">
+        <property name="text">
+         <string>重新规划</string>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>100</width>
+          <height>40</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string>QPushButton { background-color: #2196F3; color: white; font-weight: bold; border-radius: 5px; }
+QPushButton:hover { background-color: #1976D2; }
+QPushButton:pressed { background-color: #1565C0; }</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="editDurButton">
+        <property name="text">
+         <string>编辑时长</string>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>100</width>
+          <height>40</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string>QPushButton { background-color: #FF9800; color: white; font-weight: bold; border-radius: 5px; }
+QPushButton:hover { background-color: #F57C00; }
+QPushButton:pressed { background-color: #EF6C00; }</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="exportJsonButton">
+        <property name="text">
+         <string>导出JSON</string>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>100</width>
+          <height>40</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QLabel" name="statusLabel">
+        <property name="text">
+         <string>就绪</string>
+        </property>
+        <property name="styleSheet">
+         <string>QLabel { color: #666; font-style: italic; }</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <!-- 主内容区域 - 水平分割器 -->
+    <widget class="QSplitter" name="mainHSplitter">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <!-- 左侧：时长配置表格 -->
+     <widget class="QGroupBox" name="durConfigGroup">
+      <property name="title">
+       <string>操作时长配置 (秒)</string>
+      </property>
+      <property name="minimumSize">
+       <size>
+        <width>300</width>
+        <height>0</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>400</width>
+        <height>16777215</height>
+       </size>
+      </property>
+      <layout class="QVBoxLayout" name="durConfigLayout">
+       <item>
+        <widget class="QTableWidget" name="durTable">
+         <property name="alternatingRowColors">
+          <bool>true</bool>
+         </property>
+         <property name="selectionMode">
+          <enum>QAbstractItemView::SingleSelection</enum>
+         </property>
+         <property name="columnCount">
+          <number>2</number>
+         </property>
+         <column>
+          <property name="text">
+           <string>操作名称</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>时长(s)</string>
+          </property>
+         </column>
+        </widget>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="durButtonLayout">
+         <item>
+          <widget class="QPushButton" name="loadDurButton">
+           <property name="text">
+            <string>加载配置</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="saveDurButton">
+           <property name="text">
+            <string>保存配置</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="resetDurButton">
+           <property name="text">
+            <string>重置默认</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+     <!-- 右侧：可视化区域 -->
+     <widget class="QSplitter" name="mainSplitter">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+      <!-- 甘特图可视化区域 -->
+      <widget class="QWidget" name="ganttContainer">
+       <layout class="QVBoxLayout" name="ganttLayout">
+        <property name="margin">
+         <number>0</number>
+        </property>
+        <item>
+         <widget class="QScrollArea" name="ganttScrollArea">
+          <property name="widgetResizable">
+           <bool>true</bool>
+          </property>
+          <property name="horizontalScrollBarPolicy">
+           <enum>Qt::ScrollBarAsNeeded</enum>
+          </property>
+          <property name="verticalScrollBarPolicy">
+           <enum>Qt::ScrollBarAsNeeded</enum>
+          </property>
+          <widget class="QWidget" name="ganttScrollContent">
+           <layout class="QVBoxLayout" name="ganttScrollLayout">
+            <property name="margin">
+             <number>0</number>
+            </property>
+            <item>
+             <widget class="QLabel" name="ganttPlaceholder">
+              <property name="text">
+               <string>甘特图可视化区域 (点击"运行规划"生成)</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
+              <property name="styleSheet">
+               <string>QLabel { background-color: #f5f5f5; border: 1px solid #ddd; color: #999; font-size: 16px; }</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </widget>
+        </item>
+        <item>
+         <widget class="QScrollBar" name="ganttHScrollBar">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>16</height>
+           </size>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <!-- ASCII输出区域 -->
+      <widget class="QGroupBox" name="asciiGroup">
+       <property name="title">
+        <string>ASCII 甘特图输出</string>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>16777215</width>
+         <height>300</height>
+        </size>
+       </property>
+       <layout class="QVBoxLayout" name="asciiLayout">
+        <item>
+         <widget class="QPlainTextEdit" name="asciiOutput">
+          <property name="font">
+           <font>
+            <family>Consolas</family>
+            <pointsize>9</pointsize>
+           </font>
+          </property>
+          <property name="readOnly">
+           <bool>true</bool>
+          </property>
+          <property name="lineWrapMode">
+           <enum>QPlainTextEdit::NoWrap</enum>
+          </property>
+          <property name="horizontalScrollBarPolicy">
+           <enum>Qt::ScrollBarAsNeeded</enum>
+          </property>
+          <property name="styleSheet">
+           <string>QPlainTextEdit { background-color: #1e1e1e; color: #d4d4d4; }</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </widget>
+    </widget>
+   </item>
+   <item>
+    <!-- 底部统计信息栏 -->
+    <widget class="QWidget" name="statsBar">
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>50</height>
+      </size>
+     </property>
+     <property name="styleSheet">
+      <string>QWidget { background-color: #f0f0f0; border-top: 1px solid #ccc; }</string>
+     </property>
+     <layout class="QHBoxLayout" name="statsLayout">
+      <item>
+       <widget class="QLabel" name="serialTimeLabel">
+        <property name="text">
+         <string>串行时间: --</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="optimizedTimeLabel">
+        <property name="text">
+         <string>优化时间: --</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="savedTimeLabel">
+        <property name="text">
+         <string>节省时间: --</string>
+        </property>
+        <property name="styleSheet">
+         <string>QLabel { color: #4CAF50; font-weight: bold; }</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="statsHorizontalSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QLabel" name="stagesLabel">
+        <property name="text">
+         <string>阶段: A(安装钻具) | B(接杆钻进) | C(回收钻杆) | D(回收钻具)</string>
+        </property>
+        <property name="styleSheet">
+         <string>QLabel { color: #666; }</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
