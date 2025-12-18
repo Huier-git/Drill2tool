@@ -34,6 +34,7 @@ AutoTaskPage::AutoTaskPage(QWidget *parent)
     , m_feedController(nullptr)
     , m_rotationController(nullptr)
     , m_percussionController(nullptr)
+    , m_acquisitionManager(nullptr)
     , m_drillManager(nullptr)
     , m_elapsedTimer(new QTimer(this))
     , m_tasksDirectory("config/auto_tasks")
@@ -134,6 +135,12 @@ void AutoTaskPage::setAcquisitionManager(AcquisitionManager* manager)
     if (!manager) {
         return;
     }
+
+    m_acquisitionManager = manager;
+
+    // 连接采集状态变化信号
+    connect(m_acquisitionManager, &AcquisitionManager::acquisitionStateChanged,
+            this, &AutoTaskPage::logAcquisitionEvent, Qt::UniqueConnection);
 
     // 如果drillManager已创建，将数据worker连接到它
     if (m_drillManager) {
@@ -257,6 +264,12 @@ void AutoTaskPage::onStartClicked()
     if (!m_drillManager) {
         QMessageBox::warning(this, tr("错误"),
             tr("控制器未连接\n\n请先在「钻机高级控制」页面连接控制器。"));
+        return;
+    }
+
+    // 采集准备检查
+    if (!ensureAcquisitionReady()) {
+        appendLog(tr("任务未启动：数据采集未就绪"));
         return;
     }
 
@@ -639,6 +652,121 @@ QString AutoTaskPage::formatElapsedTime(qint64 msec) const
     return QString("%1:%2")
         .arg(minutes, 2, 10, QLatin1Char('0'))
         .arg(seconds, 2, 10, QLatin1Char('0'));
+}
+
+// ==================================================
+// AutoTask-Acquisition 集成方法
+// ==================================================
+
+bool AutoTaskPage::ensureAcquisitionReady()
+{
+    // 如果没有AcquisitionManager，跳过（向后兼容）
+    if (!m_acquisitionManager) {
+        return true;
+    }
+
+    bool isRunning = m_acquisitionManager->isRunning();
+    int currentRound = m_acquisitionManager->currentRoundId();
+
+    // 场景1：采集未运行
+    if (!isRunning) {
+        auto reply = QMessageBox::question(
+            this,
+            tr("启动数据采集?"),
+            tr("当前未启用数据采集。\n\n"
+               "是否启动采集并创建新的实验轮次？\n"
+               "（备注将标记为：%1）").arg(formatTaskNote()),
+            QMessageBox::Yes | QMessageBox::No,
+            QMessageBox::Yes
+        );
+
+        if (reply == QMessageBox::No) {
+            return false;  // 用户拒绝，中止任务启动
+        }
+
+        // 先创建轮次
+        QString note = formatTaskNote();
+        m_acquisitionManager->startNewRound("AutoTask", note);
+
+        // 验证轮次是否成功创建
+        int newRoundId = m_acquisitionManager->currentRoundId();
+        if (newRoundId <= 0) {
+            QMessageBox::critical(this, tr("错误"), tr("创建实验轮次失败"));
+            return false;
+        }
+
+        // 轮次创建成功后才启动采集
+        m_acquisitionManager->startAll();
+
+        // 验证采集是否成功启动
+        if (!m_acquisitionManager->isRunning()) {
+            QMessageBox::critical(this, tr("错误"), tr("启动数据采集失败"));
+            m_acquisitionManager->endCurrentRound();  // 清理已创建的轮次
+            return false;
+        }
+
+        appendLog(tr("[数据采集] 已启动，轮次ID: %1").arg(newRoundId));
+        return true;
+    }
+
+    // 场景2：采集运行中，但没有活动轮次
+    if (currentRound == 0) {
+        QString note = formatTaskNote();
+        m_acquisitionManager->startNewRound("AutoTask", note);
+
+        // 验证轮次是否成功创建
+        int newRoundId = m_acquisitionManager->currentRoundId();
+        if (newRoundId <= 0) {
+            QMessageBox::critical(this, tr("错误"), tr("创建实验轮次失败"));
+            return false;
+        }
+
+        appendLog(tr("[数据采集] 已创建轮次: %1").arg(newRoundId));
+        return true;
+    }
+
+    // 场景3：采集运行中且有活动轮次 - 询问是否创建新轮次
+    auto reply = QMessageBox::question(
+        this,
+        tr("创建新轮次?"),
+        tr("当前已有活动的实验轮次 (ID: %1)。\n\n"
+           "是否为本次任务创建新的轮次？").arg(currentRound),
+        QMessageBox::Yes | QMessageBox::No,
+        QMessageBox::No  // 默认：继续使用现有轮次
+    );
+
+    if (reply == QMessageBox::Yes) {
+        QString note = formatTaskNote();
+        m_acquisitionManager->startNewRound("AutoTask", note);
+
+        // 验证轮次是否成功创建
+        int newRoundId = m_acquisitionManager->currentRoundId();
+        if (newRoundId <= 0 || newRoundId == currentRound) {
+            QMessageBox::warning(this, tr("警告"), tr("创建新轮次失败，将继续使用现有轮次"));
+        } else {
+            appendLog(tr("[数据采集] 已创建新轮次: %1").arg(newRoundId));
+        }
+    }
+
+    return true;
+}
+
+QString AutoTaskPage::formatTaskNote() const
+{
+    if (m_currentTaskFile.isEmpty()) {
+        return tr("AutoTask");
+    }
+    QFileInfo info(m_currentTaskFile);
+    return tr("AutoTask:%1").arg(info.fileName());
+}
+
+void AutoTaskPage::logAcquisitionEvent(bool running)
+{
+    if (running) {
+        appendLog(tr("[数据采集] 已启动"));
+    } else {
+        appendLog(tr("[数据采集] 已停止"));
+    }
 }
 
 // ==================================================

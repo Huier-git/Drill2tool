@@ -83,11 +83,17 @@ private:
     QString formatStepTarget(const TaskStep& step) const;
     QString formatElapsedTime(qint64 msec) const;
 
+    // AutoTask-Acquisition integration helpers
+    bool ensureAcquisitionReady();
+    QString formatTaskNote() const;
+    void logAcquisitionEvent(bool running);
+
     Ui::AutoTaskPage *ui;
 
     FeedController* m_feedController;
     RotationController* m_rotationController;
     PercussionController* m_percussionController;
+    AcquisitionManager* m_acquisitionManager;
 
     AutoDrillManager* m_drillManager;
     QTimer* m_elapsedTimer;

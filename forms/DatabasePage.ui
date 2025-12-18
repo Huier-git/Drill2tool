@@ -74,14 +74,14 @@ QPushButton#btn_select_round:hover { background-color: #85ce61; }
 QPushButton#btn_select_round:pressed { background-color: #5daf34; }
 
 /* 蓝色主要按钮 */
-QPushButton#btn_query, QPushButton#btn_exec_sql {
+QPushButton#btn_query, QPushButton#btn_exec_sql, QPushButton#btn_export {
     background-color: #409eff;
     color: white;
     border: none;
     font-weight: bold;
 }
-QPushButton#btn_query:hover, QPushButton#btn_exec_sql:hover { background-color: #66b1ff; }
-QPushButton#btn_query:pressed, QPushButton#btn_exec_sql:pressed { background-color: #3a8ee6; }
+QPushButton#btn_query:hover, QPushButton#btn_exec_sql:hover, QPushButton#btn_export:hover { background-color: #66b1ff; }
+QPushButton#btn_query:pressed, QPushButton#btn_exec_sql:pressed, QPushButton#btn_export:pressed { background-color: #3a8ee6; }
 
 /* --- 输入控件 (SpinBox, ComboBox, LineEdit) --- */
 QSpinBox, QComboBox, QTextEdit, QLineEdit {
@@ -484,6 +484,19 @@ QLabel { color: #606266; }
           </property>
          </widget>
         </item>
+        <item>
+         <widget class="QPushButton" name="btn_export">
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>40</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>导出数据</string>
+          </property>
+         </widget>
+        </item>
        </layout>
       </widget>
      </item>
@@ -583,16 +596,75 @@ QLabel { color: #606266; }
        <number>15</number>
       </property>
       <item>
-       <widget class="QTableWidget" name="table_result">
-        <property name="styleSheet">
-         <string>border: none;</string>
+       <widget class="QTabWidget" name="tab_results">
+        <property name="currentIndex">
+         <number>0</number>
         </property>
-        <property name="alternatingRowColors">
-         <bool>true</bool>
-        </property>
-        <attribute name="verticalHeaderVisible">
-         <bool>false</bool>
-        </attribute>
+        <widget class="QWidget" name="tab_table">
+         <attribute name="title">
+          <string>数据表格</string>
+         </attribute>
+         <layout class="QVBoxLayout" name="verticalLayout_tab_table">
+          <property name="spacing">
+           <number>0</number>
+          </property>
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <item>
+           <widget class="QTableWidget" name="table_result">
+            <property name="styleSheet">
+             <string>border: none;</string>
+            </property>
+            <property name="alternatingRowColors">
+             <bool>true</bool>
+            </property>
+            <attribute name="verticalHeaderVisible">
+             <bool>false</bool>
+            </attribute>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QWidget" name="tab_chart">
+         <attribute name="title">
+          <string>趋势曲线</string>
+         </attribute>
+         <layout class="QVBoxLayout" name="verticalLayout_tab_chart">
+          <property name="spacing">
+           <number>10</number>
+          </property>
+          <item>
+           <widget class="QCustomPlot" name="plot_scalar" native="true">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>300</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCustomPlot" name="plot_vibration" native="true">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>250</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
        </widget>
       </item>
       <item>
@@ -613,6 +685,14 @@ QLabel { color: #606266; }
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>QCustomPlot</class>
+   <extends>QWidget</extends>
+   <header>qcustomplot.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>
