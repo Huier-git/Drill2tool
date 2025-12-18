@@ -1,3 +1,4 @@
+#include "Logger.h"
 #include "control/AcquisitionManager.h"
 #include "dataACQ/VibrationWorker.h"
 #include "dataACQ/MdbWorker.h"

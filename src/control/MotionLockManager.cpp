@@ -1,3 +1,4 @@
+#include "Logger.h"
 #include "control/MotionLockManager.h"
 #include "Global.h"
 #include "control/zmotion.h"

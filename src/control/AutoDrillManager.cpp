@@ -1,3 +1,4 @@
+#include "Logger.h"
 #include "control/AutoDrillManager.h"
 
 #include "control/FeedController.h"
