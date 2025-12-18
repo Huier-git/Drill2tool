@@ -43,18 +43,18 @@ QGroupBox::title {
     color: #2c3e50;
 }
 
-/* --- 右侧数据区域(深色主题) --- */
+/* --- 右侧数据区域(亮色主题) --- */
 QWidget#widget_data_area {
-    background-color: #2C2C2C;
+    background-color: #f5f7fa;
 }
 QGroupBox#groupBox_charts, QGroupBox#groupBox_table {
-    background-color: #1E1E1E;
-    border: 1px solid #3C3C3C;
+    background-color: #ffffff;
+    border: 1px solid #e4e7ed;
     border-radius: 6px;
-    color: #E0E0E0;
+    color: #303133;
 }
 QGroupBox#groupBox_charts::title, QGroupBox#groupBox_table::title {
-    color: #FFFFFF;
+    color: #2c3e50;
 }
 
 /* --- 按钮 (通用) --- */
@@ -129,14 +129,14 @@ QTableWidget#table_rounds {
     outline: none;
 }
 
-/* --- 表格 (右侧数据表格 - 深色) --- */
+/* --- 表格 (右侧数据表格 - 亮色) --- */
 QTableWidget#table_result {
-    border: 1px solid #3C3C3C;
-    background-color: #2C2C2C;
-    gridline-color: #404040;
-    selection-background-color: #264F78;
-    selection-color: #FFFFFF;
-    color: #E0E0E0;
+    border: 1px solid #ebeef5;
+    background-color: #ffffff;
+    gridline-color: #ecf0f1;
+    selection-background-color: #ecf5ff;
+    selection-color: #409eff;
+    color: #303133;
     outline: none;
 }
 
@@ -152,10 +152,10 @@ QHeaderView::section {
     height: 30px;
 }
 QTableWidget#table_result QHeaderView::section {
-    background-color: #3C3C3C;
-    color: #E0E0E0;
-    border-bottom: 1px solid #505050;
-    border-right: 1px solid #505050;
+    background-color: #f5f7fa;
+    color: #606266;
+    border-bottom: 1px solid #ebeef5;
+    border-right: 1px solid #ebeef5;
 }
 
 /* --- 滑动条 --- */

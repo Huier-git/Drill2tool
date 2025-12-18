@@ -618,40 +618,40 @@ void DatabasePage::startExportAsync(const QString& filePath)
     });
 }
 // ==================================================
-// 深色主题配置
+// 亮色主题配置
 // ==================================================
 void DatabasePage::configureChartDarkTheme(QCustomPlot* plot)
 {
     if (!plot) return;
 
     // 背景和边框
-    plot->setBackground(QBrush(QColor(44, 44, 44)));  // #2C2C2C
-    plot->axisRect()->setBackground(QBrush(QColor(30, 30, 30)));  // #1E1E1E
+    plot->setBackground(QBrush(QColor(255, 255, 255)));  // 白色背景
+    plot->axisRect()->setBackground(QBrush(QColor(250, 250, 250)));  // 浅灰背景
 
     // 坐标轴样式
-    plot->xAxis->setBasePen(QPen(QColor(180, 180, 180)));
-    plot->yAxis->setBasePen(QPen(QColor(180, 180, 180)));
-    plot->xAxis->setTickPen(QPen(QColor(180, 180, 180)));
-    plot->yAxis->setTickPen(QPen(QColor(180, 180, 180)));
-    plot->xAxis->setSubTickPen(QPen(QColor(120, 120, 120)));
-    plot->yAxis->setSubTickPen(QPen(QColor(120, 120, 120)));
-    plot->xAxis->setTickLabelColor(QColor(224, 224, 224));
-    plot->yAxis->setTickLabelColor(QColor(224, 224, 224));
-    plot->xAxis->setLabelColor(QColor(224, 224, 224));
-    plot->yAxis->setLabelColor(QColor(224, 224, 224));
+    plot->xAxis->setBasePen(QPen(QColor(96, 98, 102)));  // #606266
+    plot->yAxis->setBasePen(QPen(QColor(96, 98, 102)));
+    plot->xAxis->setTickPen(QPen(QColor(96, 98, 102)));
+    plot->yAxis->setTickPen(QPen(QColor(96, 98, 102)));
+    plot->xAxis->setSubTickPen(QPen(QColor(144, 147, 153)));  // #909399
+    plot->yAxis->setSubTickPen(QPen(QColor(144, 147, 153)));
+    plot->xAxis->setTickLabelColor(QColor(48, 49, 51));  // #303133
+    plot->yAxis->setTickLabelColor(QColor(48, 49, 51));
+    plot->xAxis->setLabelColor(QColor(48, 49, 51));
+    plot->yAxis->setLabelColor(QColor(48, 49, 51));
 
     // 网格线
-    plot->xAxis->grid()->setPen(QPen(QColor(80, 80, 80), 1, Qt::DashLine));
-    plot->yAxis->grid()->setPen(QPen(QColor(80, 80, 80), 1, Qt::DashLine));
-    plot->xAxis->grid()->setSubGridPen(QPen(QColor(60, 60, 60), 1, Qt::DotLine));
-    plot->yAxis->grid()->setSubGridPen(QPen(QColor(60, 60, 60), 1, Qt::DotLine));
+    plot->xAxis->grid()->setPen(QPen(QColor(220, 223, 230), 1, Qt::DashLine));  // #dcdfe6
+    plot->yAxis->grid()->setPen(QPen(QColor(220, 223, 230), 1, Qt::DashLine));
+    plot->xAxis->grid()->setSubGridPen(QPen(QColor(235, 238, 245), 1, Qt::DotLine));  // #ebeef5
+    plot->yAxis->grid()->setSubGridPen(QPen(QColor(235, 238, 245), 1, Qt::DotLine));
     plot->xAxis->grid()->setSubGridVisible(true);
     plot->yAxis->grid()->setSubGridVisible(true);
 
     // 图例样式
-    plot->legend->setBrush(QBrush(QColor(50, 50, 50, 200)));
-    plot->legend->setBorderPen(QPen(QColor(100, 100, 100)));
-    plot->legend->setTextColor(QColor(224, 224, 224));
+    plot->legend->setBrush(QBrush(QColor(255, 255, 255, 230)));  // 半透明白色
+    plot->legend->setBorderPen(QPen(QColor(220, 223, 230)));  // #dcdfe6
+    plot->legend->setTextColor(QColor(48, 49, 51));  // #303133
 }
 
 // ==================================================
