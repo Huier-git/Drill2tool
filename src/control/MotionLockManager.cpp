@@ -23,7 +23,7 @@ MotionLockManager::MotionLockManager(QObject* parent)
     : QObject(parent)
     , m_currentSource(MotionSource::None)
 {
-    qDebug() << "[MotionLockManager] Initialized";
+    LOG_DEBUG("MotionLockManager", "Initialized");
 }
 
 bool MotionLockManager::requestMotion(MotionSource source, const QString& description)
@@ -34,7 +34,8 @@ bool MotionLockManager::requestMotion(MotionSource source, const QString& descri
     if (m_currentSource == MotionSource::None) {
         m_currentSource = source;
         m_currentDescription = description;
-        qDebug() << "[MotionLockManager] Motion granted:" << sourceToString(source) << "-" << description;
+        LOG_DEBUG_STREAM("MotionLockManager")
+            << "Motion granted:" << sourceToString(source) << "-" << description;
         emit motionStateChanged(source, description);
         return true;
     }
@@ -42,7 +43,7 @@ bool MotionLockManager::requestMotion(MotionSource source, const QString& descri
     // 同类型的手动点动，直接覆盖（允许连续点动）
     if (m_currentSource == MotionSource::ManualJog && source == MotionSource::ManualJog) {
         m_currentDescription = description;
-        qDebug() << "[MotionLockManager] ManualJog updated:" << description;
+        LOG_DEBUG_STREAM("MotionLockManager") << "ManualJog updated:" << description;
         return true;
     }
 
@@ -58,19 +59,20 @@ bool MotionLockManager::requestMotion(MotionSource source, const QString& descri
     bool confirmed = showConflictDialog(currentSrc, source, currentDesc, description);
 
     if (!confirmed) {
-        qDebug() << "[MotionLockManager] Motion request cancelled by user";
+        LOG_DEBUG("MotionLockManager", "Motion request cancelled by user");
         return false;
     }
 
     // 用户确认，先停止所有运动
-    qDebug() << "[MotionLockManager] User confirmed, stopping current motion...";
+    LOG_DEBUG("MotionLockManager", "User confirmed, stopping current motion...");
     doStopAll();
 
     // 重新获取锁，设置新状态
     locker.relock();
     m_currentSource = source;
     m_currentDescription = description;
-    qDebug() << "[MotionLockManager] Motion granted after stop:" << sourceToString(source) << "-" << description;
+    LOG_DEBUG_STREAM("MotionLockManager")
+        << "Motion granted after stop:" << sourceToString(source) << "-" << description;
     emit motionStateChanged(source, description);
     return true;
 }
@@ -80,7 +82,8 @@ void MotionLockManager::releaseMotion(MotionSource source)
     QMutexLocker locker(&m_mutex);
 
     if (m_currentSource == source) {
-        qDebug() << "[MotionLockManager] Motion released:" << sourceToString(source);
+        LOG_DEBUG_STREAM("MotionLockManager")
+            << "Motion released:" << sourceToString(source);
         m_currentSource = MotionSource::None;
         m_currentDescription.clear();
         emit motionStateChanged(MotionSource::None, QString());
@@ -89,7 +92,7 @@ void MotionLockManager::releaseMotion(MotionSource source)
 
 void MotionLockManager::emergencyStop()
 {
-    qWarning() << "[MotionLockManager] EMERGENCY STOP TRIGGERED!";
+    LOG_WARNING("MotionLockManager", "EMERGENCY STOP TRIGGERED!");
 
     // 立即停止，不需要用户确认
     doStopAll();
@@ -140,16 +143,16 @@ void MotionLockManager::doStopAll()
     QMutexLocker locker(&g_mutex);
 
     if (!g_handle) {
-        qWarning() << "[MotionLockManager] Cannot stop: no handle";
+        LOG_WARNING("MotionLockManager", "Cannot stop: no handle");
         return;
     }
 
     // 急停模式2：取消缓冲和当前运动
     int result = ZAux_Direct_Rapidstop(g_handle, 2);
     if (result != 0) {
-        qWarning() << "[MotionLockManager] Rapidstop failed, error:" << result;
+        LOG_WARNING_STREAM("MotionLockManager") << "Rapidstop failed, error:" << result;
     } else {
-        qDebug() << "[MotionLockManager] All motors stopped";
+        LOG_DEBUG("MotionLockManager", "All motors stopped");
     }
 }
 
