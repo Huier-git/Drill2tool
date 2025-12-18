@@ -1,19 +1,13 @@
 {
   "permissions": {
     "allow": [
-      "Read(//c/Users/YMH/Desktop/drillControl/**)",
-      "mcp__desktop-commander__start_search",
-      "Bash(python vk701_simulator.py:*)",
-      "Bash(python modbus_tcp_simulator.py:*)",
-      "Bash(python zmotion_simulator.py:*)",
-      "Bash(netstat:*)",
-      "Bash(findstr:*)",
-      "Read(//d/**)",
-      "Bash(cd:*)",
-      "Bash(git init:*)",
-      "mcp__desktop-commander__list_directory",
-      "mcp__desktop-commander__get_more_search_results",
-      "Bash(git add:*)"
+      "Bash(Select-Object FullName)",
+      "Bash(Get-ChildItem \"D:\\KT_DrillControl\\include\\control\" -Name)",
+      "Bash(Select-String \"Controller\")",
+      "Bash(dir:*)",
+      "Bash(Get-ChildItem -Name)",
+      "mcp__gemini__gemini",
+      "Bash(powershell -Command \"(Get-Content SensorPage.ui -Raw) -replace ''(?s)<property name=\"\"styleSheet\"\">.*?</string>\\s*</property>'', ''<property name=\"\"styleSheet\"\"><string notr=\"\"true\"\">/* New CSS here */</string></property>'' | Set-Content SensorPage_temp.ui\")"
     ],
     "deny": [],
     "ask": []

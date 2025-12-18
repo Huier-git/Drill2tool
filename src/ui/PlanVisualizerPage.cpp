@@ -21,16 +21,17 @@ static QString getProjectRoot()
 }
 
 // DOF列表和颜色映射
-static const QStringList DOFS = {"Fz", "Sr", "Me", "Mg", "Mr", "Dh", "Pr", "Cb"};
+static const QStringList DOFS = {"Fz", "Sr", "Me", "Mg", "Mr", "Dh", "Pr", "Pi", "Cb"};
 static const QMap<QString, QColor> DOF_COLORS = {
     {"Fz", QColor(52, 152, 219)},   // 蓝色 - 进给
-    {"Sr", QColor(155, 89, 182)},   // 紫色 - 料仓
+    {"Sr", QColor(155, 89, 182)},   // 紫色 - 存储机构
     {"Me", QColor(46, 204, 113)},   // 绿色 - 机械手伸缩
     {"Mg", QColor(241, 196, 15)},   // 黄色 - 机械手夹紧
     {"Mr", QColor(230, 126, 34)},   // 橙色 - 机械手回转
     {"Dh", QColor(231, 76, 60)},    // 红色 - 对接推杆
     {"Pr", QColor(26, 188, 156)},   // 青色 - 回转
-    {"Cb", QColor(149, 165, 166)}   // 灰色 - 夹紧
+    {"Pi", QColor(52, 73, 94)},     // 深灰蓝 - 冲击
+    {"Cb", QColor(149, 165, 166)}   // 灰色 - 下夹紧
 };
 
 // 默认时长配置

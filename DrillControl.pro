@@ -6,6 +6,29 @@ QT += core gui widgets sql network concurrent serialbus printsupport
 
 CONFIG += c++17
 
+# ==================================================
+# 测试模式开关
+# ==================================================
+# 启用测试：取消下面的注释
+# 禁用测试：注释掉下面的行（默认状态，用于发布）
+# CONFIG += test_mode
+
+test_mode {
+    DEFINES += ENABLE_TEST_MODE
+    message("测试模式已启用 - 包含测试代码")
+
+    SOURCES += \
+        $$PWD/tests/unit/test_autotask.cpp \
+        $$PWD/tests/mock/MockDataGenerator.cpp
+
+    HEADERS += \
+        $$PWD/tests/mock/MockDataGenerator.h
+
+    INCLUDEPATH += $$PWD/tests/mock
+} else {
+    message("测试模式已禁用 - 正常编译")
+}
+
 TARGET = DrillControl
 TEMPLATE = app
 
@@ -48,7 +71,7 @@ SOURCES += \
     src/database/DbWriter.cpp \
     src/database/DataQuerier.cpp \
     src/control/AcquisitionManager.cpp \
-    src/control/MotionController.cpp \
+    src/control/MotionLockManager.cpp \
     src/control/MotionConfigManager.cpp \
     src/control/MechanismTypes.cpp \
     src/control/ZMotionDriver.cpp \
@@ -61,7 +84,11 @@ SOURCES += \
     src/control/ArmExtensionController.cpp \
     src/control/ArmGripController.cpp \
     src/control/ArmRotationController.cpp \
-    src/control/DockingController.cpp
+    src/control/DockingController.cpp \
+    src/control/DrillParameterPreset.cpp \
+    src/control/SafetyWatchdog.cpp \
+    src/control/AutoDrillManager.cpp \
+    src/ui/AutoTaskPage.cpp
 
 # ==================================================
 # 头文件
@@ -83,7 +110,7 @@ HEADERS += \
     include/database/DbWriter.h \
     include/database/DataQuerier.h \
     include/control/AcquisitionManager.h \
-    include/control/MotionController.h \
+    include/control/MotionLockManager.h \
     include/control/MotionConfigManager.h \
     include/control/MechanismDefs.h \
     include/control/zmotion.h \
@@ -101,8 +128,12 @@ HEADERS += \
     include/control/ArmGripController.h \
     include/control/ArmRotationController.h \
     include/control/DockingController.h \
+    include/control/DrillParameterPreset.h \
+    include/control/SafetyWatchdog.h \
+    include/control/AutoDrillManager.h \
     include/ui/DrillControlPage.h \
-    include/ui/PlanVisualizerPage.h
+    include/ui/PlanVisualizerPage.h \
+    include/ui/AutoTaskPage.h
 
 # ==================================================
 # UI界面文件
@@ -116,7 +147,8 @@ FORMS += \
     $$PWD/forms/ControlPage.ui \
     $$PWD/forms/DatabasePage.ui \
     $$PWD/forms/DrillControlPage.ui \
-    $$PWD/forms/PlanVisualizerPage.ui
+    $$PWD/forms/PlanVisualizerPage.ui \
+    $$PWD/forms/AutoTaskPage.ui
 
 # ==================================================
 # 头文件路径

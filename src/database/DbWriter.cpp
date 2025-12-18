@@ -7,6 +7,8 @@
 #include <QDebug>
 #include <QFile>
 #include <QThread>
+#include <QtMath>
+#include <cfloat>
 
 DbWriter::DbWriter(const QString &dbPath, QObject *parent)
     : QObject(parent)
@@ -18,6 +20,7 @@ DbWriter::DbWriter(const QString &dbPath, QObject *parent)
     , m_batchIntervalMs(100)
     , m_totalBlocksWritten(0)
     , m_isInitialized(false)
+    , m_maxCacheSize(100)  // 窗口缓存大小
 {
     qDebug() << "DbWriter created, db path:" << m_dbPath;
 }
@@ -57,24 +60,27 @@ void DbWriter::shutdown()
     if (!m_isInitialized) {
         return;
     }
-    
+
     qDebug() << "DbWriter shutting down...";
-    
+
     // 停止定时器
     if (m_batchTimer) {
         m_batchTimer->stop();
         delete m_batchTimer;
         m_batchTimer = nullptr;
     }
-    
+
     // 处理剩余队列
     processBatch();
-    
+
+    // 清理窗口缓存
+    clearWindowCache();
+
     // 关闭数据库
     if (m_db.isOpen()) {
         m_db.close();
     }
-    
+
     m_isInitialized = false;
     qDebug() << "DbWriter shutdown complete. Total blocks written:" << m_totalBlocksWritten;
 }
@@ -292,53 +298,95 @@ bool DbWriter::createTables()
 bool DbWriter::createTablesManually()
 {
     QSqlQuery query(m_db);
-    
-    // 创建rounds表
+
+    // 创建rounds表（添加status字段）
     if (!query.exec(
         "CREATE TABLE IF NOT EXISTS rounds ("
         "round_id INTEGER PRIMARY KEY AUTOINCREMENT, "
         "start_ts_us INTEGER NOT NULL, "
         "end_ts_us INTEGER, "
+        "status TEXT DEFAULT 'running', "
         "operator_name TEXT, "
         "note TEXT, "
         "created_at DATETIME DEFAULT CURRENT_TIMESTAMP)")) {
         emit errorOccurred("Failed to create rounds table: " + query.lastError().text());
         return false;
     }
-    
-    // 创建scalar_samples表
+
+    // 创建time_windows表（核心创新）
+    if (!query.exec(
+        "CREATE TABLE IF NOT EXISTS time_windows ("
+        "window_id INTEGER PRIMARY KEY AUTOINCREMENT, "
+        "round_id INTEGER NOT NULL, "
+        "window_start_us INTEGER NOT NULL, "
+        "window_end_us INTEGER NOT NULL, "
+        "has_vibration INTEGER DEFAULT 0, "
+        "has_mdb INTEGER DEFAULT 0, "
+        "has_motor INTEGER DEFAULT 0)")) {
+        emit errorOccurred("Failed to create time_windows table: " + query.lastError().text());
+        return false;
+    }
+
+    // 创建time_windows索引
+    query.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_tw_round_start "
+               "ON time_windows(round_id, window_start_us)");
+
+    // 创建scalar_samples表（添加window_id）
     if (!query.exec(
         "CREATE TABLE IF NOT EXISTS scalar_samples ("
-        "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+        "sample_id INTEGER PRIMARY KEY AUTOINCREMENT, "
         "round_id INTEGER NOT NULL, "
+        "window_id INTEGER NOT NULL, "
         "sensor_type INTEGER NOT NULL, "
         "channel_id INTEGER NOT NULL, "
         "timestamp_us INTEGER NOT NULL, "
-        "value REAL NOT NULL, "
-        "seq_in_round INTEGER)")) {
+        "value REAL NOT NULL)")) {
         emit errorOccurred("Failed to create scalar_samples table: " + query.lastError().text());
         return false;
     }
-    
-    // 创建vibration_blocks表
+
+    // 创建scalar_samples索引
+    query.exec("CREATE INDEX IF NOT EXISTS idx_scalar_window ON scalar_samples(window_id)");
+
+    // 创建vibration_blocks表（添加window_id和统计字段）
     if (!query.exec(
         "CREATE TABLE IF NOT EXISTS vibration_blocks ("
-        "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+        "block_id INTEGER PRIMARY KEY AUTOINCREMENT, "
         "round_id INTEGER NOT NULL, "
+        "window_id INTEGER NOT NULL, "
         "channel_id INTEGER NOT NULL, "
         "start_ts_us INTEGER NOT NULL, "
         "sample_rate REAL NOT NULL, "
         "n_samples INTEGER NOT NULL, "
         "data_blob BLOB NOT NULL, "
-        "seq_in_round INTEGER)")) {
+        "min_value REAL, "
+        "max_value REAL, "
+        "mean_value REAL, "
+        "rms_value REAL)")) {
         emit errorOccurred("Failed to create vibration_blocks table: " + query.lastError().text());
         return false;
     }
-    
+
+    // 创建vibration_blocks索引
+    query.exec("CREATE INDEX IF NOT EXISTS idx_vib_window ON vibration_blocks(window_id)");
+
+    // 创建events表
+    if (!query.exec(
+        "CREATE TABLE IF NOT EXISTS events ("
+        "event_id INTEGER PRIMARY KEY AUTOINCREMENT, "
+        "round_id INTEGER NOT NULL, "
+        "window_id INTEGER, "
+        "event_type TEXT NOT NULL, "
+        "timestamp_us INTEGER NOT NULL, "
+        "description TEXT)")) {
+        emit errorOccurred("Failed to create events table: " + query.lastError().text());
+        return false;
+    }
+
     // 创建frequency_log表
     if (!query.exec(
         "CREATE TABLE IF NOT EXISTS frequency_log ("
-        "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+        "log_id INTEGER PRIMARY KEY AUTOINCREMENT, "
         "round_id INTEGER, "
         "sensor_type INTEGER NOT NULL, "
         "old_freq REAL, "
@@ -348,66 +396,131 @@ bool DbWriter::createTablesManually()
         emit errorOccurred("Failed to create frequency_log table: " + query.lastError().text());
         return false;
     }
-    
-    qDebug() << "Tables created manually";
+
+    // 创建system_config表
+    if (!query.exec(
+        "CREATE TABLE IF NOT EXISTS system_config ("
+        "key TEXT PRIMARY KEY, "
+        "value TEXT NOT NULL, "
+        "description TEXT, "
+        "updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)")) {
+        emit errorOccurred("Failed to create system_config table: " + query.lastError().text());
+        return false;
+    }
+
+    // 插入默认配置
+    query.exec("INSERT OR IGNORE INTO system_config (key, value, description) "
+               "VALUES ('db_version', '2.0', '数据库版本')");
+    query.exec("INSERT OR IGNORE INTO system_config (key, value, description) "
+               "VALUES ('window_duration_us', '1000000', '时间窗口时长（微秒）')");
+
+    qDebug() << "Database v2.0 tables created manually";
     return true;
 }
 
 bool DbWriter::writeScalarData(const DataBlock &block)
 {
+    // 获取或创建时间窗口
+    int windowId = getOrCreateWindow(block.roundId, block.startTimestampUs);
+    if (windowId < 0) {
+        return false;
+    }
+
     // 低频标量数据（MDB传感器、电机参数等）
-    // 每个值作为一条记录写入
-    
     QSqlQuery query(m_db);
     query.prepare("INSERT INTO scalar_samples "
-                  "(round_id, sensor_type, channel_id, timestamp_us, value, seq_in_round) "
-                  "VALUES (:round_id, :sensor_type, :channel_id, :timestamp_us, :value, :seq)");
-    
+                  "(round_id, window_id, sensor_type, channel_id, timestamp_us, value) "
+                  "VALUES (?, ?, ?, ?, ?, ?)");
+
     for (int i = 0; i < block.values.size(); ++i) {
         // 计算每个样本的时间戳
         qint64 sampleTimestamp = block.startTimestampUs;
         if (block.sampleRate > 0 && i > 0) {
             sampleTimestamp += static_cast<qint64>((i * 1000000.0) / block.sampleRate);
         }
-        
-        query.bindValue(":round_id", block.roundId);
-        query.bindValue(":sensor_type", static_cast<int>(block.sensorType));
-        query.bindValue(":channel_id", block.channelId);
-        query.bindValue(":timestamp_us", sampleTimestamp);
-        query.bindValue(":value", block.values[i]);
-        query.bindValue(":seq", block.numSamples > 0 ? i : QVariant());
-        
+
+        query.addBindValue(block.roundId);
+        query.addBindValue(windowId);
+        query.addBindValue(static_cast<int>(block.sensorType));
+        query.addBindValue(block.channelId);
+        query.addBindValue(sampleTimestamp);
+        query.addBindValue(block.values[i]);
+
         if (!query.exec()) {
             qWarning() << "Failed to write scalar data:" << query.lastError().text();
             return false;
         }
     }
-    
+
+    // 更新窗口状态
+    if (block.sensorType >= SensorType::Force_Upper &&
+        block.sensorType <= SensorType::Position_MDB) {
+        updateWindowStatus(windowId, "mdb");
+    } else if (block.sensorType >= SensorType::Motor_Position &&
+               block.sensorType <= SensorType::Motor_Current) {
+        updateWindowStatus(windowId, "motor");
+    }
+
     return true;
 }
 
 bool DbWriter::writeVibrationData(const DataBlock &block)
 {
-    // 高频振动数据 - 整块写入
-    
+    // 获取或创建时间窗口
+    int windowId = getOrCreateWindow(block.roundId, block.startTimestampUs);
+    if (windowId < 0) {
+        return false;
+    }
+
+    // 预计算统计特征（KISS：简单遍历）
+    float minVal = FLT_MAX;
+    float maxVal = -FLT_MAX;
+    double sum = 0.0;
+    double sumSq = 0.0;
+
+    const float *data = reinterpret_cast<const float*>(block.blobData.constData());
+    int n = block.numSamples;
+
+    for (int i = 0; i < n; ++i) {
+        float val = data[i];
+        if (val < minVal) minVal = val;
+        if (val > maxVal) maxVal = val;
+        sum += val;
+        sumSq += val * val;
+    }
+
+    double mean = (n > 0) ? (sum / n) : 0.0;
+    double rms = (n > 0) ? qSqrt(sumSq / n) : 0.0;
+
+    // 写入数据库
     QSqlQuery query(m_db);
-    query.prepare("INSERT INTO vibration_blocks "
-                  "(round_id, channel_id, start_ts_us, sample_rate, n_samples, data_blob, seq_in_round) "
-                  "VALUES (:round_id, :channel_id, :start_ts, :sample_rate, :n_samples, :data_blob, :seq)");
-    
-    query.bindValue(":round_id", block.roundId);
-    query.bindValue(":channel_id", block.channelId);
-    query.bindValue(":start_ts", block.startTimestampUs);
-    query.bindValue(":sample_rate", block.sampleRate);
-    query.bindValue(":n_samples", block.numSamples);
-    query.bindValue(":data_blob", block.blobData);
-    query.bindValue(":seq", QVariant());
-    
+    query.prepare(
+        "INSERT INTO vibration_blocks "
+        "(round_id, window_id, channel_id, start_ts_us, sample_rate, "
+        "n_samples, data_blob, min_value, max_value, mean_value, rms_value) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    );
+
+    query.addBindValue(block.roundId);
+    query.addBindValue(windowId);
+    query.addBindValue(block.channelId);
+    query.addBindValue(block.startTimestampUs);
+    query.addBindValue(block.sampleRate);
+    query.addBindValue(n);
+    query.addBindValue(block.blobData);
+    query.addBindValue(minVal);
+    query.addBindValue(maxVal);
+    query.addBindValue(mean);
+    query.addBindValue(rms);
+
     if (!query.exec()) {
         qWarning() << "Failed to write vibration data:" << query.lastError().text();
         return false;
     }
-    
+
+    // 更新窗口状态
+    updateWindowStatus(windowId, "vibration");
+
     return true;
 }
 
@@ -415,4 +528,86 @@ qint64 DbWriter::getCurrentTimestampUs()
 {
     // 返回当前时间的微秒级时间戳
     return QDateTime::currentMSecsSinceEpoch() * 1000;
+}
+
+// ============================================
+// 时间窗口管理功能
+// ============================================
+
+int DbWriter::getOrCreateWindow(int roundId, qint64 timestampUs)
+{
+    // 计算窗口起始时间（向下取整到秒边界）
+    qint64 windowStart = (timestampUs / 1000000) * 1000000;
+    qint64 windowEnd = windowStart + 1000000;
+
+    // 先查缓存
+    if (m_windowCache.contains(windowStart)) {
+        return m_windowCache[windowStart];
+    }
+
+    // 查询数据库
+    QSqlQuery query(m_db);
+    query.prepare("SELECT window_id FROM time_windows "
+                  "WHERE round_id = ? AND window_start_us = ?");
+    query.addBindValue(roundId);
+    query.addBindValue(windowStart);
+
+    if (query.exec() && query.next()) {
+        int windowId = query.value(0).toInt();
+        m_windowCache[windowStart] = windowId;
+        return windowId;
+    }
+
+    // 创建新窗口
+    query.prepare("INSERT INTO time_windows "
+                  "(round_id, window_start_us, window_end_us) "
+                  "VALUES (?, ?, ?)");
+    query.addBindValue(roundId);
+    query.addBindValue(windowStart);
+    query.addBindValue(windowEnd);
+
+    if (!query.exec()) {
+        qWarning() << "Failed to create window:" << query.lastError().text();
+        return -1;
+    }
+
+    int windowId = query.lastInsertId().toInt();
+    m_windowCache[windowStart] = windowId;
+
+    // 缓存大小控制
+    if (m_windowCache.size() > m_maxCacheSize) {
+        // 移除最旧的条目
+        m_windowCache.erase(m_windowCache.begin());
+    }
+
+    return windowId;
+}
+
+void DbWriter::updateWindowStatus(int windowId, const QString &dataType)
+{
+    // 简洁实现：只更新对应的标志
+    QString field;
+    if (dataType == "vibration") {
+        field = "has_vibration";
+    } else if (dataType == "mdb") {
+        field = "has_mdb";
+    } else if (dataType == "motor") {
+        field = "has_motor";
+    } else {
+        return;
+    }
+
+    QSqlQuery query(m_db);
+    QString sql = QString("UPDATE time_windows SET %1 = 1 WHERE window_id = ?").arg(field);
+    query.prepare(sql);
+    query.addBindValue(windowId);
+
+    if (!query.exec()) {
+        qWarning() << "Failed to update window status:" << query.lastError().text();
+    }
+}
+
+void DbWriter::clearWindowCache()
+{
+    m_windowCache.clear();
 }

@@ -1,0 +1,229 @@
+{
+  "_version": "2.1",
+  "_comment": "钻机机构运动参数配置文件",
+  "_last_modified": "2025-01-26",
+
+  "mechanisms": {
+    "Fz": {
+      "name": "进给机构",
+      "motor_id": 2,
+      "connection_type": "ethercat",
+      "control_mode": "position",
+      "speed": 30857.0,
+      "acceleration": 154285.0,
+      "deceleration": 154285.0,
+      "max_position": 13100000,
+      "min_position": 0,
+      "pulses_per_mm": 13086.9,
+      "safe_position": 13100000,
+      "work_position": 0,
+      "stable_threshold": 1.0,
+      "stable_count": 5,
+      "monitor_interval": 100,
+      "position_tolerance": 100.0,
+      "key_positions": {
+        "A": 0,
+        "B": 1000000,
+        "C": 1500000,
+        "D": 6000000,
+        "E": 7000000,
+        "F": 8000000,
+        "G": 9000000,
+        "H": 13100000,
+        "I": 2000000,
+        "J": 11000000
+      }
+    },
+
+    "Sr": {
+      "name": "存储机构",
+      "motor_id": 7,
+      "connection_type": "ethercat",
+      "control_mode": "position",
+      "speed": 1000.0,
+      "acceleration": 5000.0,
+      "deceleration": 5000.0,
+      "max_position": 1000000,
+      "min_position": -1000000,
+      "positions": 7,
+      "angle_per_position": 51.43,
+      "pulses_per_degree": 591.11,
+      "stable_threshold": 1.0,
+      "stable_count": 5,
+      "monitor_interval": 500,
+      "position_tolerance": 100.0,
+      "key_positions": {
+        "A": 0,
+        "B": 30400,
+        "C": 60800,
+        "D": 91200,
+        "E": 121600,
+        "F": 152000,
+        "G": 182400
+      }
+    },
+
+    "Me": {
+      "name": "机械手伸缩",
+      "motor_id": 6,
+      "connection_type": "ethercat",
+      "control_mode": "position",
+      "speed": 5000.0,
+      "acceleration": 25000.0,
+      "deceleration": 25000.0,
+      "max_position": 100000,
+      "min_position": -100000,
+      "safe_position": 0,
+      "work_position": 50000,
+      "init_dac": -50.0,
+      "stable_threshold": 1.0,
+      "stable_count": 5,
+      "monitor_interval": 500,
+      "position_tolerance": 100.0,
+      "key_positions": {
+        "A": 0,
+        "B": 25000,
+        "C": 50000
+      }
+    },
+
+    "Mg": {
+      "name": "机械手夹紧",
+      "motor_id": 4,
+      "connection_type": "ethercat",
+      "control_mode": "torque",
+      "speed": 50000.0,
+      "acceleration": 250000.0,
+      "deceleration": 250000.0,
+      "max_position": 1000000,
+      "min_position": -1310000,
+      "open_dac": -100.0,
+      "close_dac": 100.0,
+      "init_dac": 10.0,
+      "dac_increment": 10.0,
+      "safe_position": 0,
+      "work_position": -1310000,
+      "stable_threshold": 1.0,
+      "stable_count": 5,
+      "monitor_interval": 500,
+      "position_tolerance": 100.0,
+      "key_positions": {
+        "A": -100.0,
+        "B": 100.0
+      }
+    },
+
+    "Mr": {
+      "name": "机械手旋转",
+      "motor_id": 5,
+      "connection_type": "ethercat",
+      "control_mode": "position",
+      "speed": 10000.0,
+      "acceleration": 50000.0,
+      "deceleration": 50000.0,
+      "max_position": 0,
+      "min_position": -52000,
+      "safe_position": 0,
+      "work_position": -52000,
+      "pulses_per_degree": 144.44,
+      "stable_threshold": 1.0,
+      "stable_count": 5,
+      "monitor_interval": 500,
+      "position_tolerance": 100.0,
+      "key_positions": {
+        "A": 0,
+        "B": -52000
+      }
+    },
+
+    "Dh": {
+      "name": "对接头",
+      "motor_id": -1,
+      "connection_type": "modbus",
+      "control_mode": "position",
+      "modbus_device": 3,
+      "slave_id": 1,
+      "extend_position": -35000,
+      "retract_position": 0,
+      "speed": 500,
+      "acceleration": 250,
+      "monitor_interval": 500,
+      "position_tolerance": 100,
+      "key_positions": {
+        "A": -35000,
+        "B": 0
+      }
+    },
+
+    "Pr": {
+      "name": "回转",
+      "motor_id": 0,
+      "connection_type": "ethercat",
+      "control_mode": "velocity",
+      "speed": 60.0,
+      "acceleration": 300.0,
+      "deceleration": 300.0,
+      "max_position": 1000000,
+      "min_position": -1000000,
+      "open_dac": -100.0,
+      "close_dac": 100.0,
+      "work_dac": 90.0,
+      "stable_threshold": 1.0,
+      "stable_count": 5,
+      "monitor_interval": 500,
+      "position_tolerance": 100.0,
+      "key_positions": {
+        "A": 0,
+        "B": 30.0,
+        "C": -30.0,
+        "D": 60.0
+      }
+    },
+
+    "Pi": {
+      "name": "冲击",
+      "motor_id": 1,
+      "connection_type": "ethercat",
+      "control_mode": "velocity",
+      "speed": 5.0,
+      "acceleration": 25.0,
+      "deceleration": 25.0,
+      "max_position": 1000000,
+      "min_position": -1000000,
+      "open_dac": -30.0,
+      "close_dac": 50.0,
+      "stable_threshold": 1.0,
+      "stable_count": 5,
+      "monitor_interval": 500,
+      "position_tolerance": 1.0,
+      "key_positions": {
+        "A": 0,
+        "B": 5.0
+      }
+    },
+
+    "Cb": {
+      "name": "下夹紧",
+      "motor_id": 3,
+      "connection_type": "ethercat",
+      "control_mode": "torque",
+      "speed": 2000.0,
+      "acceleration": 10000.0,
+      "deceleration": 10000.0,
+      "max_position": 1000000,
+      "min_position": -1000000,
+      "open_dac": -70.0,
+      "close_dac": 100.0,
+      "init_dac": -10.0,
+      "dac_increment": -10.0,
+      "stable_threshold": 1.0,
+      "stable_count": 5,
+      "monitor_interval": 500,
+      "position_tolerance": 1.0,
+      "key_positions": {
+        "A": -70.0,
+        "B": 100.0
+      }
+    }
+  }
+}

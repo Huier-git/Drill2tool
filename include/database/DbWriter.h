@@ -7,6 +7,7 @@
 #include <QTimer>
 #include <QSqlDatabase>
 #include <QSqlQuery>
+#include <QMap>
 #include "dataACQ/DataTypes.h"
 
 /**
@@ -38,37 +39,45 @@ public slots:
      * @brief 初始化数据库连接（必须在目标线程中调用）
      */
     bool initialize();
-    
+
     /**
      * @brief 关闭数据库连接
      */
     void shutdown();
-    
+
     /**
      * @brief 接收数据块（由Worker信号触发）
      */
     void enqueueDataBlock(const DataBlock &block);
-    
+
     /**
      * @brief 开始新轮次
      * @param operatorName 操作员名称
      * @param note 备注
      * @return 新轮次ID
      */
-    int startNewRound(const QString &operatorName = QString(), 
+    int startNewRound(const QString &operatorName = QString(),
                       const QString &note = QString());
-    
+
     /**
      * @brief 结束当前轮次
      */
     void endCurrentRound();
-    
+
     /**
      * @brief 记录频率变化
      */
-    void logFrequencyChange(int roundId, SensorType sensorType, 
-                           double oldFreq, double newFreq, 
+    void logFrequencyChange(int roundId, SensorType sensorType,
+                           double oldFreq, double newFreq,
                            const QString &comment = QString());
+
+    /**
+     * @brief 获取或创建时间窗口
+     * @param roundId 轮次ID
+     * @param timestampUs 时间戳（微秒）
+     * @return 窗口ID，失败返回-1
+     */
+    int getOrCreateWindow(int roundId, qint64 timestampUs);
 
 signals:
     /**
@@ -104,6 +113,8 @@ private:
     bool writeScalarData(const DataBlock &block);
     bool writeVibrationData(const DataBlock &block);
     qint64 getCurrentTimestampUs();
+    void updateWindowStatus(int windowId, const QString &dataType);
+    void clearWindowCache();
 
 private:
     QString m_dbPath;                   // 数据库路径
@@ -111,14 +122,18 @@ private:
     QQueue<DataBlock> m_queue;          // 数据队列
     mutable QMutex m_queueMutex;        // 队列互斥锁
     QTimer *m_batchTimer;               // 批量写入定时器
-    
+
     int m_currentRoundId;               // 当前轮次ID
     int m_maxQueueSize;                 // 最大队列长度（默认10000）
     int m_batchSize;                    // 批量大小（默认200）
     int m_batchIntervalMs;              // 批量间隔（默认100ms）
-    
+
     qint64 m_totalBlocksWritten;        // 已写入总块数
     bool m_isInitialized;               // 是否已初始化
+
+    // 时间窗口管理
+    QMap<qint64, int> m_windowCache;    // 窗口缓存：key=window_start_us, value=window_id
+    int m_maxCacheSize;                 // 缓存大小限制（默认100）
 };
 
 #endif // DBWRITER_H

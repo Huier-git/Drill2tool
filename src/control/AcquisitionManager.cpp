@@ -76,54 +76,54 @@ void AcquisitionManager::shutdown()
 void AcquisitionManager::setupWorkers()
 {
     qDebug() << "[AcquisitionManager] Creating workers...";
-    
+
     // 创建Worker实例（在主线程中创建）
     m_vibrationWorker = new VibrationWorker();
     m_mdbWorker = new MdbWorker();
     m_motorWorker = new MotorWorker();
     m_dbWriter = new DbWriter(m_dbPath);
-    
+
     qDebug() << "[AcquisitionManager] Workers created";
 }
 
 void AcquisitionManager::setupThreads()
 {
     qDebug() << "[AcquisitionManager] Setting up threads...";
-    
+
     // 创建线程
     m_vibrationThread = new QThread(this);
     m_mdbThread = new QThread(this);
     m_motorThread = new QThread(this);
     m_dbThread = new QThread(this);
-    
+
     // 设置线程名称（方便调试）
     m_vibrationThread->setObjectName("VibrationThread");
     m_mdbThread->setObjectName("MdbThread");
     m_motorThread->setObjectName("MotorThread");
     m_dbThread->setObjectName("DbThread");
-    
+
     // 将Worker移动到对应线程
     m_vibrationWorker->moveToThread(m_vibrationThread);
     m_mdbWorker->moveToThread(m_mdbThread);
     m_motorWorker->moveToThread(m_motorThread);
     m_dbWriter->moveToThread(m_dbThread);
-    
+
     // 启动线程
     m_vibrationThread->start();
     m_mdbThread->start();
     m_motorThread->start();
     m_dbThread->start();
-    
+
     // 初始化DbWriter（必须在目标线程中初始化数据库连接）
     QMetaObject::invokeMethod(m_dbWriter, "initialize", Qt::BlockingQueuedConnection);
-    
+
     qDebug() << "[AcquisitionManager] Threads started";
 }
 
 void AcquisitionManager::connectSignals()
 {
     qDebug() << "[AcquisitionManager] Connecting signals...";
-    
+
     // 连接Worker的dataBlockReady信号到DbWriter
     connect(m_vibrationWorker, &BaseWorker::dataBlockReady,
             m_dbWriter, &DbWriter::enqueueDataBlock, Qt::QueuedConnection);
@@ -131,9 +131,9 @@ void AcquisitionManager::connectSignals()
             m_dbWriter, &DbWriter::enqueueDataBlock, Qt::QueuedConnection);
     connect(m_motorWorker, &BaseWorker::dataBlockReady,
             m_dbWriter, &DbWriter::enqueueDataBlock, Qt::QueuedConnection);
-    
+
     // 连接Worker的错误信号
-    connect(m_vibrationWorker, &BaseWorker::errorOccurred, this, 
+    connect(m_vibrationWorker, &BaseWorker::errorOccurred, this,
             [this](const QString &error) {
                 emit errorOccurred("VibrationWorker", error);
             });
@@ -145,13 +145,13 @@ void AcquisitionManager::connectSignals()
             [this](const QString &error) {
                 emit errorOccurred("MotorWorker", error);
             });
-    
+
     // 连接DbWriter的错误信号
     connect(m_dbWriter, &DbWriter::errorOccurred, this,
             [this](const QString &error) {
                 emit errorOccurred("DbWriter", error);
             });
-    
+
     // 连接DbWriter的统计信号
     connect(m_dbWriter, &DbWriter::statisticsUpdated, this,
             [this](qint64 totalBlocks, int queueSize) {
@@ -159,14 +159,14 @@ void AcquisitionManager::connectSignals()
                                .arg(totalBlocks).arg(queueSize);
                 emit statisticsUpdated(info);
             });
-    
+
     qDebug() << "[AcquisitionManager] Signals connected";
 }
 
 void AcquisitionManager::cleanupThreads()
 {
     qDebug() << "[AcquisitionManager] Cleaning up threads...";
-    
+
     // 停止并等待线程结束
     auto stopThread = [](QThread *thread, BaseWorker *worker, const QString &name) {
         if (thread && thread->isRunning()) {
@@ -183,12 +183,12 @@ void AcquisitionManager::cleanupThreads()
             qDebug() << "  " << name << "thread stopped";
         }
     };
-    
+
     // 先停止Worker线程
     stopThread(m_vibrationThread, m_vibrationWorker, "Vibration");
     stopThread(m_mdbThread, m_mdbWorker, "MDB");
     stopThread(m_motorThread, m_motorWorker, "Motor");
-    
+
     // 最后停止DbWriter线程（确保所有数据写完）
     if (m_dbThread && m_dbThread->isRunning()) {
         qDebug() << "  Stopping DbWriter thread...";
@@ -201,9 +201,8 @@ void AcquisitionManager::cleanupThreads()
         }
         qDebug() << "  DbWriter thread stopped";
     }
-    
-    // 删除Worker（会自动删除，因为moveToThread后线程结束时会删除）
-    // 但为了保险，先手动删除
+
+    // 删除Worker
     if (m_vibrationWorker) {
         m_vibrationWorker->deleteLater();
         m_vibrationWorker = nullptr;
@@ -220,7 +219,7 @@ void AcquisitionManager::cleanupThreads()
         m_dbWriter->deleteLater();
         m_dbWriter = nullptr;
     }
-    
+
     qDebug() << "[AcquisitionManager] Threads cleaned up";
 }
 

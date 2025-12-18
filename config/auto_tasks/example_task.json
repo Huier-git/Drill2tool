@@ -1,0 +1,130 @@
+{
+  "version": "1.0",
+  "metadata": {
+    "name": "E1_D1_HoleA",
+    "description": "196mm深度钻进测试 - 三阶段参数切换",
+    "author": "DrillControl",
+    "created_date": "2025-01-15"
+  },
+  "presets": [
+    {
+      "id": "P1",
+      "description": "软地层 - 快速钻进",
+      "vp_mm_per_min": 45.0,
+      "rpm": 60.0,
+      "fi_hz": 4.5,
+      "torque_limit_nm": 1200.0,
+      "pressure_limit_n": 13500.0,
+      "drill_string_weight_n": 500.0,
+      "stall_velocity_mm_per_min": 5.0,
+      "stall_window_ms": 1000
+    },
+    {
+      "id": "P2",
+      "description": "标准地层 - 正常钻进",
+      "vp_mm_per_min": 38.0,
+      "rpm": 55.0,
+      "fi_hz": 5.0,
+      "torque_limit_nm": 1600.0,
+      "pressure_limit_n": 15000.0,
+      "drill_string_weight_n": 500.0,
+      "stall_velocity_mm_per_min": 5.0,
+      "stall_window_ms": 1000
+    },
+    {
+      "id": "P3",
+      "description": "硬地层 - 低速高扭",
+      "vp_mm_per_min": 25.0,
+      "rpm": 45.0,
+      "fi_hz": 6.0,
+      "torque_limit_nm": 1800.0,
+      "pressure_limit_n": 18000.0,
+      "drill_string_weight_n": 500.0,
+      "stall_velocity_mm_per_min": 3.0,
+      "stall_window_ms": 1500
+    }
+  ],
+  "steps": [
+    {
+      "type": "positioning",
+      "target_depth": 50.0,
+      "param_id": "P1",
+      "timeout": 120,
+      "description": "定位到起始深度50mm"
+    },
+    {
+      "type": "hold",
+      "hold_time": 10,
+      "timeout": 15,
+      "description": "稳定10秒后开始钻进"
+    },
+    {
+      "type": "drilling",
+      "target_depth": 100.0,
+      "param_id": "P1",
+      "timeout": 300,
+      "description": "第一阶段：软地层钻进 50->100mm"
+    },
+    {
+      "type": "drilling",
+      "target_depth": 150.0,
+      "param_id": "P2",
+      "timeout": 400,
+      "description": "第二阶段：标准地层钻进 100->150mm",
+      "conditions": {
+        "stop_if": [
+          {
+            "sensor": "torque",
+            "op": ">",
+            "value": 1800
+          },
+          {
+            "sensor": "stall",
+            "op": "==",
+            "value": true
+          }
+        ],
+        "logic": "OR"
+      }
+    },
+    {
+      "type": "hold",
+      "hold_time": 30,
+      "timeout": 45,
+      "description": "中间保持30秒，检查钻具状态"
+    },
+    {
+      "type": "drilling",
+      "target_depth": 196.0,
+      "param_id": "P3",
+      "timeout": 600,
+      "description": "第三阶段：硬地层钻进 150->196mm",
+      "conditions": {
+        "stop_if": [
+          {
+            "sensor": "torque",
+            "op": ">",
+            "value": 2000
+          },
+          {
+            "sensor": "pressure",
+            "op": ">",
+            "value": 20.0
+          },
+          {
+            "sensor": "stall",
+            "op": "==",
+            "value": true
+          }
+        ],
+        "logic": "OR"
+      }
+    },
+    {
+      "type": "hold",
+      "hold_time": 20,
+      "timeout": 30,
+      "description": "完成保持20秒后任务结束"
+    }
+  ]
+}

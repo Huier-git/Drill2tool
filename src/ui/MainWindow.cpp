@@ -8,6 +8,7 @@
 #include "ui/DatabasePage.h"
 #include "ui/DrillControlPage.h"
 #include "ui/PlanVisualizerPage.h"
+#include "ui/AutoTaskPage.h"
 #include "control/AcquisitionManager.h"
 #include <QVBoxLayout>
 #include <QCloseEvent>
@@ -65,6 +66,7 @@ MainWindow::MainWindow(QWidget *parent)
     , m_databasePage(nullptr)
     , m_drillControlPage(nullptr)
     , m_planVisualizerPage(nullptr)
+    , m_autoTaskPage(nullptr)
     , m_detachButton(nullptr)
 {
     ui->setupUi(this);
@@ -93,7 +95,7 @@ void MainWindow::setupAcquisitionManager()
 void MainWindow::setupPages()
 {
     // 页面名称
-    m_pageNames << "数据采集" << "振动监测" << "Modbus监测" << "数据库管理" << "电机参数" << "运动控制" << "钻机高级控制" << "钻杆规划";
+    m_pageNames << "数据采集" << "振动监测" << "Modbus监测" << "数据库管理" << "电机参数" << "运动控制" << "钻机高级控制" << "钻杆规划" << "自动任务";
 
     // 获取UI中自动创建的页面
     m_sensorPage = ui->sensorPage;
@@ -121,6 +123,11 @@ void MainWindow::setupPages()
     ui->stackedWidget_pages->addWidget(m_planVisualizerPage);
     ui->listWidget_pages->addItem("钻杆规划");
 
+    // 手动创建 AutoTaskPage
+    m_autoTaskPage = new AutoTaskPage(this);
+    ui->stackedWidget_pages->addWidget(m_autoTaskPage);
+    ui->listWidget_pages->addItem("自动任务");
+
     // 记录容器页面（StackedWidget的直接子控件）
     m_pageWidgets[0] = ui->stackedWidget_pages->widget(0);  // page_dataCollection
     m_pageWidgets[1] = ui->stackedWidget_pages->widget(1);  // page_vibration
@@ -130,12 +137,27 @@ void MainWindow::setupPages()
     m_pageWidgets[5] = m_controlPage;
     m_pageWidgets[6] = m_drillControlPage;
     m_pageWidgets[7] = m_planVisualizerPage;
+    m_pageWidgets[8] = m_autoTaskPage;
 
     // 设置 AcquisitionManager
     if (m_sensorPage) m_sensorPage->setAcquisitionManager(m_acquisitionManager);
     if (m_vibrationPage) m_vibrationPage->setAcquisitionManager(m_acquisitionManager);
     if (m_mdbPage) m_mdbPage->setAcquisitionManager(m_acquisitionManager);
     if (m_motorPage) m_motorPage->setAcquisitionManager(m_acquisitionManager);
+
+    // 设置 AutoTaskPage 的 AcquisitionManager（用于传感器数据）
+    if (m_autoTaskPage) {
+        m_autoTaskPage->setAcquisitionManager(m_acquisitionManager);
+    }
+
+    // 设置 AutoTaskPage 控制器（共享 DrillControlPage 的控制器）
+    if (m_autoTaskPage && m_drillControlPage) {
+        m_autoTaskPage->setControllers(
+            m_drillControlPage->feedController(),
+            m_drillControlPage->rotationController(),
+            m_drillControlPage->percussionController()
+        );
+    }
 
     ui->listWidget_pages->setCurrentRow(0);
 }
@@ -148,6 +170,22 @@ void MainWindow::setupConnections()
     // 双击弹出独立窗口
     connect(ui->listWidget_pages, &QListWidget::itemDoubleClicked,
             this, &MainWindow::onPageDoubleClicked);
+
+    // 当DrillControlPage的控制器准备就绪时，更新AutoTaskPage的控制器引用
+    if (m_drillControlPage && m_autoTaskPage) {
+        connect(m_drillControlPage, &DrillControlPage::controllersReady,
+                this, [this]() {
+            m_autoTaskPage->setControllers(
+                m_drillControlPage->feedController(),
+                m_drillControlPage->rotationController(),
+                m_drillControlPage->percussionController()
+            );
+            // 同时更新数据采集连接
+            if (m_acquisitionManager) {
+                m_autoTaskPage->setAcquisitionManager(m_acquisitionManager);
+            }
+        });
+    }
 }
 
 void MainWindow::setupDetachButton()

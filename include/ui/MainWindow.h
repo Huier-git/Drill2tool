@@ -20,6 +20,7 @@ class ControlPage;
 class DatabasePage;
 class DrillControlPage;
 class PlanVisualizerPage;
+class AutoTaskPage;
 class DetachedWindow;
 
 /**
@@ -68,6 +69,7 @@ private:
     DatabasePage *m_databasePage;
     DrillControlPage *m_drillControlPage;
     PlanVisualizerPage *m_planVisualizerPage;
+    AutoTaskPage *m_autoTaskPage;
 
     // 弹出窗口管理
     QMap<int, DetachedWindow*> m_detachedWindows;  // pageIndex -> window

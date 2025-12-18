@@ -1,0 +1,587 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MotorPage</class>
+ <widget class="QWidget" name="MotorPage">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1280</width>
+    <height>850</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>电机状态监控</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">/* 全局背景与字体 */
+QWidget#MotorPage {
+    background-color: #f5f7fa; /* 浅灰背景，护眼且现代 */
+    font-family: &quot;Microsoft YaHei&quot;, &quot;Segoe UI&quot;, sans-serif;
+    color: #333333;
+}
+
+QScrollArea {
+    border: none;
+    background-color: transparent;
+}
+QScrollArea &gt; QWidget &gt; QWidget {
+    background-color: transparent;
+}
+
+/* 电机卡片容器 */
+QGroupBox {
+    background-color: #ffffff; /* 纯白卡片背景 */
+    border: 1px solid #e4e7ed; /* 极淡的边框 */
+    border-radius: 8px;        /* 圆角 */
+    padding-top: 5px;
+}
+
+/* 标题样式 (电机编号) */
+QLabel[class=&quot;MotorTitle&quot;] {
+    color: #2c3e50;            /* 深蓝灰色标题 */
+    font-size: 18px;           /* 字体放大 */
+    font-weight: bold;
+    border-bottom: 2px solid #409eff; /* 底部蓝条装饰 */
+    padding-bottom: 8px;
+    margin-bottom: 5px;
+}
+
+/* 参数标签样式 (位置、速度等) */
+QLabel[class=&quot;ParamLabel&quot;] {
+    color: #606266;            /* 次级文字颜色 */
+    font-size: 15px;           /* 参数文字放大 */
+    font-weight: bold;
+}
+
+/* LCD 数字显示屏 - 浅色风格 */
+QLCDNumber {
+    background-color: #f0f2f5; /* 极浅灰底色 */
+    color: #303133;            /* 深色数字，高对比度 */
+    border: 1px solid #dcdfe6;
+    border-radius: 4px;
+}
+
+/* 按钮通用样式 */
+QPushButton {
+    border: none;
+    border-radius: 4px;
+    padding: 8px 20px;
+    font-size: 14px;
+    font-weight: bold;
+    color: white;
+}
+
+/* 开始按钮 - 蓝色 */
+QPushButton#btn_start {
+    background-color: #409eff;
+}
+QPushButton#btn_start:hover {
+    background-color: #66b1ff;
+}
+QPushButton#btn_start:pressed {
+    background-color: #3a8ee6;
+}
+
+/* 停止按钮 - 红色 */
+QPushButton#btn_stop {
+    background-color: #f56c6c;
+}
+QPushButton#btn_stop:hover {
+    background-color: #f78989;
+}
+QPushButton#btn_stop:pressed {
+    background-color: #dd6161;
+}
+
+/* 状态标签 */
+QLabel#label_status {
+    color: #e6a23c; /* 橙色状态 */
+    font-size: 16px;
+    font-weight: bold;
+    padding: 5px;
+    border: 1px dashed #e6a23c;
+    border-radius: 4px;
+}</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <property name="spacing">
+    <number>15</number>
+   </property>
+   <property name="leftMargin">
+    <number>20</number>
+   </property>
+   <property name="topMargin">
+    <number>20</number>
+   </property>
+   <property name="rightMargin">
+    <number>20</number>
+   </property>
+   <property name="bottomMargin">
+    <number>20</number>
+   </property>
+   
+   <!-- 顶部控制栏 -->
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_Controls">
+     <property name="spacing">
+      <number>20</number>
+     </property>
+     <item>
+      <widget class="QLabel" name="label_status">
+       <property name="text">
+        <string>系统状态: 未连接</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btn_start">
+       <property name="minimumSize">
+        <size>
+         <width>120</width>
+         <height>40</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>▶ 开始采集</string>
+       </property>
+       <property name="cursor">
+        <cursorShape>PointingHandCursor</cursorShape>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btn_stop">
+       <property name="minimumSize">
+        <size>
+         <width>100</width>
+         <height>40</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>停止</string>
+       </property>
+       <property name="cursor">
+        <cursorShape>PointingHandCursor</cursorShape>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   
+   <!-- 电机列表区域 -->
+   <item>
+    <widget class="QScrollArea" name="scrollArea">
+     <property name="widgetResizable">
+      <bool>true</bool>
+     </property>
+     <widget class="QWidget" name="scrollAreaWidgetContents">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>0</y>
+        <width>1238</width>
+        <height>750</height>
+       </rect>
+      </property>
+      <layout class="QGridLayout" name="gridLayout_Motors">
+       <property name="horizontalSpacing">
+        <number>20</number>
+       </property>
+       <property name="verticalSpacing">
+        <number>20</number>
+       </property>
+       <property name="leftMargin">
+        <number>5</number>
+       </property>
+       <property name="topMargin">
+        <number>5</number>
+       </property>
+       <property name="rightMargin">
+        <number>5</number>
+       </property>
+       <property name="bottomMargin">
+        <number>5</number>
+       </property>
+       
+       <!-- 1号电机 -->
+       <item row="0" column="0">
+        <widget class="QGroupBox" name="group_m1">
+         <layout class="QVBoxLayout" name="verticalLayout_m1">
+          <property name="spacing">
+           <number>10</number>
+          </property>
+          <property name="topMargin">
+           <number>10</number>
+          </property>
+          <item>
+           <widget class="QLabel" name="title_m1">
+            <property name="text">
+             <string>电机 01</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+            <property name="class" stdset="0">
+             <string>MotorTitle</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QGridLayout" name="grid_m1">
+            <property name="verticalSpacing">
+             <number>12</number>
+            </property>
+            <item row="0" column="0"><widget class="QLabel" name="l_m1_p"><property name="text"><string>位置 (mm)</string></property><property name="class" stdset="0"><string>ParamLabel</string></property></widget></item>
+            <item row="0" column="1"><widget class="QLCDNumber" name="lcd_m1_pos"><property name="minimumSize"><size><width>0</width><height>40</height></size></property><property name="digitCount"><number>7</number></property><property name="segmentStyle"><enum>QLCDNumber::Flat</enum></property></widget></item>
+            
+            <item row="1" column="0"><widget class="QLabel" name="l_m1_s"><property name="text"><string>速度 (rpm)</string></property><property name="class" stdset="0"><string>ParamLabel</string></property></widget></item>
+            <item row="1" column="1"><widget class="QLCDNumber" name="lcd_m1_speed"><property name="minimumSize"><size><width>0</width><height>40</height></size></property><property name="digitCount"><number>7</number></property><property name="segmentStyle"><enum>QLCDNumber::Flat</enum></property></widget></item>
+            
+            <item row="2" column="0"><widget class="QLabel" name="l_m1_t"><property name="text"><string>扭矩 (N·m)</string></property><property name="class" stdset="0"><string>ParamLabel</string></property></widget></item>
+            <item row="2" column="1"><widget class="QLCDNumber" name="lcd_m1_torque"><property name="minimumSize"><size><width>0</width><height>40</height></size></property><property name="digitCount"><number>7</number></property><property name="segmentStyle"><enum>QLCDNumber::Flat</enum></property></widget></item>
+            
+            <item row="3" column="0"><widget class="QLabel" name="l_m1_c"><property name="text"><string>电流 (A)</string></property><property name="class" stdset="0"><string>ParamLabel</string></property></widget></item>
+            <item row="3" column="1"><widget class="QLCDNumber" name="lcd_m1_current"><property name="minimumSize"><size><width>0</width><height>40</height></size></property><property name="digitCount"><number>7</number></property><property name="segmentStyle"><enum>QLCDNumber::Flat</enum></property></widget></item>
+           </layout>
+          </item>
+          <item>
+           <spacer name="verticalSpacer_m1">
+            <property name="orientation">
+             <enum>Qt::Vertical</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>40</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </widget>
+       </item>
+
+       <!-- 2号电机 -->
+       <item row="0" column="1">
+        <widget class="QGroupBox" name="group_m2">
+         <layout class="QVBoxLayout" name="verticalLayout_m2">
+          <property name="spacing">
+           <number>10</number>
+          </property>
+          <property name="topMargin">
+           <number>10</number>
+          </property>
+          <item>
+           <widget class="QLabel" name="title_m2">
+            <property name="text">
+             <string>电机 02</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+            <property name="class" stdset="0">
+             <string>MotorTitle</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QGridLayout" name="grid_m2">
+            <property name="verticalSpacing">
+             <number>12</number>
+            </property>
+            <item row="0" column="0"><widget class="QLabel" name="l_m2_p"><property name="text"><string>位置 (mm)</string></property><property name="class" stdset="0"><string>ParamLabel</string></property></widget></item>
+            <item row="0" column="1"><widget class="QLCDNumber" name="lcd_m2_pos"><property name="minimumSize"><size><width>0</width><height>40</height></size></property><property name="digitCount"><number>7</number></property><property name="segmentStyle"><enum>QLCDNumber::Flat</enum></property></widget></item>
+            <item row="1" column="0"><widget class="QLabel" name="l_m2_s"><property name="text"><string>速度 (rpm)</string></property><property name="class" stdset="0"><string>ParamLabel</string></property></widget></item>
+            <item row="1" column="1"><widget class="QLCDNumber" name="lcd_m2_speed"><property name="minimumSize"><size><width>0</width><height>40</height></size></property><property name="digitCount"><number>7</number></property><property name="segmentStyle"><enum>QLCDNumber::Flat</enum></property></widget></item>
+            <item row="2" column="0"><widget class="QLabel" name="l_m2_t"><property name="text"><string>扭矩 (N·m)</string></property><property name="class" stdset="0"><string>ParamLabel</string></property></widget></item>
+            <item row="2" column="1"><widget class="QLCDNumber" name="lcd_m2_torque"><property name="minimumSize"><size><width>0</width><height>40</height></size></property><property name="digitCount"><number>7</number></property><property name="segmentStyle"><enum>QLCDNumber::Flat</enum></property></widget></item>
+            <item row="3" column="0"><widget class="QLabel" name="l_m2_c"><property name="text"><string>电流 (A)</string></property><property name="class" stdset="0"><string>ParamLabel</string></property></widget></item>
+            <item row="3" column="1"><widget class="QLCDNumber" name="lcd_m2_current"><property name="minimumSize"><size><width>0</width><height>40</height></size></property><property name="digitCount"><number>7</number></property><property name="segmentStyle"><enum>QLCDNumber::Flat</enum></property></widget></item>
+           </layout>
+          </item>
+          <item><spacer name="verticalSpacer_m2"><property name="orientation"><enum>Qt::Vertical</enum></property><property name="sizeHint" stdset="0"><size><width>20</width><height>40</height></size></property></spacer></item>
+         </layout>
+        </widget>
+       </item>
+
+       <!-- 3号电机 -->
+       <item row="0" column="2">
+        <widget class="QGroupBox" name="group_m3">
+         <layout class="QVBoxLayout" name="verticalLayout_m3">
+          <property name="spacing">
+           <number>10</number>
+          </property>
+          <property name="topMargin">
+           <number>10</number>
+          </property>
+          <item>
+           <widget class="QLabel" name="title_m3">
+            <property name="text">
+             <string>电机 03</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+            <property name="class" stdset="0">
+             <string>MotorTitle</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QGridLayout" name="grid_m3">
+            <property name="verticalSpacing">
+             <number>12</number>
+            </property>
+            <item row="0" column="0"><widget class="QLabel" name="l_m3_p"><property name="text"><string>位置 (mm)</string></property><property name="class" stdset="0"><string>ParamLabel</string></property></widget></item>
+            <item row="0" column="1"><widget class="QLCDNumber" name="lcd_m3_pos"><property name="minimumSize"><size><width>0</width><height>40</height></size></property><property name="digitCount"><number>7</number></property><property name="segmentStyle"><enum>QLCDNumber::Flat</enum></property></widget></item>
+            <item row="1" column="0"><widget class="QLabel" name="l_m3_s"><property name="text"><string>速度 (rpm)</string></property><property name="class" stdset="0"><string>ParamLabel</string></property></widget></item>
+            <item row="1" column="1"><widget class="QLCDNumber" name="lcd_m3_speed"><property name="minimumSize"><size><width>0</width><height>40</height></size></property><property name="digitCount"><number>7</number></property><property name="segmentStyle"><enum>QLCDNumber::Flat</enum></property></widget></item>
+            <item row="2" column="0"><widget class="QLabel" name="l_m3_t"><property name="text"><string>扭矩 (N·m)</string></property><property name="class" stdset="0"><string>ParamLabel</string></property></widget></item>
+            <item row="2" column="1"><widget class="QLCDNumber" name="lcd_m3_torque"><property name="minimumSize"><size><width>0</width><height>40</height></size></property><property name="digitCount"><number>7</number></property><property name="segmentStyle"><enum>QLCDNumber::Flat</enum></property></widget></item>
+            <item row="3" column="0"><widget class="QLabel" name="l_m3_c"><property name="text"><string>电流 (A)</string></property><property name="class" stdset="0"><string>ParamLabel</string></property></widget></item>
+            <item row="3" column="1"><widget class="QLCDNumber" name="lcd_m3_current"><property name="minimumSize"><size><width>0</width><height>40</height></size></property><property name="digitCount"><number>7</number></property><property name="segmentStyle"><enum>QLCDNumber::Flat</enum></property></widget></item>
+           </layout>
+          </item>
+          <item><spacer name="verticalSpacer_m3"><property name="orientation"><enum>Qt::Vertical</enum></property><property name="sizeHint" stdset="0"><size><width>20</width><height>40</height></size></property></spacer></item>
+         </layout>
+        </widget>
+       </item>
+
+       <!-- 4号电机 -->
+       <item row="0" column="3">
+        <widget class="QGroupBox" name="group_m4">
+         <layout class="QVBoxLayout" name="verticalLayout_m4">
+          <property name="spacing">
+           <number>10</number>
+          </property>
+          <property name="topMargin">
+           <number>10</number>
+          </property>
+          <item>
+           <widget class="QLabel" name="title_m4">
+            <property name="text">
+             <string>电机 04</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+            <property name="class" stdset="0">
+             <string>MotorTitle</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QGridLayout" name="grid_m4">
+            <property name="verticalSpacing">
+             <number>12</number>
+            </property>
+            <item row="0" column="0"><widget class="QLabel" name="l_m4_p"><property name="text"><string>位置 (mm)</string></property><property name="class" stdset="0"><string>ParamLabel</string></property></widget></item>
+            <item row="0" column="1"><widget class="QLCDNumber" name="lcd_m4_pos"><property name="minimumSize"><size><width>0</width><height>40</height></size></property><property name="digitCount"><number>7</number></property><property name="segmentStyle"><enum>QLCDNumber::Flat</enum></property></widget></item>
+            <item row="1" column="0"><widget class="QLabel" name="l_m4_s"><property name="text"><string>速度 (rpm)</string></property><property name="class" stdset="0"><string>ParamLabel</string></property></widget></item>
+            <item row="1" column="1"><widget class="QLCDNumber" name="lcd_m4_speed"><property name="minimumSize"><size><width>0</width><height>40</height></size></property><property name="digitCount"><number>7</number></property><property name="segmentStyle"><enum>QLCDNumber::Flat</enum></property></widget></item>
+            <item row="2" column="0"><widget class="QLabel" name="l_m4_t"><property name="text"><string>扭矩 (N·m)</string></property><property name="class" stdset="0"><string>ParamLabel</string></property></widget></item>
+            <item row="2" column="1"><widget class="QLCDNumber" name="lcd_m4_torque"><property name="minimumSize"><size><width>0</width><height>40</height></size></property><property name="digitCount"><number>7</number></property><property name="segmentStyle"><enum>QLCDNumber::Flat</enum></property></widget></item>
+            <item row="3" column="0"><widget class="QLabel" name="l_m4_c"><property name="text"><string>电流 (A)</string></property><property name="class" stdset="0"><string>ParamLabel</string></property></widget></item>
+            <item row="3" column="1"><widget class="QLCDNumber" name="lcd_m4_current"><property name="minimumSize"><size><width>0</width><height>40</height></size></property><property name="digitCount"><number>7</number></property><property name="segmentStyle"><enum>QLCDNumber::Flat</enum></property></widget></item>
+           </layout>
+          </item>
+          <item><spacer name="verticalSpacer_m4"><property name="orientation"><enum>Qt::Vertical</enum></property><property name="sizeHint" stdset="0"><size><width>20</width><height>40</height></size></property></spacer></item>
+         </layout>
+        </widget>
+       </item>
+
+       <!-- 5号电机 -->
+       <item row="1" column="0">
+        <widget class="QGroupBox" name="group_m5">
+         <layout class="QVBoxLayout" name="verticalLayout_m5">
+          <property name="spacing">
+           <number>10</number>
+          </property>
+          <property name="topMargin">
+           <number>10</number>
+          </property>
+          <item>
+           <widget class="QLabel" name="title_m5">
+            <property name="text">
+             <string>电机 05</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+            <property name="class" stdset="0">
+             <string>MotorTitle</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QGridLayout" name="grid_m5">
+            <property name="verticalSpacing">
+             <number>12</number>
+            </property>
+            <item row="0" column="0"><widget class="QLabel" name="l_m5_p"><property name="text"><string>位置 (mm)</string></property><property name="class" stdset="0"><string>ParamLabel</string></property></widget></item>
+            <item row="0" column="1"><widget class="QLCDNumber" name="lcd_m5_pos"><property name="minimumSize"><size><width>0</width><height>40</height></size></property><property name="digitCount"><number>7</number></property><property name="segmentStyle"><enum>QLCDNumber::Flat</enum></property></widget></item>
+            <item row="1" column="0"><widget class="QLabel" name="l_m5_s"><property name="text"><string>速度 (rpm)</string></property><property name="class" stdset="0"><string>ParamLabel</string></property></widget></item>
+            <item row="1" column="1"><widget class="QLCDNumber" name="lcd_m5_speed"><property name="minimumSize"><size><width>0</width><height>40</height></size></property><property name="digitCount"><number>7</number></property><property name="segmentStyle"><enum>QLCDNumber::Flat</enum></property></widget></item>
+            <item row="2" column="0"><widget class="QLabel" name="l_m5_t"><property name="text"><string>扭矩 (N·m)</string></property><property name="class" stdset="0"><string>ParamLabel</string></property></widget></item>
+            <item row="2" column="1"><widget class="QLCDNumber" name="lcd_m5_torque"><property name="minimumSize"><size><width>0</width><height>40</height></size></property><property name="digitCount"><number>7</number></property><property name="segmentStyle"><enum>QLCDNumber::Flat</enum></property></widget></item>
+            <item row="3" column="0"><widget class="QLabel" name="l_m5_c"><property name="text"><string>电流 (A)</string></property><property name="class" stdset="0"><string>ParamLabel</string></property></widget></item>
+            <item row="3" column="1"><widget class="QLCDNumber" name="lcd_m5_current"><property name="minimumSize"><size><width>0</width><height>40</height></size></property><property name="digitCount"><number>7</number></property><property name="segmentStyle"><enum>QLCDNumber::Flat</enum></property></widget></item>
+           </layout>
+          </item>
+          <item><spacer name="verticalSpacer_m5"><property name="orientation"><enum>Qt::Vertical</enum></property><property name="sizeHint" stdset="0"><size><width>20</width><height>40</height></size></property></spacer></item>
+         </layout>
+        </widget>
+       </item>
+
+       <!-- 6号电机 -->
+       <item row="1" column="1">
+        <widget class="QGroupBox" name="group_m6">
+         <layout class="QVBoxLayout" name="verticalLayout_m6">
+          <property name="spacing">
+           <number>10</number>
+          </property>
+          <property name="topMargin">
+           <number>10</number>
+          </property>
+          <item>
+           <widget class="QLabel" name="title_m6">
+            <property name="text">
+             <string>电机 06</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+            <property name="class" stdset="0">
+             <string>MotorTitle</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QGridLayout" name="grid_m6">
+            <property name="verticalSpacing">
+             <number>12</number>
+            </property>
+            <item row="0" column="0"><widget class="QLabel" name="l_m6_p"><property name="text"><string>位置 (mm)</string></property><property name="class" stdset="0"><string>ParamLabel</string></property></widget></item>
+            <item row="0" column="1"><widget class="QLCDNumber" name="lcd_m6_pos"><property name="minimumSize"><size><width>0</width><height>40</height></size></property><property name="digitCount"><number>7</number></property><property name="segmentStyle"><enum>QLCDNumber::Flat</enum></property></widget></item>
+            <item row="1" column="0"><widget class="QLabel" name="l_m6_s"><property name="text"><string>速度 (rpm)</string></property><property name="class" stdset="0"><string>ParamLabel</string></property></widget></item>
+            <item row="1" column="1"><widget class="QLCDNumber" name="lcd_m6_speed"><property name="minimumSize"><size><width>0</width><height>40</height></size></property><property name="digitCount"><number>7</number></property><property name="segmentStyle"><enum>QLCDNumber::Flat</enum></property></widget></item>
+            <item row="2" column="0"><widget class="QLabel" name="l_m6_t"><property name="text"><string>扭矩 (N·m)</string></property><property name="class" stdset="0"><string>ParamLabel</string></property></widget></item>
+            <item row="2" column="1"><widget class="QLCDNumber" name="lcd_m6_torque"><property name="minimumSize"><size><width>0</width><height>40</height></size></property><property name="digitCount"><number>7</number></property><property name="segmentStyle"><enum>QLCDNumber::Flat</enum></property></widget></item>
+            <item row="3" column="0"><widget class="QLabel" name="l_m6_c"><property name="text"><string>电流 (A)</string></property><property name="class" stdset="0"><string>ParamLabel</string></property></widget></item>
+            <item row="3" column="1"><widget class="QLCDNumber" name="lcd_m6_current"><property name="minimumSize"><size><width>0</width><height>40</height></size></property><property name="digitCount"><number>7</number></property><property name="segmentStyle"><enum>QLCDNumber::Flat</enum></property></widget></item>
+           </layout>
+          </item>
+          <item><spacer name="verticalSpacer_m6"><property name="orientation"><enum>Qt::Vertical</enum></property><property name="sizeHint" stdset="0"><size><width>20</width><height>40</height></size></property></spacer></item>
+         </layout>
+        </widget>
+       </item>
+
+       <!-- 7号电机 -->
+       <item row="1" column="2">
+        <widget class="QGroupBox" name="group_m7">
+         <layout class="QVBoxLayout" name="verticalLayout_m7">
+          <property name="spacing">
+           <number>10</number>
+          </property>
+          <property name="topMargin">
+           <number>10</number>
+          </property>
+          <item>
+           <widget class="QLabel" name="title_m7">
+            <property name="text">
+             <string>电机 07</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+            <property name="class" stdset="0">
+             <string>MotorTitle</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QGridLayout" name="grid_m7">
+            <property name="verticalSpacing">
+             <number>12</number>
+            </property>
+            <item row="0" column="0"><widget class="QLabel" name="l_m7_p"><property name="text"><string>位置 (mm)</string></property><property name="class" stdset="0"><string>ParamLabel</string></property></widget></item>
+            <item row="0" column="1"><widget class="QLCDNumber" name="lcd_m7_pos"><property name="minimumSize"><size><width>0</width><height>40</height></size></property><property name="digitCount"><number>7</number></property><property name="segmentStyle"><enum>QLCDNumber::Flat</enum></property></widget></item>
+            <item row="1" column="0"><widget class="QLabel" name="l_m7_s"><property name="text"><string>速度 (rpm)</string></property><property name="class" stdset="0"><string>ParamLabel</string></property></widget></item>
+            <item row="1" column="1"><widget class="QLCDNumber" name="lcd_m7_speed"><property name="minimumSize"><size><width>0</width><height>40</height></size></property><property name="digitCount"><number>7</number></property><property name="segmentStyle"><enum>QLCDNumber::Flat</enum></property></widget></item>
+            <item row="2" column="0"><widget class="QLabel" name="l_m7_t"><property name="text"><string>扭矩 (N·m)</string></property><property name="class" stdset="0"><string>ParamLabel</string></property></widget></item>
+            <item row="2" column="1"><widget class="QLCDNumber" name="lcd_m7_torque"><property name="minimumSize"><size><width>0</width><height>40</height></size></property><property name="digitCount"><number>7</number></property><property name="segmentStyle"><enum>QLCDNumber::Flat</enum></property></widget></item>
+            <item row="3" column="0"><widget class="QLabel" name="l_m7_c"><property name="text"><string>电流 (A)</string></property><property name="class" stdset="0"><string>ParamLabel</string></property></widget></item>
+            <item row="3" column="1"><widget class="QLCDNumber" name="lcd_m7_current"><property name="minimumSize"><size><width>0</width><height>40</height></size></property><property name="digitCount"><number>7</number></property><property name="segmentStyle"><enum>QLCDNumber::Flat</enum></property></widget></item>
+           </layout>
+          </item>
+          <item><spacer name="verticalSpacer_m7"><property name="orientation"><enum>Qt::Vertical</enum></property><property name="sizeHint" stdset="0"><size><width>20</width><height>40</height></size></property></spacer></item>
+         </layout>
+        </widget>
+       </item>
+
+       <!-- 8号电机 -->
+       <item row="1" column="3">
+        <widget class="QGroupBox" name="group_m8">
+         <layout class="QVBoxLayout" name="verticalLayout_m8">
+          <property name="spacing">
+           <number>10</number>
+          </property>
+          <property name="topMargin">
+           <number>10</number>
+          </property>
+          <item>
+           <widget class="QLabel" name="title_m8">
+            <property name="text">
+             <string>电机 08</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+            <property name="class" stdset="0">
+             <string>MotorTitle</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QGridLayout" name="grid_m8">
+            <property name="verticalSpacing">
+             <number>12</number>
+            </property>
+            <item row="0" column="0"><widget class="QLabel" name="l_m8_p"><property name="text"><string>位置 (mm)</string></property><property name="class" stdset="0"><string>ParamLabel</string></property></widget></item>
+            <item row="0" column="1"><widget class="QLCDNumber" name="lcd_m8_pos"><property name="minimumSize"><size><width>0</width><height>40</height></size></property><property name="digitCount"><number>7</number></property><property name="segmentStyle"><enum>QLCDNumber::Flat</enum></property></widget></item>
+            <item row="1" column="0"><widget class="QLabel" name="l_m8_s"><property name="text"><string>速度 (rpm)</string></property><property name="class" stdset="0"><string>ParamLabel</string></property></widget></item>
+            <item row="1" column="1"><widget class="QLCDNumber" name="lcd_m8_speed"><property name="minimumSize"><size><width>0</width><height>40</height></size></property><property name="digitCount"><number>7</number></property><property name="segmentStyle"><enum>QLCDNumber::Flat</enum></property></widget></item>
+            <item row="2" column="0"><widget class="QLabel" name="l_m8_t"><property name="text"><string>扭矩 (N·m)</string></property><property name="class" stdset="0"><string>ParamLabel</string></property></widget></item>
+            <item row="2" column="1"><widget class="QLCDNumber" name="lcd_m8_torque"><property name="minimumSize"><size><width>0</width><height>40</height></size></property><property name="digitCount"><number>7</number></property><property name="segmentStyle"><enum>QLCDNumber::Flat</enum></property></widget></item>
+            <item row="3" column="0"><widget class="QLabel" name="l_m8_c"><property name="text"><string>电流 (A)</string></property><property name="class" stdset="0"><string>ParamLabel</string></property></widget></item>
+            <item row="3" column="1"><widget class="QLCDNumber" name="lcd_m8_current"><property name="minimumSize"><size><width>0</width><height>40</height></size></property><property name="digitCount"><number>7</number></property><property name="segmentStyle"><enum>QLCDNumber::Flat</enum></property></widget></item>
+           </layout>
+          </item>
+          <item><spacer name="verticalSpacer_m8"><property name="orientation"><enum>Qt::Vertical</enum></property><property name="sizeHint" stdset="0"><size><width>20</width><height>40</height></size></property></spacer></item>
+         </layout>
+        </widget>
+       </item>
+
+      </layout>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

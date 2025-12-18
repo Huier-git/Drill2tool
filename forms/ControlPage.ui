@@ -1,0 +1,816 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ControlPage</class>
+ <widget class="QWidget" name="ControlPage">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1280</width>
+    <height>850</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>运动控制中心</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">/* --- 全局字体与背景 --- */
+QWidget#ControlPage {
+    background-color: #f5f7fa; /* 柔和的工业灰背景 */
+    font-family: &quot;Microsoft YaHei&quot;, &quot;Segoe UI&quot;, sans-serif;
+    color: #333333;
+}
+
+/* --- 卡片容器 (GroupBox) --- */
+QGroupBox {
+    background-color: #ffffff;
+    border: 1px solid #dcdfe6;
+    border-radius: 6px;
+    margin-top: 12px; /* 标题预留空间 */
+    padding-top: 15px;
+}
+
+/* 分组标题：统一字号，清晰醒目 */
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    left: 15px;
+    padding: 0 5px;
+    font-size: 15px;
+    font-weight: bold;
+    color: #2c3e50; /* 深色标题，比正文略重 */
+    background-color: transparent;
+}
+
+/* --- 按钮样式 --- */
+QPushButton {
+    border: none;
+    border-radius: 4px;
+    padding: 6px 15px;
+    background-color: #409eff; /* 工业蓝 */
+    color: #ffffff;            /* 按钮文字白色 */
+    font-weight: bold;
+    font-size: 13px;
+}
+QPushButton:hover {
+    background-color: #66b1ff;
+}
+QPushButton:pressed {
+    background-color: #3a8ee6;
+}
+QPushButton:disabled {
+    background-color: #f0f2f5;
+    color: #c0c4cc;
+}
+
+/* 红色警告按钮 */
+QPushButton#btn_stop_all_motors {
+    background-color: #f56c6c;
+}
+QPushButton#btn_stop_all_motors:hover {
+    background-color: #f78989;
+}
+
+/* 使能按钮 (状态切换) */
+QPushButton#btn_enable {
+    background-color: #909399;
+}
+QPushButton#btn_enable:checked {
+    background-color: #67c23a;
+}
+
+/* --- 标签 (Label) --- */
+/* 统一深灰色，层级略低于数值 */
+QLabel {
+    color: #333333; 
+    font-size: 13px;
+    font-weight: normal;
+}
+
+/* --- 输入框/数据显示 (LineEdit) --- */
+QLineEdit {
+    border: 1px solid #dcdfe6;
+    border-radius: 4px;
+    padding: 5px;
+    background-color: #ffffff;
+    font-size: 13px;
+    color: #000000; /* 输入文字纯黑，醒目 */
+    font-weight: bold;
+}
+QLineEdit:focus {
+    border: 1px solid #409eff;
+}
+
+/* 只读状态：浅灰底，纯黑字，显示更清晰 */
+QLineEdit[readOnly=&quot;true&quot;] {
+    background-color: #f2f4f7; 
+    color: #000000;
+    border: 1px solid #e4e7ed;
+}
+
+/* --- 表格 (TableWidget) --- */
+QTableWidget {
+    background-color: #ffffff;
+    border: 1px solid #e4e7ed;
+    gridline-color: #ebeef5;
+    color: #000000;
+    font-size: 13px;
+}
+QTableWidget::item {
+    padding: 5px;
+}
+/* 表头 */
+QHeaderView::section {
+    background-color: #f5f7fa;
+    padding: 6px;
+    border: none;
+    border-bottom: 1px solid #dcdfe6;
+    border-right: 1px solid #ebeef5;
+    color: #333333;
+    font-weight: bold;
+    font-size: 13px;
+}
+/* 选中行 */
+QTableWidget::item:selected {
+    background-color: #ecf5ff;
+    color: #000000;
+}
+
+/* --- 文本浏览器 (Command Window) --- */
+QTextBrowser {
+    background-color: #fafafa;
+    border: 1px solid #dcdfe6;
+    border-radius: 4px;
+    color: #000000;
+    font-family: &quot;Consolas&quot;, monospace;
+    font-size: 12px;
+}
+
+/* --- 复选框与下拉框 --- */
+QCheckBox, QComboBox {
+    color: #333333;
+    font-size: 13px;
+}</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout_main">
+   <property name="spacing">
+    <number>15</number>
+   </property>
+   <property name="leftMargin">
+    <number>15</number>
+   </property>
+   <property name="topMargin">
+    <number>15</number>
+   </property>
+   <property name="rightMargin">
+    <number>15</number>
+   </property>
+   <property name="bottomMargin">
+    <number>15</number>
+   </property>
+   
+   <!-- 1. 顶部控制面板 -->
+   <item>
+    <widget class="QGroupBox" name="group_control">
+     <property name="title">
+      <string>系统总控制</string>
+     </property>
+     <property name="maximumHeight">
+      <number>85</number>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout_control">
+      <property name="spacing">
+       <number>20</number>
+      </property>
+      <property name="leftMargin">
+       <number>20</number>
+      </property>
+      <property name="rightMargin">
+       <number>20</number>
+      </property>
+      <item>
+       <widget class="QPushButton" name="btn_bus_init">
+        <property name="minimumSize">
+         <size>
+          <width>120</width>
+          <height>36</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>总线初始化</string>
+        </property>
+        <property name="cursor">
+         <cursorShape>PointingHandCursor</cursorShape>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="le_bus_init_status">
+        <property name="minimumSize">
+         <size>
+          <width>120</width>
+          <height>30</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string>background-color: #e4e7ed; border-radius: 4px; padding: 0 10px;</string>
+        </property>
+        <property name="text">
+         <string>未初始化</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QPushButton" name="btn_stop_all_motors">
+        <property name="minimumSize">
+         <size>
+          <width>140</width>
+          <height>36</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>⚠ 停止所有电机</string>
+        </property>
+        <property name="cursor">
+         <cursorShape>PointingHandCursor</cursorShape>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+
+   <!-- 2. 中间核心区域：表格(2) + 详情(1) -->
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_content">
+     <property name="spacing">
+      <number>15</number>
+     </property>
+     
+     <!-- 左侧：表格区域 -->
+     <item>
+      <widget class="QGroupBox" name="group_motor_table">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+         <horstretch>2</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="title">
+        <string>电机参数列表</string>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_table">
+        <property name="spacing">
+         <number>12</number>
+        </property>
+        <property name="leftMargin">
+         <number>15</number>
+        </property>
+        <property name="topMargin">
+         <number>15</number>
+        </property>
+        <property name="rightMargin">
+         <number>15</number>
+        </property>
+        <property name="bottomMargin">
+         <number>15</number>
+        </property>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_table_controls">
+          <property name="spacing">
+           <number>15</number>
+          </property>
+          <item>
+           <widget class="QPushButton" name="btn_motor_parm_update">
+            <property name="minimumSize">
+             <size>
+              <width>90</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>刷新列表</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="cb_motor_parm_edit">
+            <property name="text">
+             <string>启用编辑模式</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="cb_motor_rt_refresh">
+            <property name="text">
+             <string>实时监控数据</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="cb_motor_pos_abs">
+            <property name="text">
+             <string>绝对位置模式</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="horizontalSpacer_2">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="QTableWidget" name="tb_motor">
+          <property name="alternatingRowColors">
+           <bool>true</bool>
+          </property>
+          <property name="selectionMode">
+           <enum>QAbstractItemView::SingleSelection</enum>
+          </property>
+          <property name="selectionBehavior">
+           <enum>QAbstractItemView::SelectRows</enum>
+          </property>
+          <property name="showGrid">
+           <bool>true</bool>
+          </property>
+          <column>
+           <property name="text">
+            <string>ID</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>指令位置 (MPos)</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>实际位置 (Pos)</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>指令速度 (MVel)</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>实际速度 (Vel)</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>输出 (DAC)</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>轴类型</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>脉冲当量</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>加速度</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>减速度</string>
+           </property>
+          </column>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     
+     <!-- 右侧：详情区域 -->
+     <item>
+      <widget class="QGroupBox" name="group_axis_info">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+         <horstretch>1</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="title">
+        <string>单轴详情与控制</string>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_axis_info">
+        <property name="spacing">
+         <number>12</number>
+        </property>
+        <property name="leftMargin">
+         <number>15</number>
+        </property>
+        <property name="topMargin">
+         <number>15</number>
+        </property>
+        <property name="rightMargin">
+         <number>15</number>
+        </property>
+        <property name="bottomMargin">
+         <number>15</number>
+        </property>
+        
+        <!-- 轴选择行 -->
+        <item>
+         <layout class="QGridLayout" name="gridLayout_selection">
+          <property name="horizontalSpacing">
+           <number>10</number>
+          </property>
+          <property name="verticalSpacing">
+           <number>8</number>
+          </property>
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_axis_num">
+            <property name="text">
+             <string>当前轴号:</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QComboBox" name="cb_axis_num">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>30</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QPushButton" name="btn_update">
+            <property name="minimumSize">
+             <size>
+              <width>60</width>
+              <height>30</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>读取</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_bus_node_num">
+            <property name="text">
+             <string>总线节点:</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QLineEdit" name="le_bus_node_num">
+            <property name="readOnly">
+             <bool>true</bool>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="2">
+           <widget class="QCheckBox" name="cb_auto_update">
+            <property name="text">
+             <string>自动轮询</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+
+        <item>
+         <widget class="Line" name="line_2">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+         </widget>
+        </item>
+
+        <!-- 详细参数 - 使用 Form Layout 以适应窄宽度 -->
+        <item>
+         <widget class="QScrollArea" name="scrollArea_params">
+          <property name="frameShape">
+           <enum>QFrame::NoFrame</enum>
+          </property>
+          <property name="widgetResizable">
+           <bool>true</bool>
+          </property>
+          <widget class="QWidget" name="scrollAreaWidgetContents">
+           <property name="geometry">
+            <rect>
+             <x>0</x>
+             <y>0</y>
+             <width>100</width>
+             <height>100</height>
+            </rect>
+           </property>
+           <layout class="QFormLayout" name="formLayout_params">
+            <property name="horizontalSpacing">
+             <number>15</number>
+            </property>
+            <property name="verticalSpacing">
+             <number>10</number>
+            </property>
+            <property name="leftMargin">
+             <number>5</number>
+            </property>
+            <property name="topMargin">
+             <number>5</number>
+            </property>
+            <property name="rightMargin">
+             <number>5</number>
+            </property>
+            <property name="bottomMargin">
+             <number>5</number>
+            </property>
+            <property name="labelAlignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+            
+            <!-- 核心数据放在最前 -->
+            <item row="0" column="0">
+             <widget class="QLabel" name="label_current_pos">
+              <property name="text">
+               <string>当前位置:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QLineEdit" name="le_current_axis_pos">
+              <property name="styleSheet">
+               <string>color: #409eff; border-color: #409eff;</string>
+              </property>
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+
+            <item row="1" column="0">
+             <widget class="QLabel" name="label_speed">
+              <property name="text">
+               <string>实时速度:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QLineEdit" name="le_speed">
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+
+            <item row="2" column="0">
+             <widget class="QLabel" name="label_direct_pos">
+              <property name="text">
+               <string>指令位置:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="1">
+             <widget class="QLineEdit" name="le_direct_axis_pos">
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+
+            <item row="3" column="0">
+             <widget class="QLabel" name="label_axis_status">
+              <property name="text">
+               <string>轴状态字:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="1">
+             <widget class="QLineEdit" name="le_axis_status">
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+
+            <!-- 配置参数 -->
+            <item row="4" column="0">
+             <widget class="QLabel" name="label_accel">
+              <property name="text">
+               <string>加速度:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="1">
+             <widget class="QLineEdit" name="le_accel">
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+
+            <item row="5" column="0">
+             <widget class="QLabel" name="label_decel">
+              <property name="text">
+               <string>减速度:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="5" column="1">
+             <widget class="QLineEdit" name="le_decel">
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            
+            <item row="6" column="0">
+             <widget class="QLabel" name="label_units">
+              <property name="text">
+               <string>脉冲当量:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="6" column="1">
+             <widget class="QLineEdit" name="le_pulse_equivalent">
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+
+            <item row="7" column="0">
+             <widget class="QPushButton" name="btn_enable">
+              <property name="text">
+               <string>伺服使能</string>
+              </property>
+              <property name="checkable">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item row="7" column="1">
+             <widget class="QLineEdit" name="le_enable_status">
+              <property name="text">
+               <string>OFF</string>
+              </property>
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+
+            <!-- 清除报警按钮 -->
+            <item row="8" column="0">
+             <widget class="QPushButton" name="btn_clear_alarm">
+              <property name="text">
+               <string>清除报警</string>
+              </property>
+             </widget>
+            </item>
+
+            <!-- 设置零点按钮 -->
+            <item row="8" column="1">
+             <widget class="QPushButton" name="btn_set_zero">
+              <property name="text">
+               <string>设置零点</string>
+              </property>
+             </widget>
+            </item>
+
+            <!-- 隐藏或次要参数 (保留ID) -->
+             <item row="9" column="0">
+                <widget class="QLineEdit" name="le_atype"><property name="visible"><bool>false</bool></property></widget>
+             </item>
+             <item row="9" column="1">
+                <widget class="QLineEdit" name="le_if_idle"><property name="visible"><bool>false</bool></property></widget>
+             </item>
+             <item row="10" column="0">
+                <widget class="QLineEdit" name="le_total_axis_num"><property name="visible"><bool>false</bool></property></widget>
+             </item>
+
+           </layout>
+          </widget>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+    </layout>
+   </item>
+
+   <!-- 3. 底部命令窗口 -->
+   <item>
+    <widget class="QGroupBox" name="group_command">
+     <property name="title">
+      <string>命令调试终端</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_cmd">
+      <property name="spacing">
+       <number>12</number>
+      </property>
+      <property name="leftMargin">
+       <number>15</number>
+      </property>
+      <property name="topMargin">
+       <number>15</number>
+      </property>
+      <property name="rightMargin">
+       <number>15</number>
+      </property>
+      <property name="bottomMargin">
+       <number>15</number>
+      </property>
+      <item>
+       <widget class="QTextBrowser" name="tb_cmd_window">
+        <property name="minimumHeight">
+         <number>100</number>
+        </property>
+        <property name="maximumHeight">
+         <number>150</number>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_cmd">
+        <property name="spacing">
+         <number>15</number>
+        </property>
+        <item>
+         <widget class="QLineEdit" name="tx_cmd">
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>35</height>
+           </size>
+          </property>
+          <property name="placeholderText">
+           <string>在此输入运动控制指令...</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btn_send_cmd">
+          <property name="minimumSize">
+           <size>
+            <width>100</width>
+            <height>35</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>发送指令</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

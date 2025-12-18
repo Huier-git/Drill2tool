@@ -31,7 +31,7 @@
      <number>0</number>
     </property>
     <item>
-     <!-- 侧边栏 - 页面导航 -->
+     <!-- 侧边栏- 页面导航 -->
      <widget class="QListWidget" name="listWidget_pages">
       <property name="maximumSize">
        <size>
@@ -61,17 +61,22 @@
       </property>
       <item>
        <property name="text">
-        <string>📊 数据采集</string>
+        <string>数据采集</string>
        </property>
       </item>
       <item>
        <property name="text">
-        <string>🎮 钻机控制</string>
+        <string>振动监测</string>
        </property>
       </item>
       <item>
        <property name="text">
-        <string>💾 数据库管理</string>
+        <string>Modbus监测</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>数据库管理</string>
        </property>
       </item>
      </widget>
@@ -105,43 +110,72 @@
         </item>
        </layout>
       </widget>
-      <!-- 钻机控制页面 -->
-      <widget class="QWidget" name="page_drillControl">
-       <layout class="QVBoxLayout" name="verticalLayout_2">
+      <!-- 振动监测页面 -->
+      <widget class="QWidget" name="page_vibration">
+       <layout class="QVBoxLayout" name="verticalLayout_vibration">
+        <property name="spacing">
+         <number>0</number>
+        </property>
+        <property name="leftMargin">
+         <number>0</number>
+        </property>
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <property name="rightMargin">
+         <number>0</number>
+        </property>
+        <property name="bottomMargin">
+         <number>0</number>
+        </property>
         <item>
-         <widget class="QLabel" name="label_page2">
-          <property name="text">
-           <string>钻机控制页面 - 待实现</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignCenter</set>
-          </property>
-          <property name="font">
-           <font>
-            <pointsize>16</pointsize>
-           </font>
-          </property>
-         </widget>
+         <widget class="VibrationPage" name="vibrationPage"/>
+        </item>
+       </layout>
+      </widget>
+      <!-- Modbus监测页面 -->
+      <widget class="QWidget" name="page_mdb">
+       <layout class="QVBoxLayout" name="verticalLayout_mdb">
+        <property name="spacing">
+         <number>0</number>
+        </property>
+        <property name="leftMargin">
+         <number>0</number>
+        </property>
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <property name="rightMargin">
+         <number>0</number>
+        </property>
+        <property name="bottomMargin">
+         <number>0</number>
+        </property>
+        <item>
+         <widget class="MdbPage" name="mdbPage"/>
         </item>
        </layout>
       </widget>
       <!-- 数据库管理页面 -->
       <widget class="QWidget" name="page_database">
        <layout class="QVBoxLayout" name="verticalLayout_3">
+        <property name="spacing">
+         <number>0</number>
+        </property>
+        <property name="leftMargin">
+         <number>0</number>
+        </property>
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <property name="rightMargin">
+         <number>0</number>
+        </property>
+        <property name="bottomMargin">
+         <number>0</number>
+        </property>
         <item>
-         <widget class="QLabel" name="label_page3">
-          <property name="text">
-           <string>数据库管理页面 - 待实现</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignCenter</set>
-          </property>
-          <property name="font">
-           <font>
-            <pointsize>16</pointsize>
-           </font>
-          </property>
-         </widget>
+         <widget class="DatabasePage" name="databasePage"/>
         </item>
        </layout>
       </widget>
@@ -190,6 +224,24 @@
    <class>SensorPage</class>
    <extends>QWidget</extends>
    <header>ui/SensorPage.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>VibrationPage</class>
+   <extends>QWidget</extends>
+   <header>ui/VibrationPage.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>MdbPage</class>
+   <extends>QWidget</extends>
+   <header>ui/MdbPage.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>DatabasePage</class>
+   <extends>QWidget</extends>
+   <header>ui/DatabasePage.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

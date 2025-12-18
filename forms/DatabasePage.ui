@@ -1,0 +1,618 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>DatabasePage</class>
+ <widget class="QWidget" name="DatabasePage">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1000</width>
+    <height>700</height>
+   </rect>
+  </property>
+  <property name="font">
+   <font>
+    <family>Microsoft YaHei</family>
+    <pointsize>10</pointsize>
+   </font>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">/* --- 全局背景与字体 --- */
+QWidget#DatabasePage {
+    background-color: #f0f2f5;
+    font-family: &quot;Microsoft YaHei&quot;, &quot;Segoe UI&quot;, sans-serif;
+    color: #333333;
+    font-size: 10pt;
+}
+
+/* --- 卡片 (GroupBox) --- */
+QGroupBox {
+    background-color: #ffffff;
+    border: 1px solid #dcdfe6;
+    border-radius: 8px;
+    margin-top: 12px; 
+    padding-top: 10px;
+}
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    left: 15px;
+    padding: 0 5px;
+    font-size: 11pt;
+    font-weight: bold;
+    color: #2c3e50; 
+}
+
+/* --- 按钮 (通用) --- */
+QPushButton {
+    border: 1px solid #dcdfe6;
+    border-radius: 4px;
+    padding: 6px 12px;
+    background-color: #ffffff;
+    color: #606266;
+    min-height: 20px;
+}
+QPushButton:hover {
+    color: #409eff;
+    border-color: #c6e2ff;
+    background-color: #ecf5ff;
+}
+QPushButton:pressed {
+    color: #3a8ee6;
+    border-color: #3a8ee6;
+    background-color: #ecf5ff;
+}
+
+/* --- 特殊按钮样式 (通过 ObjectName 定制) --- */
+/* 绿色主要按钮 */
+QPushButton#btn_select_round {
+    background-color: #67c23a;
+    color: white;
+    border: none;
+}
+QPushButton#btn_select_round:hover { background-color: #85ce61; }
+QPushButton#btn_select_round:pressed { background-color: #5daf34; }
+
+/* 蓝色主要按钮 */
+QPushButton#btn_query, QPushButton#btn_exec_sql {
+    background-color: #409eff;
+    color: white;
+    border: none;
+    font-weight: bold;
+}
+QPushButton#btn_query:hover, QPushButton#btn_exec_sql:hover { background-color: #66b1ff; }
+QPushButton#btn_query:pressed, QPushButton#btn_exec_sql:pressed { background-color: #3a8ee6; }
+
+/* --- 输入控件 (SpinBox, ComboBox, LineEdit) --- */
+QSpinBox, QComboBox, QTextEdit, QLineEdit {
+    border: 1px solid #dcdfe6;
+    border-radius: 4px;
+    padding: 4px;
+    background-color: #fff;
+    selection-background-color: #409eff;
+}
+QSpinBox:focus, QComboBox:focus, QTextEdit:focus {
+    border: 1px solid #409eff;
+}
+/* ComboBox 下拉箭头美化 */
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 20px;
+    border-left-width: 0px;
+    border-top-right-radius: 3px;
+    border-bottom-right-radius: 3px;
+}
+
+/* --- 表格 (TableWidget) --- */
+QTableWidget {
+    border: 1px solid #ebeef5;
+    background-color: #ffffff;
+    gridline-color: #ecf0f1;
+    selection-background-color: #ecf5ff; /* 选中行背景变浅蓝 */
+    selection-color: #409eff;            /* 选中文字变蓝 */
+    outline: none;
+}
+QHeaderView::section {
+    background-color: #f5f7fa;
+    padding: 5px;
+    border: none;
+    border-bottom: 1px solid #ebeef5;
+    border-right: 1px solid #ebeef5;
+    font-weight: bold;
+    color: #606266;
+    height: 30px;
+}
+/* 垂直表头隐藏或美化 */
+QHeaderView::section:vertical {
+    border-right: 1px solid #ebeef5;
+    background-color: #fff;
+}
+
+/* --- 滑动条 (Slider) --- */
+QSlider::groove:horizontal {
+    border: 1px solid #dcdfe6;
+    height: 6px; 
+    background: #e4e7ed;
+    margin: 2px 0;
+    border-radius: 3px;
+}
+QSlider::handle:horizontal {
+    background: #ffffff;
+    border: 1px solid #dcdfe6;
+    width: 16px;
+    height: 16px;
+    margin: -6px 0; 
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+QSlider::handle:horizontal:hover {
+    border-color: #409eff;
+    background-color: #ecf5ff;
+}
+
+/* --- 标签 (Label) --- */
+QLabel { color: #606266; }
+</string>
+  </property>
+  <layout class="QHBoxLayout" name="horizontalLayout_main">
+   <property name="spacing">
+    <number>20</number>
+   </property>
+   <property name="leftMargin">
+    <number>20</number>
+   </property>
+   <property name="topMargin">
+    <number>20</number>
+   </property>
+   <property name="rightMargin">
+    <number>20</number>
+   </property>
+   <property name="bottomMargin">
+    <number>20</number>
+   </property>
+   <item>
+    <layout class="QVBoxLayout" name="verticalLayout_left">
+     <property name="spacing">
+      <number>15</number>
+     </property>
+     <item>
+      <widget class="QGroupBox" name="groupBox_rounds">
+       <property name="title">
+        <string>轮次列表</string>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_rounds">
+        <property name="spacing">
+         <number>10</number>
+        </property>
+        <property name="leftMargin">
+         <number>15</number>
+        </property>
+        <property name="topMargin">
+         <number>20</number>
+        </property>
+        <property name="rightMargin">
+         <number>15</number>
+        </property>
+        <property name="bottomMargin">
+         <number>15</number>
+        </property>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_rounds_btns">
+          <property name="spacing">
+           <number>10</number>
+          </property>
+          <item>
+           <widget class="QPushButton" name="btn_refresh_rounds">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>32</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>刷新列表</string>
+            </property>
+            <property name="icon">
+             <iconset theme="view-refresh"/>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="btn_select_round">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>32</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>选择此轮次</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="QTableWidget" name="table_rounds">
+          <property name="minimumSize">
+           <size>
+            <width>320</width>
+            <height>180</height>
+           </size>
+          </property>
+          <property name="selectionBehavior">
+           <enum>QAbstractItemView::SelectRows</enum>
+          </property>
+          <property name="selectionMode">
+           <enum>QAbstractItemView::SingleSelection</enum>
+          </property>
+          <property name="alternatingRowColors">
+           <bool>true</bool>
+          </property>
+          <property name="verticalScrollMode">
+           <enum>QAbstractItemView::ScrollPerPixel</enum>
+          </property>
+          <property name="horizontalScrollMode">
+           <enum>QAbstractItemView::ScrollPerPixel</enum>
+          </property>
+          <attribute name="horizontalHeaderStretchLastSection">
+           <bool>true</bool>
+          </attribute>
+          <attribute name="verticalHeaderVisible">
+           <bool>false</bool>
+          </attribute>
+          <column>
+           <property name="text">
+            <string>ID</string>
+           </property>
+           <property name="width">
+            <number>50</number>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>开始时间</string>
+           </property>
+           <property name="width">
+            <number>140</number>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>时长</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>状态</string>
+           </property>
+          </column>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QGroupBox" name="groupBox_query">
+       <property name="title">
+        <string>数据查询与导出</string>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_query">
+        <property name="spacing">
+         <number>12</number>
+        </property>
+        <property name="leftMargin">
+         <number>15</number>
+        </property>
+        <property name="topMargin">
+         <number>20</number>
+        </property>
+        <property name="rightMargin">
+         <number>15</number>
+        </property>
+        <property name="bottomMargin">
+         <number>15</number>
+        </property>
+        <item>
+         <widget class="QLabel" name="label_round_info">
+          <property name="text">
+           <string>请先选择一个轮次</string>
+          </property>
+          <property name="styleSheet">
+           <string>font-weight: bold; color: #f56c6c;</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_range">
+          <property name="spacing">
+           <number>10</number>
+          </property>
+          <item>
+           <widget class="QLabel" name="label_start">
+            <property name="text">
+             <string>起始(s):</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QSpinBox" name="spin_start_sec">
+            <property name="minimumSize">
+             <size>
+              <width>70</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="minimum">
+             <number>0</number>
+            </property>
+            <property name="maximum">
+             <number>999999</number>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_end">
+            <property name="text">
+             <string>结束(s):</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QSpinBox" name="spin_end_sec">
+            <property name="minimumSize">
+             <size>
+              <width>70</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="minimum">
+             <number>0</number>
+            </property>
+            <property name="maximum">
+             <number>999999</number>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="QSlider" name="slider_range">
+          <property name="cursor">
+           <cursorShape>PointingHandCursor</cursorShape>
+          </property>
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="tickPosition">
+           <enum>QSlider::TicksBelow</enum>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_quick">
+          <property name="spacing">
+           <number>10</number>
+          </property>
+          <item>
+           <widget class="QPushButton" name="btn_select_all">
+            <property name="text">
+             <string>全部范围</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="btn_first_10">
+            <property name="text">
+             <string>前 10 秒</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="btn_last_10">
+            <property name="text">
+             <string>后 10 秒</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_type">
+          <item>
+           <widget class="QLabel" name="label_type">
+            <property name="text">
+             <string>数据类型:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QComboBox" name="combo_data_type">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>30</height>
+             </size>
+            </property>
+            <item>
+             <property name="text">
+              <string>全部数据</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>振动数据 (VK701)</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>MDB 传感器数据</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>电机运行参数</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btn_query">
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>40</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>查询数据</string>
+          </property>
+          <property name="icon">
+           <iconset theme="system-search"/>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QGroupBox" name="groupBox_sql">
+       <property name="title">
+        <string>高级 SQL 交互</string>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_sql">
+        <property name="spacing">
+         <number>10</number>
+        </property>
+        <property name="leftMargin">
+         <number>15</number>
+        </property>
+        <property name="topMargin">
+         <number>20</number>
+        </property>
+        <property name="rightMargin">
+         <number>15</number>
+        </property>
+        <property name="bottomMargin">
+         <number>15</number>
+        </property>
+        <item>
+         <widget class="QTextEdit" name="te_sql">
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>60</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>100</height>
+           </size>
+          </property>
+          <property name="styleSheet">
+           <string>font-family: &quot;Consolas&quot;, &quot;Courier New&quot;, monospace;</string>
+          </property>
+          <property name="placeholderText">
+           <string>SELECT * FROM table_name WHERE id &gt; 0;</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btn_exec_sql">
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>32</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>执行 SQL</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <spacer name="verticalSpacer">
+       <property name="orientation">
+        <enum>Qt::Vertical</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>20</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="groupBox_result">
+     <property name="title">
+      <string>查询结果详情</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_result">
+      <property name="spacing">
+       <number>10</number>
+      </property>
+      <property name="leftMargin">
+       <number>15</number>
+      </property>
+      <property name="topMargin">
+       <number>20</number>
+      </property>
+      <property name="rightMargin">
+       <number>15</number>
+      </property>
+      <property name="bottomMargin">
+       <number>15</number>
+      </property>
+      <item>
+       <widget class="QTableWidget" name="table_result">
+        <property name="styleSheet">
+         <string>border: none;</string>
+        </property>
+        <property name="alternatingRowColors">
+         <bool>true</bool>
+        </property>
+        <attribute name="verticalHeaderVisible">
+         <bool>false</bool>
+        </attribute>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_result_info">
+        <property name="styleSheet">
+         <string>color: #909399;</string>
+        </property>
+        <property name="text">
+         <string>共 0 条记录</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

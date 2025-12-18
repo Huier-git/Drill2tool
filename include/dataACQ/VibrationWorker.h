@@ -4,20 +4,19 @@
 #include "dataACQ/BaseWorker.h"
 #include <QElapsedTimer>
 #include <QThread>
-#include <QTcpSocket>
 
 /**
- * @brief VK701震动传感器采集Worker
- * 
+ * @brief VK701振动传感器采集Worker
+ *
  * 硬件：VK701采集卡
  * 传感器类型：3通道振动传感器（X, Y, Z轴）
- * 默认采样频率：5000Hz（可配置）
+ * 默认采样频率：5000Hz（可配置1K-100K Hz）
  * 数据格式：高频BLOB数据
- * 
+ *
  * 功能：
- * 1. 连接VK701采集卡
+ * 1. 连接VK701采集卡（TCP通信）
  * 2. 配置采样参数（频率、通道数）
- * 3. 循环采集3通道振动数据
+ * 3. 循环采集3通道振动数据（第4通道被忽略）
  * 4. 打包成DataBlock发送
  */
 class VibrationWorker : public BaseWorker
@@ -58,15 +57,14 @@ private:
 private:
     int m_cardId;               // 采集卡ID
     int m_port;                 // 网络端口
-    QString m_serverAddress;    // 服务器地址
-    int m_channelCount;         // 通道数（默认3）
+    QString m_serverAddress;    // 服务器地址（保留用于UI显示）
+    int m_channelCount;         // 通道数（固定为3）
     int m_blockSize;            // 每次读取的块大小（点数）
-    
-    QTcpSocket *m_tcpSocket;    // TCP连接
+
     QElapsedTimer m_timer;      // 用于时间戳对齐
     qint64 m_baseTimestamp;     // 采集开始时的基准时间戳
     int m_blockSequence;        // 块序号
-    
+
     bool m_isCardConnected;     // 是否已连接采集卡
     bool m_isSampling;          // 是否正在采样
 };

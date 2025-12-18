@@ -1,0 +1,1601 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>DrillControlPage</class>
+ <widget class="QWidget" name="DrillControlPage">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1200</width>
+    <height>800</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>钻机高级控制</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">/* ============================================================
+   GLOBAL SETTINGS
+   ============================================================ */
+QWidget#DrillControlPage {
+    background-color: #f0f2f5;
+    font-family: &quot;Microsoft YaHei UI&quot;, &quot;Segoe UI&quot;, sans-serif;
+    font-size: 10pt;
+    color: #2c3e50;
+}
+
+/* ============================================================
+   TOP BAR ACTIONS
+   ============================================================ */
+/* Connection Status Label */
+QLabel#lbl_connection_status {
+    background-color: #909399;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 10pt;
+}
+
+/* Top Bar Buttons */
+QPushButton#btn_connect, QPushButton#btn_init_all,
+QPushButton#btn_stop_all, QPushButton#btn_reload_config {
+    height: 36px;
+    font-size: 10pt;
+    padding: 0 20px;
+}
+
+QPushButton#btn_connect {
+    background-color: #67c23a;
+    border: 1px solid #5daf34;
+    color: white;
+}
+QPushButton#btn_connect:hover { background-color: #85ce61; }
+
+QPushButton#btn_init_all {
+    background-color: #e6a23c;
+    border: 1px solid #dcdfe6;
+    color: white;
+}
+QPushButton#btn_init_all:hover { background-color: #ebb563; }
+
+QPushButton#btn_stop_all {
+    background-color: #f56c6c;
+    border: 1px solid #f56c6c;
+    font-weight: bold;
+    color: white;
+}
+QPushButton#btn_stop_all:hover { background-color: #ff7875; }
+
+/* ============================================================
+   TAB WIDGET STYLING
+   ============================================================ */
+QTabWidget::pane {
+    border: 1px solid #e4e7ed;
+    border-radius: 4px;
+    background: #f0f2f5;
+    top: -1px;
+}
+
+QTabBar::tab {
+    background: #e4e7ed;
+    color: #606266;
+    padding: 8px 24px;
+    margin-right: 2px;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    font-weight: 600;
+    min-width: 80px;
+}
+
+QTabBar::tab:selected {
+    background: #f0f2f5;
+    color: #409eff;
+    border-top: 3px solid #409eff;
+}
+
+QTabBar::tab:hover {
+    background: #ffffff;
+    color: #409eff;
+}
+
+/* ============================================================
+   CARD UI (Group Boxes)
+   ============================================================ */
+QGroupBox {
+    background-color: #ffffff;
+    border: 1px solid #e4e7ed;
+    border-radius: 8px;
+    margin-top: 12px;
+    padding-top: 24px;
+    padding-bottom: 12px;
+    padding-left: 12px;
+    padding-right: 12px;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    left: 16px;
+    top: 2px;
+    padding: 0 6px;
+    font-size: 11pt;
+    font-weight: bold;
+    color: #303133;
+    background-color: transparent;
+}
+
+QGroupBox:hover {
+    border-color: #c0c4cc;
+}
+
+/* ============================================================
+   SCROLL AREA
+   ============================================================ */
+QScrollArea {
+    border: none;
+    background: transparent;
+}
+QScrollArea &gt; QWidget &gt; QWidget {
+    background: transparent;
+}
+
+/* ============================================================
+   INPUT CONTROLS
+   ============================================================ */
+QLineEdit, QSpinBox, QDoubleSpinBox, QComboBox {
+    border: 1px solid #dcdfe6;
+    border-radius: 4px;
+    padding: 5px 8px;
+    background-color: #ffffff;
+    color: #606266;
+    min-height: 24px;
+    selection-background-color: #409eff;
+}
+
+QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus, QComboBox:focus {
+    border: 1px solid #409eff;
+    background-color: #ecf5ff;
+}
+
+QLineEdit[readOnly=&quot;true&quot;] {
+    background-color: #f5f7fa;
+    color: #909399;
+}
+
+/* ============================================================
+   BUTTONS (General)
+   ============================================================ */
+QPushButton {
+    border: 1px solid #dcdfe6;
+    border-radius: 4px;
+    padding: 6px 12px;
+    background-color: #ffffff;
+    color: #606266;
+    font-weight: 500;
+    min-height: 28px;
+}
+
+QPushButton:hover {
+    color: #409eff;
+    border-color: #c6e2ff;
+    background-color: #ecf5ff;
+}
+
+QPushButton:pressed {
+    color: #3a8ee6;
+    border-color: #3a8ee6;
+    background-color: #ecf5ff;
+    padding-top: 7px;
+}
+
+/* Primary Action */
+QPushButton#btn_Fz_move, QPushButton#btn_Pr_start, QPushButton#btn_Pi_start,
+QPushButton#btn_Me_move, QPushButton#btn_Mr_move,
+QPushButton#btn_apply_config, QPushButton#btn_save_config {
+    background-color: #409eff;
+    color: white;
+    border: none;
+}
+QPushButton#btn_Fz_move:hover, QPushButton#btn_Pr_start:hover, QPushButton#btn_Pi_start:hover,
+QPushButton#btn_Me_move:hover, QPushButton#btn_Mr_move:hover,
+QPushButton#btn_apply_config:hover, QPushButton#btn_save_config:hover {
+    background-color: #66b1ff;
+}
+
+/* Danger Action */
+QPushButton#btn_Fz_stop, QPushButton#btn_Pr_stop, QPushButton#btn_Pi_stop {
+    background-color: #fef0f0;
+    color: #f56c6c;
+    border-color: #fbc4c4;
+}
+QPushButton#btn_Fz_stop:hover, QPushButton#btn_Pr_stop:hover, QPushButton#btn_Pi_stop:hover {
+    background-color: #f56c6c;
+    color: white;
+    border-color: #f56c6c;
+}
+
+/* Initialization */
+QPushButton#btn_Fz_init, QPushButton#btn_Pr_init, QPushButton#btn_Pi_unlock,
+QPushButton#btn_Cb_init, QPushButton#btn_Sr_init, QPushButton#btn_Dh_connect,
+QPushButton#btn_Me_init, QPushButton#btn_Mg_init, QPushButton#btn_Mr_init,
+QPushButton#btn_reset_config {
+    background-color: #fdf6ec;
+    color: #e6a23c;
+    border-color: #f5dab1;
+}
+QPushButton#btn_Fz_init:hover, QPushButton#btn_Pr_init:hover, QPushButton#btn_Pi_unlock:hover,
+QPushButton#btn_Cb_init:hover, QPushButton#btn_Sr_init:hover, QPushButton#btn_Dh_connect:hover,
+QPushButton#btn_Me_init:hover, QPushButton#btn_Mg_init:hover, QPushButton#btn_Mr_init:hover,
+QPushButton#btn_reset_config:hover {
+    background-color: #e6a23c;
+    color: white;
+    border-color: #e6a23c;
+}
+
+/* ============================================================
+   DATA VISUALIZATION LABELS
+   ============================================================ */
+QLabel#lbl_Fz_status, QLabel#lbl_Pr_status, QLabel#lbl_Pi_status,
+QLabel#lbl_Cb_status, QLabel#lbl_Sr_status, QLabel#lbl_Dh_status,
+QLabel#lbl_Me_status, QLabel#lbl_Mg_status, QLabel#lbl_Mr_status {
+    font-weight: bold;
+    color: #909399;
+    padding: 2px 0;
+}
+
+QLabel#lbl_Fz_pos, QLabel#lbl_Pr_rpm, QLabel#lbl_Pi_freq,
+QLabel#lbl_Sr_pos, QLabel#lbl_Me_pos, QLabel#lbl_Mr_angle {
+    font-family: &quot;Consolas&quot;, &quot;Monaco&quot;, monospace;
+    font-size: 11pt;
+    font-weight: bold;
+    color: #409eff;
+}
+
+QGroupBox QLabel {
+    color: #606266;
+}
+
+/* ============================================================
+   BOTTOM LOG CONSOLE
+   ============================================================ */
+QGroupBox#group_log {
+    background-color: #282c34;
+    border: 1px solid #3e4451;
+    margin-top: 8px;
+}
+
+QGroupBox#group_log::title {
+    color: #abb2bf;
+}
+
+QTextBrowser#tb_log {
+    background-color: #21252b;
+    border: none;
+    color: #abb2bf;
+    font-family: &quot;Consolas&quot;, monospace;
+    font-size: 9pt;
+    padding: 4px;
+}
+
+/* ============================================================
+   TABLE WIDGET (Config)
+   ============================================================ */
+QTableWidget {
+    border: 1px solid #e4e7ed;
+    gridline-color: #ebeef5;
+    background-color: white;
+    alternate-background-color: #fafafa;
+}
+
+QHeaderView::section {
+    background-color: #f5f7fa;
+    padding: 6px;
+    border: none;
+    border-right: 1px solid #ebeef5;
+    border-bottom: 1px solid #ebeef5;
+    font-weight: bold;
+    color: #606266;
+}</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <layout class="QHBoxLayout" name="topBarLayout">
+     <item>
+      <widget class="QLabel" name="lbl_connection_status">
+       <property name="text">
+        <string>● 未连接</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btn_connect">
+       <property name="minimumSize">
+        <size>
+         <width>100</width>
+         <height>32</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>连接控制器</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btn_init_all">
+       <property name="minimumSize">
+        <size>
+         <width>100</width>
+         <height>32</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>全部初始化</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btn_stop_all">
+       <property name="minimumSize">
+        <size>
+         <width>100</width>
+         <height>32</height>
+        </size>
+       </property>
+       <property name="styleSheet">
+        <string>background-color: #f56c6c; color: white;</string>
+       </property>
+       <property name="text">
+        <string>⚠ 全部停止</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btn_reload_config">
+       <property name="text">
+        <string>重载配置</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="topSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>0</width>
+         <height>0</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QTabWidget" name="tabWidget">
+     <property name="currentIndex">
+      <number>1</number>
+     </property>
+     <widget class="QWidget" name="tab_manual">
+      <attribute name="title">
+       <string>手动控制</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="manualLayout">
+       <item>
+        <widget class="QScrollArea" name="scrollArea">
+         <property name="widgetResizable">
+          <bool>true</bool>
+         </property>
+         <widget class="QWidget" name="scrollAreaContent">
+          <property name="geometry">
+           <rect>
+            <x>0</x>
+            <y>0</y>
+            <width>1131</width>
+            <height>593</height>
+           </rect>
+          </property>
+          <layout class="QGridLayout" name="gridLayout">
+           <property name="spacing">
+            <number>10</number>
+           </property>
+           <item row="0" column="0">
+            <widget class="QGroupBox" name="group_Fz">
+             <property name="title">
+              <string>Fz - 进给</string>
+             </property>
+             <layout class="QVBoxLayout">
+              <item>
+               <widget class="QLabel" name="lbl_Fz_status">
+                <property name="text">
+                 <string>未就绪</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="lbl_Fz_pos">
+                <property name="text">
+                 <string>位置: 0.00 mm</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <layout class="QHBoxLayout">
+                <item>
+                 <widget class="QLabel" name="label">
+                  <property name="text">
+                   <string>目标:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLineEdit" name="le_Fz_target">
+                  <property name="placeholderText">
+                   <string>mm</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QHBoxLayout">
+                <item>
+                 <widget class="QPushButton" name="btn_Fz_init">
+                  <property name="text">
+                   <string>初始化</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="btn_Fz_move">
+                  <property name="text">
+                   <string>移动</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QHBoxLayout">
+                <item>
+                 <widget class="QPushButton" name="btn_Fz_safe">
+                  <property name="text">
+                   <string>安全位</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="btn_Fz_stop">
+                  <property name="styleSheet">
+                   <string>background-color: #f56c6c; color: white;</string>
+                  </property>
+                  <property name="text">
+                   <string>停止</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QGroupBox" name="group_Pr">
+             <property name="title">
+              <string>Pr - 回转</string>
+             </property>
+             <layout class="QVBoxLayout">
+              <item>
+               <widget class="QLabel" name="lbl_Pr_status">
+                <property name="text">
+                 <string>未就绪</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="lbl_Pr_rpm">
+                <property name="text">
+                 <string>转速: 0 rpm</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <layout class="QHBoxLayout">
+                <item>
+                 <widget class="QLabel" name="label">
+                  <property name="text">
+                   <string>转速:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLineEdit" name="le_Pr_rpm">
+                  <property name="placeholderText">
+                   <string>rpm</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QHBoxLayout">
+                <item>
+                 <widget class="QPushButton" name="btn_Pr_init">
+                  <property name="text">
+                   <string>初始化</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="btn_Pr_start">
+                  <property name="text">
+                   <string>启动</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="btn_Pr_stop">
+                  <property name="styleSheet">
+                   <string>background-color: #f56c6c; color: white;</string>
+                  </property>
+                  <property name="text">
+                   <string>停止</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item row="0" column="2">
+            <widget class="QGroupBox" name="group_Pi">
+             <property name="title">
+              <string>Pi - 冲击</string>
+             </property>
+             <layout class="QVBoxLayout">
+              <item>
+               <widget class="QLabel" name="lbl_Pi_status">
+                <property name="text">
+                 <string>锁定</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="lbl_Pi_freq">
+                <property name="text">
+                 <string>频率: 0 Hz</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <layout class="QHBoxLayout">
+                <item>
+                 <widget class="QLabel" name="label">
+                  <property name="text">
+                   <string>频率:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLineEdit" name="le_Pi_freq">
+                  <property name="placeholderText">
+                   <string>Hz</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QHBoxLayout">
+                <item>
+                 <widget class="QPushButton" name="btn_Pi_unlock">
+                  <property name="text">
+                   <string>解锁</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="btn_Pi_start">
+                  <property name="text">
+                   <string>启动</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="btn_Pi_stop">
+                  <property name="styleSheet">
+                   <string>background-color: #f56c6c; color: white;</string>
+                  </property>
+                  <property name="text">
+                   <string>停止</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QGroupBox" name="group_Cb">
+             <property name="title">
+              <string>Cb - 下夹紧</string>
+             </property>
+             <layout class="QVBoxLayout">
+              <item>
+               <widget class="QLabel" name="lbl_Cb_status">
+                <property name="text">
+                 <string>未就绪</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="lbl_Cb_state">
+                <property name="text">
+                 <string>状态: 未知</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <layout class="QHBoxLayout">
+                <item>
+                 <widget class="QLabel" name="label">
+                  <property name="text">
+                   <string>力矩:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLineEdit" name="le_Cb_torque">
+                  <property name="placeholderText">
+                   <string>DAC</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QHBoxLayout">
+                <item>
+                 <widget class="QPushButton" name="btn_Cb_init">
+                  <property name="text">
+                   <string>初始化</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="btn_Cb_open">
+                  <property name="text">
+                   <string>张开</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="btn_Cb_close">
+                  <property name="text">
+                   <string>夹紧</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QGroupBox" name="group_Sr">
+             <property name="title">
+              <string>Sr - 存储机构</string>
+             </property>
+             <layout class="QVBoxLayout">
+              <item>
+               <widget class="QLabel" name="lbl_Sr_status">
+                <property name="text">
+                 <string>未就绪</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="lbl_Sr_pos">
+                <property name="text">
+                 <string>位置: 0/7</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <layout class="QHBoxLayout">
+                <item>
+                 <widget class="QLabel" name="label">
+                  <property name="text">
+                   <string>目标:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLineEdit" name="le_Sr_target">
+                  <property name="placeholderText">
+                   <string>0-6</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QHBoxLayout">
+                <item>
+                 <widget class="QPushButton" name="btn_Sr_init">
+                  <property name="text">
+                   <string>初始化</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="btn_Sr_prev">
+                  <property name="text">
+                   <string>上一个</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="btn_Sr_next">
+                  <property name="text">
+                   <string>下一个</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="btn_Sr_goto">
+                  <property name="text">
+                   <string>定位</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item row="1" column="2">
+            <widget class="QGroupBox" name="group_Dh">
+             <property name="title">
+              <string>Dh - 对接推杆</string>
+             </property>
+             <layout class="QVBoxLayout">
+              <item>
+               <widget class="QLabel" name="lbl_Dh_status">
+                <property name="text">
+                 <string>离线</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="lbl_Dh_state">
+                <property name="text">
+                 <string>状态: 离线</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <layout class="QHBoxLayout">
+                <item>
+                 <widget class="QPushButton" name="btn_Dh_connect">
+                  <property name="text">
+                   <string>连接</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="btn_Dh_extend">
+                  <property name="text">
+                   <string>伸出</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="btn_Dh_retract">
+                  <property name="text">
+                   <string>收回</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item row="2" column="0">
+            <widget class="QGroupBox" name="group_Me">
+             <property name="title">
+              <string>Me - 机械手伸缩</string>
+             </property>
+             <layout class="QVBoxLayout">
+              <item>
+               <widget class="QLabel" name="lbl_Me_status">
+                <property name="text">
+                 <string>未就绪</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="lbl_Me_pos">
+                <property name="text">
+                 <string>位置: 0.00</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <layout class="QHBoxLayout">
+                <item>
+                 <widget class="QLabel" name="label">
+                  <property name="text">
+                   <string>目标:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLineEdit" name="le_Me_target">
+                  <property name="placeholderText">
+                   <string>position</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QHBoxLayout">
+                <item>
+                 <widget class="QPushButton" name="btn_Me_init">
+                  <property name="text">
+                   <string>初始化</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="btn_Me_move">
+                  <property name="text">
+                   <string>移动</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QHBoxLayout">
+                <item>
+                 <widget class="QPushButton" name="btn_Me_extend">
+                  <property name="text">
+                   <string>伸出</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="btn_Me_retract">
+                  <property name="text">
+                   <string>收回</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item row="2" column="1">
+            <widget class="QGroupBox" name="group_Mg">
+             <property name="title">
+              <string>Mg - 机械手夹紧</string>
+             </property>
+             <layout class="QVBoxLayout">
+              <item>
+               <widget class="QLabel" name="lbl_Mg_status">
+                <property name="text">
+                 <string>未就绪</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="lbl_Mg_state">
+                <property name="text">
+                 <string>状态: 未知</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <layout class="QHBoxLayout">
+                <item>
+                 <widget class="QLabel" name="label">
+                  <property name="text">
+                   <string>力矩:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLineEdit" name="le_Mg_torque">
+                  <property name="placeholderText">
+                   <string>DAC</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QHBoxLayout">
+                <item>
+                 <widget class="QPushButton" name="btn_Mg_init">
+                  <property name="text">
+                   <string>初始化</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="btn_Mg_open">
+                  <property name="text">
+                   <string>张开</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="btn_Mg_close">
+                  <property name="text">
+                   <string>夹紧</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item row="2" column="2">
+            <widget class="QGroupBox" name="group_Mr">
+             <property name="title">
+              <string>Mr - 机械手回转</string>
+             </property>
+             <layout class="QVBoxLayout">
+              <item>
+               <widget class="QLabel" name="lbl_Mr_status">
+                <property name="text">
+                 <string>未就绪</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="lbl_Mr_angle">
+                <property name="text">
+                 <string>角度: 0.0°</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <layout class="QHBoxLayout">
+                <item>
+                 <widget class="QLabel" name="label">
+                  <property name="text">
+                   <string>角度:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLineEdit" name="le_Mr_angle">
+                  <property name="placeholderText">
+                   <string>度</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QHBoxLayout">
+                <item>
+                 <widget class="QPushButton" name="btn_Mr_init">
+                  <property name="text">
+                   <string>初始化</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="btn_Mr_move">
+                  <property name="text">
+                   <string>移动</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QHBoxLayout">
+                <item>
+                 <widget class="QPushButton" name="btn_Mr_drill">
+                  <property name="text">
+                   <string>钻进位</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="btn_Mr_storage">
+                  <property name="text">
+                   <string>存储位</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tab_config">
+      <attribute name="title">
+       <string>参数配置</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="configLayout">
+       <item>
+        <layout class="QHBoxLayout">
+         <item>
+          <widget class="QLabel" name="label">
+           <property name="font">
+            <font>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="text">
+            <string>选择机构:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="combo_mechanism">
+           <property name="minimumSize">
+            <size>
+             <width>200</width>
+             <height>0</height>
+            </size>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer>
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>0</width>
+             <height>0</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QScrollArea" name="configScrollArea">
+         <property name="widgetResizable">
+          <bool>true</bool>
+         </property>
+         <widget class="QWidget" name="configScrollContent">
+          <property name="geometry">
+           <rect>
+            <x>0</x>
+            <y>-399</y>
+            <width>1131</width>
+            <height>848</height>
+           </rect>
+          </property>
+          <layout class="QVBoxLayout" name="configParamsLayout">
+           <item>
+            <widget class="QGroupBox" name="group_motion_params">
+             <property name="title">
+              <string>运动参数</string>
+             </property>
+             <layout class="QFormLayout">
+              <item row="0" column="0">
+               <widget class="QLabel" name="label">
+                <property name="text">
+                 <string>速度:</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <layout class="QHBoxLayout">
+                <item>
+                 <widget class="QDoubleSpinBox" name="spin_speed">
+                  <property name="decimals">
+                   <number>1</number>
+                  </property>
+                  <property name="maximum">
+                   <double>1000000.000000000000000</double>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLabel" name="lbl_speed_unit">
+                  <property name="text">
+                   <string>脉冲/秒</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item row="1" column="0">
+               <widget class="QLabel" name="label">
+                <property name="text">
+                 <string>加速度:</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <layout class="QHBoxLayout">
+                <item>
+                 <widget class="QDoubleSpinBox" name="spin_acceleration">
+                  <property name="decimals">
+                   <number>1</number>
+                  </property>
+                  <property name="maximum">
+                   <double>10000000.000000000000000</double>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLabel" name="label">
+                  <property name="text">
+                   <string>脉冲/秒²</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item row="2" column="0">
+               <widget class="QLabel" name="label">
+                <property name="text">
+                 <string>减速度:</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="1">
+               <layout class="QHBoxLayout">
+                <item>
+                 <widget class="QDoubleSpinBox" name="spin_deceleration">
+                  <property name="decimals">
+                   <number>1</number>
+                  </property>
+                  <property name="maximum">
+                   <double>10000000.000000000000000</double>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLabel" name="label">
+                  <property name="text">
+                   <string>脉冲/秒²</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
+            <widget class="QGroupBox" name="group_position_params">
+             <property name="title">
+              <string>位置参数</string>
+             </property>
+             <layout class="QFormLayout">
+              <item row="0" column="0">
+               <widget class="QLabel" name="label">
+                <property name="text">
+                 <string>最大位置:</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <layout class="QHBoxLayout">
+                <item>
+                 <widget class="QDoubleSpinBox" name="spin_max_position">
+                  <property name="decimals">
+                   <number>1</number>
+                  </property>
+                  <property name="minimum">
+                   <double>-100000000.000000000000000</double>
+                  </property>
+                  <property name="maximum">
+                   <double>100000000.000000000000000</double>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLabel" name="label">
+                  <property name="text">
+                   <string>脉冲</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item row="1" column="0">
+               <widget class="QLabel" name="label">
+                <property name="text">
+                 <string>最小位置:</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <layout class="QHBoxLayout">
+                <item>
+                 <widget class="QDoubleSpinBox" name="spin_min_position">
+                  <property name="decimals">
+                   <number>1</number>
+                  </property>
+                  <property name="minimum">
+                   <double>-100000000.000000000000000</double>
+                  </property>
+                  <property name="maximum">
+                   <double>100000000.000000000000000</double>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLabel" name="label">
+                  <property name="text">
+                   <string>脉冲</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item row="2" column="0">
+               <widget class="QLabel" name="label">
+                <property name="text">
+                 <string>安全位置:</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="1">
+               <layout class="QHBoxLayout">
+                <item>
+                 <widget class="QDoubleSpinBox" name="spin_safe_position">
+                  <property name="decimals">
+                   <number>1</number>
+                  </property>
+                  <property name="minimum">
+                   <double>-100000000.000000000000000</double>
+                  </property>
+                  <property name="maximum">
+                   <double>100000000.000000000000000</double>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLabel" name="label">
+                  <property name="text">
+                   <string>脉冲</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item row="3" column="0">
+               <widget class="QLabel" name="label">
+                <property name="text">
+                 <string>工作位置:</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="1">
+               <layout class="QHBoxLayout">
+                <item>
+                 <widget class="QDoubleSpinBox" name="spin_work_position">
+                  <property name="decimals">
+                   <number>1</number>
+                  </property>
+                  <property name="minimum">
+                   <double>-100000000.000000000000000</double>
+                  </property>
+                  <property name="maximum">
+                   <double>100000000.000000000000000</double>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLabel" name="label">
+                  <property name="text">
+                   <string>脉冲</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
+            <widget class="QGroupBox" name="group_torque_params">
+             <property name="title">
+              <string>力矩参数</string>
+             </property>
+             <layout class="QFormLayout">
+              <item row="0" column="0">
+               <widget class="QLabel" name="label">
+                <property name="text">
+                 <string>张开力矩:</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <layout class="QHBoxLayout">
+                <item>
+                 <widget class="QDoubleSpinBox" name="spin_open_dac">
+                  <property name="decimals">
+                   <number>1</number>
+                  </property>
+                  <property name="minimum">
+                   <double>-10000.000000000000000</double>
+                  </property>
+                  <property name="maximum">
+                   <double>10000.000000000000000</double>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLabel" name="label">
+                  <property name="text">
+                   <string>DAC</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item row="1" column="0">
+               <widget class="QLabel" name="label">
+                <property name="text">
+                 <string>闭合力矩:</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <layout class="QHBoxLayout">
+                <item>
+                 <widget class="QDoubleSpinBox" name="spin_close_dac">
+                  <property name="decimals">
+                   <number>1</number>
+                  </property>
+                  <property name="minimum">
+                   <double>-10000.000000000000000</double>
+                  </property>
+                  <property name="maximum">
+                   <double>10000.000000000000000</double>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLabel" name="label">
+                  <property name="text">
+                   <string>DAC</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item row="2" column="0">
+               <widget class="QLabel" name="label">
+                <property name="text">
+                 <string>初始化力矩:</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="1">
+               <layout class="QHBoxLayout">
+                <item>
+                 <widget class="QDoubleSpinBox" name="spin_init_dac">
+                  <property name="decimals">
+                   <number>1</number>
+                  </property>
+                  <property name="minimum">
+                   <double>-10000.000000000000000</double>
+                  </property>
+                  <property name="maximum">
+                   <double>10000.000000000000000</double>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLabel" name="label">
+                  <property name="text">
+                   <string>DAC</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
+            <widget class="QGroupBox" name="group_conversion_params">
+             <property name="title">
+              <string>转换系数</string>
+             </property>
+             <layout class="QFormLayout">
+              <item row="0" column="0">
+               <widget class="QLabel" name="label">
+                <property name="text">
+                 <string>脉冲/毫米:</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QDoubleSpinBox" name="spin_pulses_per_mm">
+                <property name="decimals">
+                 <number>4</number>
+                </property>
+                <property name="maximum">
+                 <double>1000000.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QLabel" name="label">
+                <property name="text">
+                 <string>脉冲/度:</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="QDoubleSpinBox" name="spin_pulses_per_degree">
+                <property name="decimals">
+                 <number>4</number>
+                </property>
+                <property name="maximum">
+                 <double>100000.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
+            <widget class="QGroupBox" name="group_key_positions">
+             <property name="title">
+              <string>关键位置 (A-J)</string>
+             </property>
+             <layout class="QVBoxLayout">
+              <item>
+               <widget class="QTableWidget" name="table_key_positions">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>200</height>
+                 </size>
+                </property>
+                <property name="rowCount">
+                 <number>0</number>
+                </property>
+                <property name="columnCount">
+                 <number>3</number>
+                </property>
+                <column>
+                 <property name="text">
+                  <string>位置代号</string>
+                 </property>
+                </column>
+                <column>
+                 <property name="text">
+                  <string>位置说明</string>
+                 </property>
+                </column>
+                <column>
+                 <property name="text">
+                  <string>值 (脉冲)</string>
+                 </property>
+                </column>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
+            <spacer>
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>0</width>
+               <height>0</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+          </layout>
+         </widget>
+        </widget>
+       </item>
+       <item>
+        <layout class="QHBoxLayout">
+         <item>
+          <spacer>
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>0</width>
+             <height>0</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QPushButton" name="btn_apply_config">
+           <property name="styleSheet">
+            <string>background-color: #409eff; color: white; padding: 8px 16px;</string>
+           </property>
+           <property name="text">
+            <string>应用到当前机构</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="btn_save_config">
+           <property name="styleSheet">
+            <string>background-color: #67c23a; color: white; padding: 8px 16px;</string>
+           </property>
+           <property name="text">
+            <string>保存到配置文件</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="btn_reset_config">
+           <property name="styleSheet">
+            <string>background-color: #909399; color: white; padding: 8px 16px;</string>
+           </property>
+           <property name="text">
+            <string>重置为默认值</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="group_log">
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>150</height>
+      </size>
+     </property>
+     <property name="title">
+      <string>操作日志</string>
+     </property>
+     <layout class="QVBoxLayout">
+      <item>
+       <widget class="QTextBrowser" name="tb_log">
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>120</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
