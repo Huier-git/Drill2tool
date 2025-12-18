@@ -20,7 +20,7 @@ AcquisitionManager::AcquisitionManager(QObject *parent)
     , m_isRunning(false)
     , m_isInitialized(false)
 {
-    qDebug() << "[AcquisitionManager] Created";
+    LOG_DEBUG("AcquisitionManager", "Created");
 }
 
 AcquisitionManager::~AcquisitionManager()
@@ -30,27 +30,27 @@ AcquisitionManager::~AcquisitionManager()
 
 bool AcquisitionManager::initialize(const QString &dbPath)
 {
-    qDebug() << "[AcquisitionManager] Initializing...";
-    qDebug() << "  Database path:" << dbPath;
-    
+    LOG_DEBUG("AcquisitionManager", "Initializing...");
+    LOG_DEBUG_STREAM("AcquisitionManager") << "  Database path:" << dbPath;
+
     if (m_isInitialized) {
-        qWarning() << "[AcquisitionManager] Already initialized";
+        LOG_WARNING("AcquisitionManager", "Already initialized");
         return true;
     }
-    
+
     m_dbPath = dbPath;
-    
+
     // 创建Worker实例
     setupWorkers();
-    
+
     // 创建并启动线程
     setupThreads();
-    
+
     // 连接信号
     connectSignals();
-    
+
     m_isInitialized = true;
-    qDebug() << "[AcquisitionManager] Initialization complete";
+    LOG_DEBUG("AcquisitionManager", "Initialization complete");
     return true;
 }
 
@@ -59,24 +59,24 @@ void AcquisitionManager::shutdown()
     if (!m_isInitialized) {
         return;
     }
-    
-    qDebug() << "[AcquisitionManager] Shutting down...";
-    
+
+    LOG_DEBUG("AcquisitionManager", "Shutting down...");
+
     // 停止所有采集
     if (m_isRunning) {
         stopAll();
     }
-    
+
     // 清理线程
     cleanupThreads();
-    
+
     m_isInitialized = false;
-    qDebug() << "[AcquisitionManager] Shutdown complete";
+    LOG_DEBUG("AcquisitionManager", "Shutdown complete");
 }
 
 void AcquisitionManager::setupWorkers()
 {
-    qDebug() << "[AcquisitionManager] Creating workers...";
+    LOG_DEBUG("AcquisitionManager", "Creating workers...");
 
     // 创建Worker实例（在主线程中创建）
     m_vibrationWorker = new VibrationWorker();
@@ -84,12 +84,12 @@ void AcquisitionManager::setupWorkers()
     m_motorWorker = new MotorWorker();
     m_dbWriter = new DbWriter(m_dbPath);
 
-    qDebug() << "[AcquisitionManager] Workers created";
+    LOG_DEBUG("AcquisitionManager", "Workers created");
 }
 
 void AcquisitionManager::setupThreads()
 {
-    qDebug() << "[AcquisitionManager] Setting up threads...";
+    LOG_DEBUG("AcquisitionManager", "Setting up threads...");
 
     // 创建线程
     m_vibrationThread = new QThread(this);
@@ -118,12 +118,12 @@ void AcquisitionManager::setupThreads()
     // 初始化DbWriter（必须在目标线程中初始化数据库连接）
     QMetaObject::invokeMethod(m_dbWriter, "initialize", Qt::BlockingQueuedConnection);
 
-    qDebug() << "[AcquisitionManager] Threads started";
+    LOG_DEBUG("AcquisitionManager", "Threads started");
 }
 
 void AcquisitionManager::connectSignals()
 {
-    qDebug() << "[AcquisitionManager] Connecting signals...";
+    LOG_DEBUG("AcquisitionManager", "Connecting signals...");
 
     // 连接Worker的dataBlockReady信号到DbWriter
     connect(m_vibrationWorker, &BaseWorker::dataBlockReady,
@@ -161,27 +161,27 @@ void AcquisitionManager::connectSignals()
                 emit statisticsUpdated(info);
             });
 
-    qDebug() << "[AcquisitionManager] Signals connected";
+    LOG_DEBUG("AcquisitionManager", "Signals connected");
 }
 
 void AcquisitionManager::cleanupThreads()
 {
-    qDebug() << "[AcquisitionManager] Cleaning up threads...";
+    LOG_DEBUG("AcquisitionManager", "Cleaning up threads...");
 
     // 停止并等待线程结束
     auto stopThread = [](QThread *thread, BaseWorker *worker, const QString &name) {
         if (thread && thread->isRunning()) {
-            qDebug() << "  Stopping" << name << "thread...";
+            LOG_DEBUG_STREAM("AcquisitionManager") << "  Stopping" << name << "thread...";
             if (worker) {
                 QMetaObject::invokeMethod(worker, "stop", Qt::QueuedConnection);
             }
             thread->quit();
             if (!thread->wait(3000)) {
-                qWarning() << "  Thread" << name << "did not stop in time, terminating...";
+                LOG_WARNING_STREAM("AcquisitionManager") << "  Thread" << name << "did not stop in time, terminating...";
                 thread->terminate();
                 thread->wait();
             }
-            qDebug() << "  " << name << "thread stopped";
+            LOG_DEBUG_STREAM("AcquisitionManager") << "  " << name << "thread stopped";
         }
     };
 
@@ -192,15 +192,15 @@ void AcquisitionManager::cleanupThreads()
 
     // 最后停止DbWriter线程（确保所有数据写完）
     if (m_dbThread && m_dbThread->isRunning()) {
-        qDebug() << "  Stopping DbWriter thread...";
+        LOG_DEBUG("AcquisitionManager", "  Stopping DbWriter thread...");
         QMetaObject::invokeMethod(m_dbWriter, "shutdown", Qt::QueuedConnection);
         m_dbThread->quit();
         if (!m_dbThread->wait(5000)) {
-            qWarning() << "  DbWriter thread did not stop in time, terminating...";
+            LOG_WARNING("AcquisitionManager", "  DbWriter thread did not stop in time, terminating...");
             m_dbThread->terminate();
             m_dbThread->wait();
         }
-        qDebug() << "  DbWriter thread stopped";
+        LOG_DEBUG("AcquisitionManager", "  DbWriter thread stopped");
     }
 
     // 删除Worker
@@ -221,135 +221,135 @@ void AcquisitionManager::cleanupThreads()
         m_dbWriter = nullptr;
     }
 
-    qDebug() << "[AcquisitionManager] Threads cleaned up";
+    LOG_DEBUG("AcquisitionManager", "Threads cleaned up");
 }
 
 void AcquisitionManager::startAll()
 {
-    qDebug() << "[AcquisitionManager] Starting all acquisition...";
-    
+    LOG_DEBUG("AcquisitionManager", "Starting all acquisition...");
+
     if (!m_isInitialized) {
-        qWarning() << "[AcquisitionManager] Not initialized";
+        LOG_WARNING("AcquisitionManager", "Not initialized");
         return;
     }
-    
+
     if (m_isRunning) {
-        qWarning() << "[AcquisitionManager] Already running";
+        LOG_WARNING("AcquisitionManager", "Already running");
         return;
     }
-    
+
     // 如果还没有轮次，创建一个
     if (m_currentRoundId == 0) {
         startNewRound();
     }
-    
+
     // 启动所有Worker
     QMetaObject::invokeMethod(m_vibrationWorker, "start", Qt::QueuedConnection);
     QMetaObject::invokeMethod(m_mdbWorker, "start", Qt::QueuedConnection);
     QMetaObject::invokeMethod(m_motorWorker, "start", Qt::QueuedConnection);
-    
+
     m_isRunning = true;
     emit acquisitionStateChanged(true);
-    
-    qDebug() << "[AcquisitionManager] All acquisition started";
+
+    LOG_DEBUG("AcquisitionManager", "All acquisition started");
 }
 
 void AcquisitionManager::stopAll()
 {
-    qDebug() << "[AcquisitionManager] Stopping all acquisition...";
-    
+    LOG_DEBUG("AcquisitionManager", "Stopping all acquisition...");
+
     if (!m_isRunning) {
-        qWarning() << "[AcquisitionManager] Not running";
+        LOG_WARNING("AcquisitionManager", "Not running");
         return;
     }
-    
+
     // 停止所有Worker
     QMetaObject::invokeMethod(m_vibrationWorker, "stop", Qt::QueuedConnection);
     QMetaObject::invokeMethod(m_mdbWorker, "stop", Qt::QueuedConnection);
     QMetaObject::invokeMethod(m_motorWorker, "stop", Qt::QueuedConnection);
-    
+
     m_isRunning = false;
     emit acquisitionStateChanged(false);
-    
-    qDebug() << "[AcquisitionManager] All acquisition stopped";
+
+    LOG_DEBUG("AcquisitionManager", "All acquisition stopped");
 }
 
 void AcquisitionManager::startVibration()
 {
-    qDebug() << "[AcquisitionManager] Starting vibration worker...";
+    LOG_DEBUG("AcquisitionManager", "Starting vibration worker...");
     QMetaObject::invokeMethod(m_vibrationWorker, "start", Qt::QueuedConnection);
 }
 
 void AcquisitionManager::startMdb()
 {
-    qDebug() << "[AcquisitionManager] Starting MDB worker...";
+    LOG_DEBUG("AcquisitionManager", "Starting MDB worker...");
     QMetaObject::invokeMethod(m_mdbWorker, "start", Qt::QueuedConnection);
 }
 
 void AcquisitionManager::startMotor()
 {
-    qDebug() << "[AcquisitionManager] Starting motor worker...";
+    LOG_DEBUG("AcquisitionManager", "Starting motor worker...");
     QMetaObject::invokeMethod(m_motorWorker, "start", Qt::QueuedConnection);
 }
 
 void AcquisitionManager::stopVibration()
 {
-    qDebug() << "[AcquisitionManager] Stopping vibration worker...";
+    LOG_DEBUG("AcquisitionManager", "Stopping vibration worker...");
     QMetaObject::invokeMethod(m_vibrationWorker, "stop", Qt::QueuedConnection);
 }
 
 void AcquisitionManager::stopMdb()
 {
-    qDebug() << "[AcquisitionManager] Stopping MDB worker...";
+    LOG_DEBUG("AcquisitionManager", "Stopping MDB worker...");
     QMetaObject::invokeMethod(m_mdbWorker, "stop", Qt::QueuedConnection);
 }
 
 void AcquisitionManager::stopMotor()
 {
-    qDebug() << "[AcquisitionManager] Stopping motor worker...";
+    LOG_DEBUG("AcquisitionManager", "Stopping motor worker...");
     QMetaObject::invokeMethod(m_motorWorker, "stop", Qt::QueuedConnection);
 }
 
 void AcquisitionManager::startNewRound(const QString &operatorName, const QString &note)
 {
-    qDebug() << "[AcquisitionManager] Starting new round...";
-    
+    LOG_DEBUG("AcquisitionManager", "Starting new round...");
+
     // 在DbWriter线程中创建新轮次
     int roundId = 0;
-    QMetaObject::invokeMethod(m_dbWriter, "startNewRound", 
+    QMetaObject::invokeMethod(m_dbWriter, "startNewRound",
                               Qt::BlockingQueuedConnection,
                               Q_RETURN_ARG(int, roundId),
                               Q_ARG(QString, operatorName),
                               Q_ARG(QString, note));
-    
+
     m_currentRoundId = roundId;
-    
+
     // 通知所有Worker新的轮次ID
     QMetaObject::invokeMethod(m_vibrationWorker, "setRoundId", Qt::QueuedConnection, Q_ARG(int, roundId));
     QMetaObject::invokeMethod(m_mdbWorker, "setRoundId", Qt::QueuedConnection, Q_ARG(int, roundId));
     QMetaObject::invokeMethod(m_motorWorker, "setRoundId", Qt::QueuedConnection, Q_ARG(int, roundId));
-    
+
     emit roundChanged(m_currentRoundId);
-    
-    qDebug() << "[AcquisitionManager] New round started, ID:" << m_currentRoundId;
+
+    LOG_DEBUG_STREAM("AcquisitionManager") << "New round started, ID:" << m_currentRoundId;
 }
 
 void AcquisitionManager::endCurrentRound()
 {
     if (m_currentRoundId == 0) {
-        qWarning() << "[AcquisitionManager] No active round to end";
+        LOG_WARNING("AcquisitionManager", "No active round to end");
         return;
     }
-    
-    qDebug() << "[AcquisitionManager] Ending round" << m_currentRoundId;
-    
+
+    LOG_DEBUG_STREAM("AcquisitionManager") << "Ending round" << m_currentRoundId;
+
     // 在DbWriter线程中结束轮次
     QMetaObject::invokeMethod(m_dbWriter, "endCurrentRound", Qt::QueuedConnection);
-    
+
     int oldRoundId = m_currentRoundId;
     m_currentRoundId = 0;
-    
+
     emit roundChanged(0);
-    
-    qDebug() << "[AcquisitionManager] Round" << oldRoundId << "ended";
+
+    LOG_DEBUG_STREAM("AcquisitionManager") << "Round" << oldRoundId << "ended";
 }
