@@ -168,15 +168,10 @@ QCheckBox, QComboBox {
    <property name="bottomMargin">
     <number>15</number>
    </property>
-   
-   <!-- 1. 顶部控制面板 -->
    <item>
     <widget class="QGroupBox" name="group_control">
      <property name="title">
       <string>系统总控制</string>
-     </property>
-     <property name="maximumHeight">
-      <number>85</number>
      </property>
      <layout class="QHBoxLayout" name="horizontalLayout_control">
       <property name="spacing">
@@ -196,11 +191,11 @@ QCheckBox, QComboBox {
           <height>36</height>
          </size>
         </property>
-        <property name="text">
-         <string>总线初始化</string>
-        </property>
         <property name="cursor">
          <cursorShape>PointingHandCursor</cursorShape>
+        </property>
+        <property name="text">
+         <string>总线初始化</string>
         </property>
        </widget>
       </item>
@@ -244,26 +239,22 @@ QCheckBox, QComboBox {
           <height>36</height>
          </size>
         </property>
-        <property name="text">
-         <string>⚠ 停止所有电机</string>
-        </property>
         <property name="cursor">
          <cursorShape>PointingHandCursor</cursorShape>
+        </property>
+        <property name="text">
+         <string>停止所有电机</string>
         </property>
        </widget>
       </item>
      </layout>
     </widget>
    </item>
-
-   <!-- 2. 中间核心区域：表格(2) + 详情(1) -->
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_content">
      <property name="spacing">
       <number>15</number>
      </property>
-     
-     <!-- 左侧：表格区域 -->
      <item>
       <widget class="QGroupBox" name="group_motor_table">
        <property name="sizePolicy">
@@ -417,8 +408,6 @@ QCheckBox, QComboBox {
        </layout>
       </widget>
      </item>
-     
-     <!-- 右侧：详情区域 -->
      <item>
       <widget class="QGroupBox" name="group_axis_info">
        <property name="sizePolicy">
@@ -446,8 +435,6 @@ QCheckBox, QComboBox {
         <property name="bottomMargin">
          <number>15</number>
         </property>
-        
-        <!-- 轴选择行 -->
         <item>
          <layout class="QGridLayout" name="gridLayout_selection">
           <property name="horizontalSpacing">
@@ -501,11 +488,11 @@ QCheckBox, QComboBox {
           </item>
           <item row="1" column="1">
            <widget class="QLineEdit" name="le_bus_node_num">
-            <property name="readOnly">
-             <bool>true</bool>
-            </property>
             <property name="alignment">
              <set>Qt::AlignCenter</set>
+            </property>
+            <property name="readOnly">
+             <bool>true</bool>
             </property>
            </widget>
           </item>
@@ -518,7 +505,6 @@ QCheckBox, QComboBox {
           </item>
          </layout>
         </item>
-
         <item>
          <widget class="Line" name="line_2">
           <property name="orientation">
@@ -526,8 +512,6 @@ QCheckBox, QComboBox {
           </property>
          </widget>
         </item>
-
-        <!-- 详细参数 - 使用 Form Layout 以适应窄宽度 -->
         <item>
          <widget class="QScrollArea" name="scrollArea_params">
           <property name="frameShape">
@@ -541,11 +525,14 @@ QCheckBox, QComboBox {
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>100</width>
-             <height>100</height>
+             <width>362</width>
+             <height>369</height>
             </rect>
            </property>
            <layout class="QFormLayout" name="formLayout_params">
+            <property name="labelAlignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
             <property name="horizontalSpacing">
              <number>15</number>
             </property>
@@ -564,11 +551,6 @@ QCheckBox, QComboBox {
             <property name="bottomMargin">
              <number>5</number>
             </property>
-            <property name="labelAlignment">
-             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-            </property>
-            
-            <!-- 核心数据放在最前 -->
             <item row="0" column="0">
              <widget class="QLabel" name="label_current_pos">
               <property name="text">
@@ -586,7 +568,6 @@ QCheckBox, QComboBox {
               </property>
              </widget>
             </item>
-
             <item row="1" column="0">
              <widget class="QLabel" name="label_speed">
               <property name="text">
@@ -601,7 +582,6 @@ QCheckBox, QComboBox {
               </property>
              </widget>
             </item>
-
             <item row="2" column="0">
              <widget class="QLabel" name="label_direct_pos">
               <property name="text">
@@ -616,7 +596,6 @@ QCheckBox, QComboBox {
               </property>
              </widget>
             </item>
-
             <item row="3" column="0">
              <widget class="QLabel" name="label_axis_status">
               <property name="text">
@@ -631,8 +610,6 @@ QCheckBox, QComboBox {
               </property>
              </widget>
             </item>
-
-            <!-- 配置参数 -->
             <item row="4" column="0">
              <widget class="QLabel" name="label_accel">
               <property name="text">
@@ -647,7 +624,6 @@ QCheckBox, QComboBox {
               </property>
              </widget>
             </item>
-
             <item row="5" column="0">
              <widget class="QLabel" name="label_decel">
               <property name="text">
@@ -662,7 +638,6 @@ QCheckBox, QComboBox {
               </property>
              </widget>
             </item>
-            
             <item row="6" column="0">
              <widget class="QLabel" name="label_units">
               <property name="text">
@@ -677,7 +652,6 @@ QCheckBox, QComboBox {
               </property>
              </widget>
             </item>
-
             <item row="7" column="0">
              <widget class="QPushButton" name="btn_enable">
               <property name="text">
@@ -693,16 +667,14 @@ QCheckBox, QComboBox {
               <property name="text">
                <string>OFF</string>
               </property>
-              <property name="readOnly">
-               <bool>true</bool>
-              </property>
               <property name="alignment">
                <set>Qt::AlignCenter</set>
               </property>
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
              </widget>
             </item>
-
-            <!-- 清除报警按钮 -->
             <item row="8" column="0">
              <widget class="QPushButton" name="btn_clear_alarm">
               <property name="text">
@@ -710,8 +682,6 @@ QCheckBox, QComboBox {
               </property>
              </widget>
             </item>
-
-            <!-- 设置零点按钮 -->
             <item row="8" column="1">
              <widget class="QPushButton" name="btn_set_zero">
               <property name="text">
@@ -719,18 +689,27 @@ QCheckBox, QComboBox {
               </property>
              </widget>
             </item>
-
-            <!-- 隐藏或次要参数 (保留ID) -->
-             <item row="9" column="0">
-                <widget class="QLineEdit" name="le_atype"><property name="visible"><bool>false</bool></property></widget>
-             </item>
-             <item row="9" column="1">
-                <widget class="QLineEdit" name="le_if_idle"><property name="visible"><bool>false</bool></property></widget>
-             </item>
-             <item row="10" column="0">
-                <widget class="QLineEdit" name="le_total_axis_num"><property name="visible"><bool>false</bool></property></widget>
-             </item>
-
+            <item row="9" column="0">
+             <widget class="QLineEdit" name="le_atype">
+              <property name="visible">
+               <bool>false</bool>
+              </property>
+             </widget>
+            </item>
+            <item row="9" column="1">
+             <widget class="QLineEdit" name="le_if_idle">
+              <property name="visible">
+               <bool>false</bool>
+              </property>
+             </widget>
+            </item>
+            <item row="10" column="0">
+             <widget class="QLineEdit" name="le_total_axis_num">
+              <property name="visible">
+               <bool>false</bool>
+              </property>
+             </widget>
+            </item>
            </layout>
           </widget>
          </widget>
@@ -740,8 +719,6 @@ QCheckBox, QComboBox {
      </item>
     </layout>
    </item>
-
-   <!-- 3. 底部命令窗口 -->
    <item>
     <widget class="QGroupBox" name="group_command">
      <property name="title">
@@ -764,14 +741,7 @@ QCheckBox, QComboBox {
        <number>15</number>
       </property>
       <item>
-       <widget class="QTextBrowser" name="tb_cmd_window">
-        <property name="minimumHeight">
-         <number>100</number>
-        </property>
-        <property name="maximumHeight">
-         <number>150</number>
-        </property>
-       </widget>
+       <widget class="QTextBrowser" name="tb_cmd_window"/>
       </item>
       <item>
        <layout class="QHBoxLayout" name="horizontalLayout_cmd">

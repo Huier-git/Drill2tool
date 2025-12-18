@@ -70,6 +70,19 @@ DatabasePage::DatabasePage(QWidget *parent)
         if (row >= 0) onTableRowSelected();
     });
 
+    // 设置按钮样式类型
+    ui->btn_query->setProperty("type", "info");  // 查询数据 - 浅蓝色
+    ui->btn_export->setProperty("type", "info");  // 导出数据 - 浅蓝色
+    ui->btn_refresh_rounds->setProperty("type", "primary");  // 刷新轮次 - 蓝色
+
+    // 刷新按钮样式
+    ui->btn_query->style()->unpolish(ui->btn_query);
+    ui->btn_query->style()->polish(ui->btn_query);
+    ui->btn_export->style()->unpolish(ui->btn_export);
+    ui->btn_export->style()->polish(ui->btn_export);
+    ui->btn_refresh_rounds->style()->unpolish(ui->btn_refresh_rounds);
+    ui->btn_refresh_rounds->style()->polish(ui->btn_refresh_rounds);
+
     loadRoundsList();
 }
 

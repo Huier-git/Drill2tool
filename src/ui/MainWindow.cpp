@@ -191,7 +191,7 @@ void MainWindow::setupConnections()
 void MainWindow::setupDetachButton()
 {
     m_detachButton = new QPushButton(ui->stackedWidget_pages);
-    m_detachButton->setText("⇗");
+    m_detachButton->setText("○");
     m_detachButton->setFixedSize(32, 32);
     m_detachButton->setToolTip("弹出为独立窗口 (双击侧边栏也可以)");
     m_detachButton->setCursor(Qt::PointingHandCursor);
@@ -223,7 +223,7 @@ void MainWindow::updateDetachButtonPosition()
 {
     if (m_detachButton && ui->stackedWidget_pages) {
         int x = ui->stackedWidget_pages->width() - m_detachButton->width() - 15;
-        int y = 15;
+        int y = ui->stackedWidget_pages->height() - m_detachButton->height() - 15;  // 改为右下角
         m_detachButton->move(x, y);
         m_detachButton->raise();
     }

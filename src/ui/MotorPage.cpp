@@ -1,4 +1,5 @@
 #include "ui/MotorPage.h"
+#include "qstyle.h"
 #include "ui_MotorPage.h"
 #include "control/AcquisitionManager.h"
 #include "dataACQ/MotorWorker.h"
@@ -42,6 +43,16 @@ void MotorPage::setupUI()
 {
     ui->btn_start->setEnabled(true);
     ui->btn_stop->setEnabled(false);
+
+    // 设置按钮样式类型
+    ui->btn_start->setProperty("type", "success");  // 开始采集 - 绿色
+    ui->btn_stop->setProperty("type", "warning");  // 停止采集 - 橙色
+
+    // 刷新按钮样式
+    ui->btn_start->style()->unpolish(ui->btn_start);
+    ui->btn_start->style()->polish(ui->btn_start);
+    ui->btn_stop->style()->unpolish(ui->btn_stop);
+    ui->btn_stop->style()->polish(ui->btn_stop);
 }
 
 void MotorPage::setupConnections()

@@ -202,7 +202,7 @@ QLabel#label_status, QLabel#label_stats {
          <cursorShape>PointingHandCursor</cursorShape>
         </property>
         <property name="text">
-         <string>▶ 开始采集</string>
+         <string>开始采集</string>
         </property>
        </widget>
       </item>
@@ -221,7 +221,7 @@ QLabel#label_status, QLabel#label_stats {
          <cursorShape>PointingHandCursor</cursorShape>
         </property>
         <property name="text">
-         <string>■ 停止采集</string>
+         <string>停止采集</string>
         </property>
        </widget>
       </item>

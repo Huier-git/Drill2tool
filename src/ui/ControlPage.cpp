@@ -38,6 +38,22 @@ ControlPage::ControlPage(QWidget *parent)
     m_advanceInfoTimer->setInterval(TIMER_ADVANCE_INFO_INTERVAL);
     m_realtimeParmTimer->setInterval(TIMER_REALTIME_PARM_INTERVAL);
 
+    // 设置按钮样式类型
+    ui->btn_stop_all_motors->setProperty("type", "emergency");  // 急停按钮
+    ui->btn_enable->setProperty("type", "success");  // 使能按钮
+    ui->btn_bus_init->setProperty("type", "primary");  // 主要操作
+    ui->btn_motor_parm_update->setProperty("type", "primary");  // 主要操作
+
+    // 刷新样式
+    ui->btn_stop_all_motors->style()->unpolish(ui->btn_stop_all_motors);
+    ui->btn_stop_all_motors->style()->polish(ui->btn_stop_all_motors);
+    ui->btn_enable->style()->unpolish(ui->btn_enable);
+    ui->btn_enable->style()->polish(ui->btn_enable);
+    ui->btn_bus_init->style()->unpolish(ui->btn_bus_init);
+    ui->btn_bus_init->style()->polish(ui->btn_bus_init);
+    ui->btn_motor_parm_update->style()->unpolish(ui->btn_motor_parm_update);
+    ui->btn_motor_parm_update->style()->polish(ui->btn_motor_parm_update);
+
     // 连接定时器
     connect(m_basicInfoTimer, &QTimer::timeout, this, &ControlPage::basicInfoRefresh);
     connect(m_realtimeParmTimer, &QTimer::timeout, this, &ControlPage::refreshTableContent);

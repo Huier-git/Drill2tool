@@ -62,6 +62,19 @@ void VibrationPage::setupUI()
     m_plots[1] = ui->plot_ch2;
     m_plots[2] = ui->plot_ch3;
 
+    // 设置按钮样式类型
+    ui->btn_start->setProperty("type", "success");  // 开始采集 - 绿色
+    ui->btn_stop->setProperty("type", "warning");  // 停止采集 - 橙色
+    ui->btn_pause->setProperty("type", "warning");  // 暂停显示 - 橙色
+
+    // 刷新按钮样式
+    ui->btn_start->style()->unpolish(ui->btn_start);
+    ui->btn_start->style()->polish(ui->btn_start);
+    ui->btn_stop->style()->unpolish(ui->btn_stop);
+    ui->btn_stop->style()->polish(ui->btn_stop);
+    ui->btn_pause->style()->unpolish(ui->btn_pause);
+    ui->btn_pause->style()->polish(ui->btn_pause);
+
     // 设置初始状态
     ui->btn_pause->setEnabled(false);
     ui->label_status->setText("状态: 就绪");

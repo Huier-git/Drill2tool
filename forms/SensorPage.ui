@@ -875,7 +875,7 @@ QLabel#label_operator, QLabel#label_note_label {
            <string>font-size: 14pt; font-weight: bold;</string>
           </property>
           <property name="text">
-           <string>▶ 启动所有采集</string>
+           <string>启动所有采集</string>
           </property>
          </widget>
         </item>
@@ -894,7 +894,7 @@ QLabel#label_operator, QLabel#label_note_label {
            <string>font-size: 14pt; font-weight: bold;</string>
           </property>
           <property name="text">
-           <string>■ 停止所有采集</string>
+           <string>停止所有采集</string>
           </property>
          </widget>
         </item>

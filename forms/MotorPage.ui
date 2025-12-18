@@ -156,7 +156,7 @@ QLabel#label_status {
         </size>
        </property>
        <property name="text">
-        <string>▶ 开始采集</string>
+        <string>开始采集</string>
        </property>
        <property name="cursor">
         <cursorShape>PointingHandCursor</cursorShape>

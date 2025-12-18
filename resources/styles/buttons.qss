@@ -1,0 +1,202 @@
+/* ============================================================================
+ * 钻机控制系统 - 统一按钮样式表
+ * Unified Button Stylesheet for Drilling Control System
+ *
+ * Light Theme - Industrial Design
+ * ============================================================================ */
+
+/* GLOBAL BUTTON RESET & BASE STYLE (Default: Secondary/Neutral) */
+QPushButton {
+    background-color: #E0E0E0;
+    border: 1px solid #BDBDBD;
+    border-radius: 4px;
+    color: #212121;
+    font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+    font-size: 14px;
+    padding: 6px 16px;
+    min-height: 24px;
+    min-width: 64px;
+}
+
+QPushButton:hover {
+    background-color: #CFD8DC;
+    border-color: #90A4AE;
+}
+
+QPushButton:pressed {
+    background-color: #B0BEC5;
+    border-color: #78909C;
+    padding-top: 7px;
+    padding-left: 17px;
+}
+
+QPushButton:disabled {
+    background-color: #F5F5F5;
+    border: 1px solid #E0E0E0;
+    color: #9E9E9E;
+}
+
+/* ============================================================================
+ * TYPE: EMERGENCY (全局急停 - 红色、加大、加粗)
+ * For global emergency stop buttons - RED, LARGE, BOLD
+ * Examples: 急停、Stop All Motors
+ * ============================================================================ */
+QPushButton[type="emergency"] {
+    background-color: #D32F2F;
+    border: 2px solid #C62828;
+    color: #FFFFFF;
+    font-weight: bold;
+    font-size: 18px;
+    border-radius: 6px;
+    min-height: 48px;
+    min-width: 120px;
+    padding: 12px 24px;
+}
+
+QPushButton[type="emergency"]:hover {
+    background-color: #B71C1C;
+    border-color: #8E0000;
+}
+
+QPushButton[type="emergency"]:pressed {
+    background-color: #8E0000;
+    border-color: #6A0000;
+}
+
+QPushButton[type="emergency"]:disabled {
+    background-color: #FFCDD2;
+    border: 2px solid #EF9A9A;
+    color: #E0E0E0;
+}
+
+/* ============================================================================
+ * TYPE: PRIMARY (主要操作 - 蓝色、加粗)
+ * For main operational actions - BLUE, BOLD
+ * Examples: 移动、设置参数、执行
+ * ============================================================================ */
+QPushButton[type="primary"] {
+    background-color: #1976D2;
+    border: 1px solid #1565C0;
+    color: #FFFFFF;
+    font-weight: bold;
+}
+
+QPushButton[type="primary"]:hover {
+    background-color: #1565C0;
+    border-color: #0D47A1;
+}
+
+QPushButton[type="primary"]:pressed {
+    background-color: #0D47A1;
+    border-color: #003D7A;
+}
+
+QPushButton[type="primary"]:disabled {
+    background-color: #BBDEFB;
+    border: 1px solid #90CAF9;
+    color: #E0E0E0;
+}
+
+/* ============================================================================
+ * TYPE: SUCCESS (启动/使能/连接 - 绿色、加粗)
+ * For start, enable, connect actions - GREEN, BOLD
+ * Examples: 启动、使能、连接
+ * ============================================================================ */
+QPushButton[type="success"] {
+    background-color: #2E7D32;
+    border: 1px solid #1B5E20;
+    color: #FFFFFF;
+    font-weight: bold;
+}
+
+QPushButton[type="success"]:hover {
+    background-color: #1B5E20;
+    border-color: #144518;
+}
+
+QPushButton[type="success"]:pressed {
+    background-color: #144518;
+    border-color: #003300;
+}
+
+QPushButton[type="success"]:disabled {
+    background-color: #C8E6C9;
+    border: 1px solid #A5D6A7;
+    color: #E0E0E0;
+}
+
+/* ============================================================================
+ * TYPE: WARNING (停止/断开/暂停 - 橙色、加粗)
+ * For stop, disconnect, pause actions - ORANGE, BOLD
+ * Examples: 停止、断开、暂停、禁用
+ * ============================================================================ */
+QPushButton[type="warning"] {
+    background-color: #F57C00;
+    border: 1px solid #EF6C00;
+    color: #FFFFFF;
+    font-weight: bold;
+}
+
+QPushButton[type="warning"]:hover {
+    background-color: #EF6C00;
+    border-color: #E65100;
+}
+
+QPushButton[type="warning"]:pressed {
+    background-color: #E65100;
+    border-color: #BF360C;
+}
+
+QPushButton[type="warning"]:disabled {
+    background-color: #FFE0B2;
+    border: 1px solid #FFCC80;
+    color: #E0E0E0;
+}
+
+/* ============================================================================
+ * TYPE: INFO (查询/日志/信息 - 浅蓝色)
+ * For query, log, information actions - LIGHT BLUE
+ * Examples: 查询数据、刷新日志、导出
+ * ============================================================================ */
+QPushButton[type="info"] {
+    background-color: #0288D1;
+    border: 1px solid #0277BD;
+    color: #FFFFFF;
+}
+
+QPushButton[type="info"]:hover {
+    background-color: #0277BD;
+    border-color: #01579B;
+}
+
+QPushButton[type="info"]:pressed {
+    background-color: #01579B;
+    border-color: #003D7A;
+}
+
+QPushButton[type="info"]:disabled {
+    background-color: #B3E5FC;
+    border: 1px solid #81D4FA;
+    color: #E0E0E0;
+}
+
+/* ============================================================================
+ * SIZE VARIANTS
+ * ============================================================================ */
+
+/* Small - 用于紧凑布局 */
+QPushButton[size="small"] {
+    padding: 2px 8px;
+    font-size: 12px;
+    min-height: 20px;
+    min-width: 40px;
+}
+
+/* Large - 用于触摸友好 */
+QPushButton[size="large"] {
+    padding: 12px 24px;
+    font-size: 16px;
+    min-height: 40px;
+    min-width: 100px;
+    border-radius: 6px;
+}
