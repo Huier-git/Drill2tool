@@ -52,19 +52,11 @@ void Logger::log(LogLevel level, const QString& module, const QString& message)
 
     QString formatted = formatMessage(level, module, message);
 
-    // 根据日志级别选择不同的输出流
-    switch (level) {
-    case LogLevel::Debug:
-    case LogLevel::Info:
-        qDebug().noquote() << formatted;
-        break;
-    case LogLevel::Warning:
-        qWarning().noquote() << formatted;
-        break;
-    case LogLevel::Error:
-    case LogLevel::Critical:
-        qCritical().noquote() << formatted;
-        break;
+    // 直接输出到stdout/stderr，避免触发messageHandler导致死锁
+    if (level == LogLevel::Warning || level == LogLevel::Error || level == LogLevel::Critical) {
+        QTextStream(stderr) << formatted << Qt::endl;
+    } else {
+        QTextStream(stdout) << formatted << Qt::endl;
     }
 }
 

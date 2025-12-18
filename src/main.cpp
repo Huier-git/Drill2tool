@@ -8,6 +8,11 @@
 
 int main(int argc, char *argv[])
 {
+
+    QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling, true);
+    QCoreApplication::setAttribute(Qt::AA_UseHighDpiPixmaps, true);
+    QApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
+
     QApplication app(argc, argv);
 
     // 安装统一日志系统
@@ -17,9 +22,7 @@ int main(int argc, char *argv[])
     QApplication::setApplicationName("DrillControl");
     QApplication::setApplicationVersion("2.0.0");
     QApplication::setOrganizationName("KT");
-    QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling, true);
-    QCoreApplication::setAttribute(Qt::AA_UseHighDpiPixmaps, true);
-    QApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
+
 
 
     // 输出启动信息
@@ -32,7 +35,7 @@ int main(int argc, char *argv[])
     MainWindow mainWindow;
     mainWindow.show();
 
-    qDebug() << "主窗口已显示";
-    
+    LOG_DEBUG("Main", "主窗口已显示");
+
     return app.exec();
 }
