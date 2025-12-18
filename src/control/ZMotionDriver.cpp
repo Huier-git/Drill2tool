@@ -1,4 +1,5 @@
 #include "control/ZMotionDriver.h"
+#include "Logger.h"
 #include "control/zmotion.h"
 #include "control/zmcaux.h"
 #include "Global.h"
@@ -28,7 +29,7 @@ bool ZMotionDriver::connect(const QString& connectionString)
     QMutexLocker locker(&g_mutex);
 
     if (g_handle != nullptr) {
-        qDebug() << "[ZMotionDriver] Already connected";
+        LOG_DEBUG("ZMotionDriver", "Already connected");
         return true;
     }
 
@@ -38,11 +39,11 @@ bool ZMotionDriver::connect(const QString& connectionString)
 
     if (result != ERR_OK || !g_handle) {
         setError(result, QString("Failed to connect to %1").arg(connectionString));
-        qWarning() << m_lastError;
+        LOG_WARNING_STREAM("ZMotionDriver") << m_lastError;
         return false;
     }
 
-    qDebug() << "[ZMotionDriver] Connected to" << connectionString;
+    LOG_DEBUG_STREAM("ZMotionDriver") << "Connected to" << connectionString;
     emit connected();
     emit commandExecuted(QString("Connected to %1").arg(connectionString));
 
@@ -58,7 +59,7 @@ void ZMotionDriver::disconnect()
         g_handle = nullptr;
     }
 
-    qDebug() << "[ZMotionDriver] Disconnected";
+    LOG_DEBUG("ZMotionDriver", "Disconnected");
     emit disconnected();
 }
 
@@ -79,7 +80,7 @@ bool ZMotionDriver::initBus()
         return false;
     }
 
-    qDebug() << "[ZMotionDriver] Bus initialized:" << response;
+    LOG_DEBUG_STREAM("ZMotionDriver") << "Bus initialized:" << response;
     emit commandExecuted(QString("Bus initialized: %1").arg(response));
     return true;
 }
@@ -396,7 +397,7 @@ bool ZMotionDriver::stopAll(int mode)
         return false;
     }
 
-    qWarning() << "[ZMotionDriver] EMERGENCY STOP EXECUTED";
+    LOG_WARNING("ZMotionDriver", "EMERGENCY STOP EXECUTED");
     emit commandExecuted("EMERGENCY STOP - ALL MOTORS STOPPED");
     return true;
 }
@@ -511,7 +512,7 @@ bool ZMotionDriver::checkError(int errorCode, const QString& operation)
                         .arg(operation)
                         .arg(errorCode));
 
-    qWarning() << "[ZMotionDriver]" << m_lastError;
+    LOG_WARNING_STREAM("ZMotionDriver") << m_lastError;
     emit errorOccurred(m_lastError);
 
     return false;
