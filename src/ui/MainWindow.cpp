@@ -197,18 +197,20 @@ void MainWindow::setupDetachButton()
     m_detachButton->setCursor(Qt::PointingHandCursor);
     m_detachButton->setStyleSheet(
         "QPushButton {"
-        "  background-color: rgba(64, 158, 255, 0.9);"
-        "  color: white;"
+        "  background-color: rgba(64, 158, 255, 0.3);"  // 提高透明度
+        "  color: rgba(255, 255, 255, 0.7);"  // 文字也增加透明度
         "  border: none;"
         "  border-radius: 16px;"
         "  font-size: 16px;"
         "  font-weight: bold;"
         "}"
         "QPushButton:hover {"
-        "  background-color: rgba(102, 177, 255, 1);"
+        "  background-color: rgba(102, 177, 255, 0.6);"  // hover时稍微明显一点
+        "  color: rgba(255, 255, 255, 0.9);"
         "}"
         "QPushButton:pressed {"
-        "  background-color: rgba(58, 142, 230, 1);"
+        "  background-color: rgba(58, 142, 230, 0.7);"
+        "  color: white;"
         "}"
     );
 
@@ -222,7 +224,7 @@ void MainWindow::setupDetachButton()
 void MainWindow::updateDetachButtonPosition()
 {
     if (m_detachButton && ui->stackedWidget_pages) {
-        int x = 15;  // 左下角
+        int x = (ui->stackedWidget_pages->width() - m_detachButton->width()) / 2;  // 底部居中
         int y = ui->stackedWidget_pages->height() - m_detachButton->height() - 15;
         m_detachButton->move(x, y);
         m_detachButton->raise();
