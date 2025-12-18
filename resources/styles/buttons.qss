@@ -37,8 +37,8 @@ QPushButton:disabled {
 }
 
 /* ============================================================================
- * TYPE: EMERGENCY (全局急停 - 红色、加大、加粗)
- * For global emergency stop buttons - RED, LARGE, BOLD
+ * TYPE: EMERGENCY (全局急停 - 红色、加粗)
+ * For global emergency stop buttons - RED, BOLD
  * Examples: 急停、Stop All Motors
  * ============================================================================ */
 QPushButton[type="emergency"] {
@@ -46,11 +46,11 @@ QPushButton[type="emergency"] {
     border: 2px solid #C62828;
     color: #FFFFFF;
     font-weight: bold;
-    font-size: 18px;
-    border-radius: 6px;
-    min-height: 48px;
-    min-width: 120px;
-    padding: 12px 24px;
+    font-size: 14px;
+    border-radius: 4px;
+    padding: 6px 16px;
+    min-height: 24px;
+    min-width: 64px;
 }
 
 QPushButton[type="emergency"]:hover {
