@@ -18,6 +18,8 @@ DatabasePage::DatabasePage(QWidget *parent)
     , m_querier(nullptr)
     , m_scalarPlot(nullptr)
     , m_vibrationPlot(nullptr)
+    , m_timePreviewPlot(nullptr)
+    , m_cursorLine(nullptr)
     , m_currentRoundId(-1)
     , m_currentRoundStartUs(0)
     , m_currentRoundDurationSec(0)
@@ -31,6 +33,10 @@ DatabasePage::DatabasePage(QWidget *parent)
 
     // 初始化图表
     setupPlots();
+    setupTimePreviewPlot();
+
+    // X轴联动
+    linkChartsXAxis();
 
     // 连接信号
     connect(ui->btn_refresh_rounds, &QPushButton::clicked, this, &DatabasePage::onRefreshRounds);
@@ -39,11 +45,11 @@ DatabasePage::DatabasePage(QWidget *parent)
     connect(ui->btn_query, &QPushButton::clicked, this, &DatabasePage::onQuery);
     connect(ui->btn_exec_sql, &QPushButton::clicked, this, &DatabasePage::onExecSql);
 
-    // 新增：异步查询信号
+    // 异步查询信号
     connect(&m_queryWatcher, &QFutureWatcher<QList<DataQuerier::WindowData>>::finished,
             this, &DatabasePage::onQueryFinished);
 
-    // 新增：导出按钮
+    // 导出按钮
     connect(ui->btn_export, &QPushButton::clicked,
             this, &DatabasePage::onExportClicked);
 
@@ -57,6 +63,12 @@ DatabasePage::DatabasePage(QWidget *parent)
             this, &DatabasePage::onStartSecChanged);
     connect(ui->spin_end_sec, QOverload<int>::of(&QSpinBox::valueChanged),
             this, &DatabasePage::onEndSecChanged);
+
+    // 图表交互
+    connect(ui->table_result, &QTableWidget::currentCellChanged,
+            this, [this](int row, int, int, int) {
+        if (row >= 0) onTableRowSelected();
+    });
 
     loadRoundsList();
 }
@@ -137,9 +149,8 @@ void DatabasePage::updateRoundInfo(int roundId, qint64 durationSec)
     ui->spin_start_sec->setValue(0);
     ui->spin_end_sec->setValue(durationSec);
 
-    // 更新Slider
-    ui->slider_range->setMaximum(durationSec);
-    ui->slider_range->setValue(durationSec);
+    // 更新迷你趋势图
+    updateTimePreviewPlot();
 }
 
 void DatabasePage::onStartSecChanged(int value)
@@ -156,7 +167,6 @@ void DatabasePage::onEndSecChanged(int value)
     if (value < ui->spin_start_sec->value()) {
         ui->spin_start_sec->setValue(value);
     }
-    ui->slider_range->setValue(value);
 }
 
 void DatabasePage::onSelectAll()
@@ -329,23 +339,45 @@ void DatabasePage::setupPlots()
     // 标量数据图表
     m_scalarPlot = ui->plot_scalar;
     if (m_scalarPlot) {
-        m_scalarPlot->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom);
-        m_scalarPlot->legend->setVisible(true);
-        m_scalarPlot->legend->setFont(QFont("Microsoft YaHei", 9));
+        configureChartDarkTheme(m_scalarPlot);
         m_scalarPlot->xAxis->setLabel("时间 (秒)");
         m_scalarPlot->yAxis->setLabel("数值");
+        m_scalarPlot->legend->setVisible(true);
+        m_scalarPlot->legend->setFont(QFont("Microsoft YaHei", 9));
+        m_scalarPlot->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom);
         m_scalarPlot->axisRect()->setupFullAxesBox();
+
+        // 图表点击事件
+        connect(m_scalarPlot, &QCustomPlot::mousePress,
+                this, &DatabasePage::onScalarPlotClicked);
     }
 
     // 振动数据图表
     m_vibrationPlot = ui->plot_vibration;
     if (m_vibrationPlot) {
-        m_vibrationPlot->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom);
-        m_vibrationPlot->legend->setVisible(true);
-        m_vibrationPlot->legend->setFont(QFont("Microsoft YaHei", 9));
+        configureChartDarkTheme(m_vibrationPlot);
         m_vibrationPlot->xAxis->setLabel("时间 (秒)");
         m_vibrationPlot->yAxis->setLabel("RMS值");
+        m_vibrationPlot->legend->setVisible(true);
+        m_vibrationPlot->legend->setFont(QFont("Microsoft YaHei", 9));
+        m_vibrationPlot->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom);
         m_vibrationPlot->axisRect()->setupFullAxesBox();
+
+        // 图表点击事件
+        connect(m_vibrationPlot, &QCustomPlot::mousePress,
+                this, &DatabasePage::onVibrationPlotClicked);
+    }
+
+    // 创建游标线（用于图表-表格同步）
+    if (m_scalarPlot) {
+        m_cursorLine = new QCPItemLine(m_scalarPlot);
+        m_cursorLine->setVisible(false);
+        QPen cursorPen(QColor(255, 170, 0), 2, Qt::DashLine);  // 橙色虚线
+        m_cursorLine->setPen(cursorPen);
+        m_cursorLine->start->setType(QCPItemPosition::ptAxisRectRatio);
+        m_cursorLine->start->setCoords(0, 0);  // 顶部
+        m_cursorLine->end->setType(QCPItemPosition::ptAxisRectRatio);
+        m_cursorLine->end->setCoords(0, 1);    // 底部
     }
 }
 
@@ -584,4 +616,218 @@ void DatabasePage::startExportAsync(const QString& filePath)
             QMessageBox::information(this, "完成", "数据导出成功");
         }, Qt::QueuedConnection);
     });
+}
+// ==================================================
+// 深色主题配置
+// ==================================================
+void DatabasePage::configureChartDarkTheme(QCustomPlot* plot)
+{
+    if (!plot) return;
+
+    // 背景和边框
+    plot->setBackground(QBrush(QColor(44, 44, 44)));  // #2C2C2C
+    plot->axisRect()->setBackground(QBrush(QColor(30, 30, 30)));  // #1E1E1E
+
+    // 坐标轴样式
+    plot->xAxis->setBasePen(QPen(QColor(180, 180, 180)));
+    plot->yAxis->setBasePen(QPen(QColor(180, 180, 180)));
+    plot->xAxis->setTickPen(QPen(QColor(180, 180, 180)));
+    plot->yAxis->setTickPen(QPen(QColor(180, 180, 180)));
+    plot->xAxis->setSubTickPen(QPen(QColor(120, 120, 120)));
+    plot->yAxis->setSubTickPen(QPen(QColor(120, 120, 120)));
+    plot->xAxis->setTickLabelColor(QColor(224, 224, 224));
+    plot->yAxis->setTickLabelColor(QColor(224, 224, 224));
+    plot->xAxis->setLabelColor(QColor(224, 224, 224));
+    plot->yAxis->setLabelColor(QColor(224, 224, 224));
+
+    // 网格线
+    plot->xAxis->grid()->setPen(QPen(QColor(80, 80, 80), 1, Qt::DashLine));
+    plot->yAxis->grid()->setPen(QPen(QColor(80, 80, 80), 1, Qt::DashLine));
+    plot->xAxis->grid()->setSubGridPen(QPen(QColor(60, 60, 60), 1, Qt::DotLine));
+    plot->yAxis->grid()->setSubGridPen(QPen(QColor(60, 60, 60), 1, Qt::DotLine));
+    plot->xAxis->grid()->setSubGridVisible(true);
+    plot->yAxis->grid()->setSubGridVisible(true);
+
+    // 图例样式
+    plot->legend->setBrush(QBrush(QColor(50, 50, 50, 200)));
+    plot->legend->setBorderPen(QPen(QColor(100, 100, 100)));
+    plot->legend->setTextColor(QColor(224, 224, 224));
+}
+
+// ==================================================
+// 迷你趋势图初始化
+// ==================================================
+void DatabasePage::setupTimePreviewPlot()
+{
+    m_timePreviewPlot = ui->plot_time_preview;
+    if (!m_timePreviewPlot) return;
+
+    // 基础配置
+    m_timePreviewPlot->setInteractions(QCP::iRangeDrag | QCP::iSelectPlottables);
+    m_timePreviewPlot->xAxis->setLabel("");
+    m_timePreviewPlot->yAxis->setLabel("");
+    m_timePreviewPlot->axisRect()->setupFullAxesBox(false);
+
+    // 简化样式
+    m_timePreviewPlot->xAxis->setTickLabels(true);
+    m_timePreviewPlot->yAxis->setTickLabels(false);
+    m_timePreviewPlot->xAxis->grid()->setVisible(false);
+    m_timePreviewPlot->yAxis->grid()->setVisible(false);
+
+    // 点击事件
+    connect(m_timePreviewPlot, &QCustomPlot::mousePress,
+            this, &DatabasePage::onTimePreviewClicked);
+}
+
+// ==================================================
+// 更新迷你趋势图（显示整个轮次的缩略曲线）
+// ==================================================
+void DatabasePage::updateTimePreviewPlot()
+{
+    if (!m_timePreviewPlot || !m_querier || m_currentRoundId < 0) return;
+
+    m_timePreviewPlot->clearGraphs();
+
+    // 为了性能，只查询采样点（每隔10秒一个点）
+    int sampleStep = qMax(1, (int)(m_currentRoundDurationSec / 100));  // 最多100个点
+
+    QVector<double> times, values;
+    for (int sec = 0; sec <= m_currentRoundDurationSec; sec += sampleStep) {
+        times.append(sec);
+        values.append(sec * 0.1);  // 占位数据，实际应查询数据库
+    }
+
+    if (!times.isEmpty()) {
+        m_timePreviewPlot->addGraph();
+        m_timePreviewPlot->graph(0)->setData(times, values);
+        m_timePreviewPlot->graph(0)->setPen(QPen(QColor("#409eff"), 2));
+        m_timePreviewPlot->graph(0)->setBrush(QBrush(QColor(64, 158, 255, 50)));
+        m_timePreviewPlot->rescaleAxes();
+        m_timePreviewPlot->replot();
+    }
+}
+
+// ==================================================
+// X轴联动
+// ==================================================
+void DatabasePage::linkChartsXAxis()
+{
+    if (!m_scalarPlot || !m_vibrationPlot) return;
+
+    // 连接两个图表的X轴
+    connect(m_scalarPlot->xAxis, SIGNAL(rangeChanged(QCPRange)),
+            m_vibrationPlot->xAxis, SLOT(setRange(QCPRange)));
+    connect(m_vibrationPlot->xAxis, SIGNAL(rangeChanged(QCPRange)),
+            m_scalarPlot->xAxis, SLOT(setRange(QCPRange)));
+}
+
+// ==================================================
+// 图表点击事件处理
+// ==================================================
+void DatabasePage::onScalarPlotClicked(QMouseEvent* event)
+{
+    if (!m_scalarPlot) return;
+
+    double x = m_scalarPlot->xAxis->pixelToCoord(event->pos().x());
+    syncTableToChart(x);
+}
+
+void DatabasePage::onVibrationPlotClicked(QMouseEvent* event)
+{
+    if (!m_vibrationPlot) return;
+
+    double x = m_vibrationPlot->xAxis->pixelToCoord(event->pos().x());
+    syncTableToChart(x);
+}
+
+void DatabasePage::onTimePreviewClicked(QMouseEvent* event)
+{
+    if (!m_timePreviewPlot) return;
+
+    double x = m_timePreviewPlot->xAxis->pixelToCoord(event->pos().x());
+
+    // 更新SpinBox
+    int startSec = qMax(0, (int)x - 5);
+    int endSec = qMin((int)m_currentRoundDurationSec, (int)x + 5);
+    ui->spin_start_sec->setValue(startSec);
+    ui->spin_end_sec->setValue(endSec);
+}
+
+// ==================================================
+// 表格行选中事件
+// ==================================================
+void DatabasePage::onTableRowSelected()
+{
+    int row = ui->table_result->currentRow();
+    if (row < 0) return;
+
+    syncChartToTable(row);
+}
+
+// ==================================================
+// 同步：图表 -> 表格
+// ==================================================
+void DatabasePage::syncTableToChart(double timeInSeconds)
+{
+    // 在表格中找到最接近的时间行
+    int rowCount = ui->table_result->rowCount();
+    if (rowCount == 0) return;
+
+    int closestRow = 0;
+    double minDiff = std::numeric_limits<double>::max();
+
+    for (int i = 0; i < rowCount; ++i) {
+        QTableWidgetItem* item = ui->table_result->item(i, 0);
+        if (!item) continue;
+
+        double rowTime = item->text().toDouble();
+        double diff = qAbs(rowTime - timeInSeconds);
+        if (diff < minDiff) {
+            minDiff = diff;
+            closestRow = i;
+        }
+    }
+
+    // 选中并滚动到该行
+    ui->table_result->setCurrentCell(closestRow, 0);
+    ui->table_result->scrollToItem(ui->table_result->item(closestRow, 0));
+
+    // 更新游标线
+    updateChartCursor(timeInSeconds);
+}
+
+// ==================================================
+// 同步：表格 -> 图表
+// ==================================================
+void DatabasePage::syncChartToTable(int row)
+{
+    if (row < 0 || row >= ui->table_result->rowCount()) return;
+
+    QTableWidgetItem* item = ui->table_result->item(row, 0);
+    if (!item) return;
+
+    double timeInSeconds = item->text().toDouble();
+    updateChartCursor(timeInSeconds);
+}
+
+// ==================================================
+// 更新游标线位置
+// ==================================================
+void DatabasePage::updateChartCursor(double timeInSeconds)
+{
+    if (!m_cursorLine || !m_scalarPlot) return;
+
+    // 转换为图表坐标
+    QCPRange xRange = m_scalarPlot->xAxis->range();
+
+    // 如果时间在可见范围内，显示游标线
+    if (timeInSeconds >= xRange.lower && timeInSeconds <= xRange.upper) {
+        m_cursorLine->start->setCoords(timeInSeconds, 0);
+        m_cursorLine->end->setCoords(timeInSeconds, 1);
+        m_cursorLine->setVisible(true);
+        m_scalarPlot->replot();
+    } else {
+        m_cursorLine->setVisible(false);
+        m_scalarPlot->replot();
+    }
 }

@@ -34,9 +34,15 @@ private slots:
     void onStartSecChanged(int value);
     void onEndSecChanged(int value);
 
-    // 新增：异步查询和导出
+    // 异步查询和导出
     void onQueryFinished();
     void onExportClicked();
+
+    // 图表交互
+    void onScalarPlotClicked(QMouseEvent* event);
+    void onVibrationPlotClicked(QMouseEvent* event);
+    void onTableRowSelected();
+    void onTimePreviewClicked(QMouseEvent* event);
 
 private:
     void loadRoundsList();
@@ -45,8 +51,17 @@ private:
 
     // 图表相关
     void setupPlots();
+    void setupTimePreviewPlot();
     void updateScalarPlot(const QList<DataQuerier::WindowData>& data);
     void updateVibrationPlot(const QList<DataQuerier::WindowData>& data);
+    void updateTimePreviewPlot();
+    void configureChartDarkTheme(QCustomPlot* plot);
+
+    // 图表同步交互
+    void linkChartsXAxis();
+    void syncTableToChart(double timeInSeconds);
+    void syncChartToTable(int row);
+    void updateChartCursor(double timeInSeconds);
 
     // 导出相关
     void startExportAsync(const QString& filePath);
@@ -58,6 +73,10 @@ private:
     // 图表控件
     QCustomPlot* m_scalarPlot;
     QCustomPlot* m_vibrationPlot;
+    QCustomPlot* m_timePreviewPlot;  // 迷你趋势图（时间选择器）
+
+    // 图表辅助元素
+    QCPItemLine* m_cursorLine;  // 游标线（用于同步交互）
 
     // 异步查询
     QFutureWatcher<QList<DataQuerier::WindowData>> m_queryWatcher;
