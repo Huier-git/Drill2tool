@@ -1,5 +1,6 @@
 #include "dataACQ/VibrationWorker.h"
 #include "VK70xNMC_DAQ2.h"  // VK701硬件库头文件
+#include "Logger.h"
 #include <QDebug>
 #include <QDateTime>
 #include <QThread>
@@ -17,7 +18,7 @@ VibrationWorker::VibrationWorker(QObject *parent)
     , m_isSampling(false)
 {
     m_sampleRate = 5000.0;  // 默认5000Hz
-    qDebug() << "[VibrationWorker] Created. Default: 5000Hz, 3 channels, port 8234";
+    LOG_DEBUG("VibrationWorker", "Created. Default: 5000Hz, 3 channels, port 8234");
 }
 
 VibrationWorker::~VibrationWorker()
@@ -29,39 +30,39 @@ VibrationWorker::~VibrationWorker()
 
 bool VibrationWorker::initializeHardware()
 {
-    qDebug() << "[VibrationWorker] Initializing VK701 hardware...";
-    qDebug() << "  Card ID:" << m_cardId;
-    qDebug() << "  Port:" << m_port;
-    qDebug() << "  Sample Rate:" << m_sampleRate << "Hz";
-    qDebug() << "  Channels:" << m_channelCount;
-    
+    LOG_DEBUG("VibrationWorker", "Initializing VK701 hardware...");
+    LOG_DEBUG_STREAM("VibrationWorker") << "  Card ID:" << m_cardId;
+    LOG_DEBUG_STREAM("VibrationWorker") << "  Port:" << m_port;
+    LOG_DEBUG_STREAM("VibrationWorker") << "  Sample Rate:" << m_sampleRate << "Hz";
+    LOG_DEBUG_STREAM("VibrationWorker") << "  Channels:" << m_channelCount;
+
     // 连接采集卡
     if (!connectToCard()) {
         return false;
     }
-    
+
     // 配置通道
     if (!configureChannels()) {
         return false;
     }
-    
+
     // 启动采样
     if (!startSampling()) {
         return false;
     }
-    
+
     // 记录基准时间戳
     m_baseTimestamp = QDateTime::currentMSecsSinceEpoch() * 1000;
     m_timer.start();
     m_blockSequence = 0;
-    
-    qDebug() << "[VibrationWorker] Hardware initialized successfully";
+
+    LOG_DEBUG("VibrationWorker", "Hardware initialized successfully");
     return true;
 }
 
 void VibrationWorker::shutdownHardware()
 {
-    qDebug() << "[VibrationWorker] Shutting down VK701...";
+    LOG_DEBUG("VibrationWorker", "Shutting down VK701...");
 
     // 停止采样
     stopSampling();
@@ -72,13 +73,13 @@ void VibrationWorker::shutdownHardware()
     m_isCardConnected = false;
     m_isSampling = false;
 
-    qDebug() << "[VibrationWorker] VK701 shutdown complete";
+    LOG_DEBUG("VibrationWorker", "VK701 shutdown complete");
 }
 
 void VibrationWorker::runAcquisition()
 {
-    qDebug() << "[VibrationWorker] Acquisition loop started";
-    
+    LOG_DEBUG("VibrationWorker", "Acquisition loop started");
+
     while (shouldContinue()) {
         // 读取一个数据块
         if (!readDataBlock()) {
@@ -86,19 +87,19 @@ void VibrationWorker::runAcquisition()
             QThread::msleep(10);  // 出错后短暂延迟
             continue;
         }
-        
+
         // 更新统计信息（每100个块更新一次）
         if (m_blockSequence % 100 == 0) {
             emit statisticsUpdated(m_samplesCollected, m_sampleRate);
         }
     }
-    
-    qDebug() << "[VibrationWorker] Acquisition loop ended";
+
+    LOG_DEBUG("VibrationWorker", "Acquisition loop ended");
 }
 
 bool VibrationWorker::connectToCard()
 {
-    qDebug() << "[VibrationWorker] Connecting to VK701 TCP server, port:" << m_port;
+    LOG_DEBUG_STREAM("VibrationWorker") << "Connecting to VK701 TCP server, port:" << m_port;
 
     int result;
     int curDeviceNum;
@@ -111,9 +112,9 @@ bool VibrationWorker::connectToCard()
         result = Server_TCPOpen(m_port);
         QThread::msleep(20);
         if (result < 0) {
-            qDebug() << "[VibrationWorker] Waiting for VK701 server...";
+            LOG_DEBUG("VibrationWorker", "Waiting for VK701 server...");
         } else {
-            qDebug() << "[VibrationWorker] Port" << m_port << "opened!";
+            LOG_DEBUG_STREAM("VibrationWorker") << "Port" << m_port << "opened!";
         }
     } while (result < 0 && shouldContinue());
 
@@ -125,7 +126,7 @@ bool VibrationWorker::connectToCard()
     QThread::msleep(100);
 
     // 2. 获取已连接设备数量
-    qDebug() << "[VibrationWorker] Getting connected device count...";
+    LOG_DEBUG("VibrationWorker", "Getting connected device count...");
     int retryCount = 0;
     do {
         if (!shouldContinue()) {
@@ -141,11 +142,11 @@ bool VibrationWorker::connectToCard()
         return false;
     }
 
-    qDebug() << "[VibrationWorker] DAQ device count:" << curDeviceNum;
+    LOG_DEBUG_STREAM("VibrationWorker") << "DAQ device count:" << curDeviceNum;
     QThread::msleep(100);
 
     m_isCardConnected = true;
-    qDebug() << "[VibrationWorker] Successfully connected to VK701 server";
+    LOG_DEBUG("VibrationWorker", "Successfully connected to VK701 server");
     return true;
 }
 
@@ -155,28 +156,28 @@ void VibrationWorker::disconnectFromCard()
         return;
     }
 
-    qDebug() << "[VibrationWorker] Disconnecting from VK701...";
+    LOG_DEBUG("VibrationWorker", "Disconnecting from VK701...");
 
     // 停止采样
     stopSampling();
 
     // VK701不需要显式关闭TCP连接，由SDK管理
-    // 如果需要关闭服务器，调用 Server_TCPClose(m_port)
+    // 如果需要关闭服务器,调用 Server_TCPClose(m_port)
 
     m_isCardConnected = false;
-    qDebug() << "[VibrationWorker] Disconnected";
+    LOG_DEBUG("VibrationWorker", "Disconnected");
 }
 
 bool VibrationWorker::testConnection()
 {
-    qDebug() << "[VibrationWorker] Testing connection to VK701...";
+    LOG_DEBUG("VibrationWorker", "Testing connection to VK701...");
 
     // 尝试连接
     if (!connectToCard()) {
         return false;
     }
 
-    qDebug() << "[VibrationWorker] Connection test successful";
+    LOG_DEBUG("VibrationWorker", "Connection test successful");
     return true;
 }
 
@@ -187,7 +188,7 @@ void VibrationWorker::disconnect()
 
 bool VibrationWorker::configureChannels()
 {
-    qDebug() << "[VibrationWorker] Configuring VK701 channels...";
+    LOG_DEBUG("VibrationWorker", "Configuring VK701 channels...");
 
     int result;
     int retryCount = 0;
@@ -198,11 +199,11 @@ bool VibrationWorker::configureChannels()
     int bitMode = 2;               // 采样分辨率 (24位)
     int volRange = 0;              // 电压输入范围
 
-    qDebug() << "[VibrationWorker] Initializing VK701 device...";
-    qDebug() << "  Card ID:" << m_cardId;
-    qDebug() << "  Sample Rate:" << static_cast<int>(m_sampleRate) << "Hz";
-    qDebug() << "  Ref Voltage:" << refVol << "V";
-    qDebug() << "  Bit Mode:" << bitMode;
+    LOG_DEBUG("VibrationWorker", "Initializing VK701 device...");
+    LOG_DEBUG_STREAM("VibrationWorker") << "  Card ID:" << m_cardId;
+    LOG_DEBUG_STREAM("VibrationWorker") << "  Sample Rate:" << static_cast<int>(m_sampleRate) << "Hz";
+    LOG_DEBUG_STREAM("VibrationWorker") << "  Ref Voltage:" << refVol << "V";
+    LOG_DEBUG_STREAM("VibrationWorker") << "  Bit Mode:" << bitMode;
 
     do {
         if (!shouldContinue()) {
@@ -221,11 +222,11 @@ bool VibrationWorker::configureChannels()
 
         if (retryCount < maxRetries) {
             if (result == -11) {
-                qDebug() << "[VibrationWorker] Server not open.";
+                LOG_DEBUG("VibrationWorker", "Server not open.");
             } else if (result == -12 || result == -13) {
-                qDebug() << "[VibrationWorker] DAQ not connected or does not exist. Try" << retryCount;
+                LOG_DEBUG_STREAM("VibrationWorker") << "DAQ not connected or does not exist. Try" << retryCount;
             } else if (result < 0) {
-                qDebug() << "[VibrationWorker] Initialization error. Try" << retryCount;
+                LOG_DEBUG_STREAM("VibrationWorker") << "Initialization error. Try" << retryCount;
             }
         }
         retryCount++;
@@ -238,23 +239,23 @@ bool VibrationWorker::configureChannels()
     }
 
     QThread::msleep(100);
-    qDebug() << "[VibrationWorker] VK701 device initialized successfully";
+    LOG_DEBUG("VibrationWorker", "VK701 device initialized successfully");
     return true;
 }
 
 bool VibrationWorker::startSampling()
 {
-    qDebug() << "[VibrationWorker] Starting VK701 sampling...";
+    LOG_DEBUG("VibrationWorker", "Starting VK701 sampling...");
 
     int result = VK70xNMC_StartSampling(m_cardId);
     if (result < 0) {
         emitError(QString("VK70xNMC_StartSampling failed: error code %1").arg(result));
-        qDebug() << "[VibrationWorker] DAQ ERROR: Failed to start sampling";
+        LOG_DEBUG("VibrationWorker", "DAQ ERROR: Failed to start sampling");
         return false;
     }
 
     m_isSampling = true;
-    qDebug() << "[VibrationWorker] VK701 sampling started successfully";
+    LOG_DEBUG("VibrationWorker", "VK701 sampling started successfully");
     return true;
 }
 
@@ -264,15 +265,15 @@ void VibrationWorker::stopSampling()
         return;
     }
 
-    qDebug() << "[VibrationWorker] Stopping VK701 sampling...";
+    LOG_DEBUG("VibrationWorker", "Stopping VK701 sampling...");
 
     int result = VK70xNMC_StopSampling(m_cardId);
     if (result < 0) {
-        qWarning() << "[VibrationWorker] VK70xNMC_StopSampling failed: error code" << result;
+        LOG_WARNING_STREAM("VibrationWorker") << "VK70xNMC_StopSampling failed: error code" << result;
     }
 
     m_isSampling = false;
-    qDebug() << "[VibrationWorker] Sampling stopped";
+    LOG_DEBUG("VibrationWorker", "Sampling stopped");
 }
 
 bool VibrationWorker::readDataBlock()
@@ -283,7 +284,7 @@ bool VibrationWorker::readDataBlock()
     // 启动采样
     int result = VK70xNMC_StartSampling(m_cardId);
     if (result < 0) {
-        qWarning() << "[VibrationWorker] VK70xNMC_StartSampling failed before read: error code" << result;
+        LOG_WARNING_STREAM("VibrationWorker") << "VK70xNMC_StartSampling failed before read: error code" << result;
         delete[] pucRecBuf;
         return false;
     }
@@ -319,7 +320,7 @@ bool VibrationWorker::readDataBlock()
         return true;
     } else if (recv < 0) {
         // 读取错误
-        qWarning() << "[VibrationWorker] VK70xNMC_GetFourChannel failed: error code" << recv;
+        LOG_WARNING_STREAM("VibrationWorker") << "VK70xNMC_GetFourChannel failed: error code" << recv;
         delete[] pucRecBuf;
         return false;
     } else {
@@ -376,9 +377,9 @@ void VibrationWorker::processAndSendData(float *ch0Data, float *ch1Data, float *
 
     // 调试信息（每10秒输出一次）
     if (m_blockSequence % (int)(10 * m_sampleRate / m_blockSize) == 0) {
-        qDebug() << QString("[VibrationWorker] Block #%1, Total samples: %2, Rate: %3 Hz")
-                    .arg(m_blockSequence)
-                    .arg(m_samplesCollected)
-                    .arg(m_sampleRate);
+        LOG_DEBUG_STREAM("VibrationWorker")
+            << "Block #" << m_blockSequence
+            << ", Total samples:" << m_samplesCollected
+            << ", Rate:" << m_sampleRate << "Hz";
     }
 }

@@ -1,4 +1,5 @@
 #include "ui/MainWindow.h"
+#include "Logger.h"
 
 #include <QApplication>
 #include <QDebug>
@@ -8,22 +9,29 @@
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
-    
+
+    // 安装统一日志系统
+    Logger::install();
+
     // 设置应用程序信息
     QApplication::setApplicationName("DrillControl");
     QApplication::setApplicationVersion("2.0.0");
     QApplication::setOrganizationName("KT");
-    
+    QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling, true);
+    QCoreApplication::setAttribute(Qt::AA_UseHighDpiPixmaps, true);
+    QApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
+
+
     // 输出启动信息
-    qDebug() << "==================================";
-    qDebug() << "钻机采集控制系统 v2.0";
-    qDebug() << "启动时间:" << QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss");
-    qDebug() << "==================================";
-    
+    LOG_INFO("Main", "==================================");
+    LOG_INFO("Main", "钻机采集控制系统 v2.0");
+    LOG_INFO_STREAM("Main") << "启动时间:" << QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss");
+    LOG_INFO("Main", "==================================");
+
     // 创建并显示主窗口
     MainWindow mainWindow;
     mainWindow.show();
-    
+
     qDebug() << "主窗口已显示";
     
     return app.exec();

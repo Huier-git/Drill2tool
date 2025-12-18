@@ -1,4 +1,5 @@
 #include "dataACQ/MotorWorker.h"
+#include "Logger.h"
 #include "Global.h"
 #include "control/zmotion.h"
 #include "control/zmcaux.h"
@@ -19,7 +20,7 @@ MotorWorker::MotorWorker(QObject *parent)
 {
     m_sampleRate = 100.0;  // 默认100Hz
     m_motorIds = {0, 1, 2, 3, 4, 5, 6, 7};  // 默认8个电机
-    qDebug() << "[MotorWorker] Created. Default: 100Hz, 8 motors (uses global g_handle)";
+    LOG_DEBUG("MotorWorker", "Created. Default: 100Hz, 8 motors (uses global g_handle)");
 }
 
 MotorWorker::~MotorWorker()
@@ -38,9 +39,9 @@ void MotorWorker::setReadParameters(bool pos, bool speed, bool torque, bool curr
     m_readTorque = torque;
     m_readCurrent = current;
 
-    qDebug() << "[MotorWorker] Read parameters set:"
-             << "Pos=" << pos << "Speed=" << speed
-             << "Torque=" << torque << "Current=" << current;
+    LOG_DEBUG_STREAM("MotorWorker")
+        << "Read parameters set: Pos=" << pos << "Speed=" << speed
+        << "Torque=" << torque << "Current=" << current;
 }
 
 bool MotorWorker::isConnected() const
@@ -51,13 +52,13 @@ bool MotorWorker::isConnected() const
 
 bool MotorWorker::initializeHardware()
 {
-    qDebug() << "[MotorWorker] Initializing (using global g_handle)...";
-    qDebug() << "  Sample Rate:" << m_sampleRate << "Hz";
-    qDebug() << "  Motor IDs:" << m_motorIds;
+    LOG_DEBUG("MotorWorker", "Initializing (using global g_handle)...");
+    LOG_DEBUG_STREAM("MotorWorker") << "  Sample Rate:" << m_sampleRate << "Hz";
+    LOG_DEBUG_STREAM("MotorWorker") << "  Motor IDs:" << m_motorIds;
 
     // 检查全局句柄是否已连接
     if (!isConnected()) {
-        qWarning() << "[MotorWorker] Global g_handle not connected, data acquisition will wait...";
+        LOG_WARNING("MotorWorker", "Global g_handle not connected, data acquisition will wait...");
         // 不返回 false，允许启动但不采集数据
     }
 
@@ -67,13 +68,13 @@ bool MotorWorker::initializeHardware()
     m_readTimer->setInterval(intervalMs);
     connect(m_readTimer, &QTimer::timeout, this, &MotorWorker::readMotorParameters);
 
-    qDebug() << "[MotorWorker] Hardware initialized, read interval:" << intervalMs << "ms";
+    LOG_DEBUG_STREAM("MotorWorker") << "Hardware initialized, read interval:" << intervalMs << "ms";
     return true;
 }
 
 void MotorWorker::shutdownHardware()
 {
-    qDebug() << "[MotorWorker] Shutting down...";
+    LOG_DEBUG("MotorWorker", "Shutting down...");
 
     // 停止定时器
     if (m_readTimer) {
@@ -84,12 +85,12 @@ void MotorWorker::shutdownHardware()
 
     // 不断开连接，连接由 ZMotionDriver 统一管理
 
-    qDebug() << "[MotorWorker] Shutdown complete. Total samples:" << m_sampleCount;
+    LOG_DEBUG_STREAM("MotorWorker") << "Shutdown complete. Total samples:" << m_sampleCount;
 }
 
 void MotorWorker::runAcquisition()
 {
-    qDebug() << "[MotorWorker] Starting acquisition timer...";
+    LOG_DEBUG("MotorWorker", "Starting acquisition timer...");
 
     // 启动定时器
     m_readTimer->start();
@@ -110,7 +111,7 @@ void MotorWorker::runAcquisition()
         m_readTimer->stop();
     }
 
-    qDebug() << "[MotorWorker] Acquisition loop ended";
+    LOG_DEBUG("MotorWorker", "Acquisition loop ended");
 }
 
 void MotorWorker::readMotorParameters()

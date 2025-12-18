@@ -55,6 +55,7 @@ CONFIG(debug, debug|release) {
 SOURCES += \
     src/main.cpp \
     src/Global.cpp \
+    src/Logger.cpp \
     src/ui/MainWindow.cpp \
     src/ui/SensorPage.cpp \
     src/ui/VibrationPage.cpp \
@@ -95,6 +96,7 @@ SOURCES += \
 # ==================================================
 HEADERS += \
     include/Global.h \
+    include/Logger.h \
     include/ui/MainWindow.h \
     include/ui/SensorPage.h \
     include/ui/VibrationPage.h \
