@@ -2,6 +2,7 @@
 #define MOTORWORKER_H
 
 #include "dataACQ/BaseWorker.h"
+#include <QElapsedTimer>
 #include <QTimer>
 #include <QVector>
 
@@ -76,6 +77,8 @@ private:
     bool m_readCurrent;
 
     qint64 m_sampleCount;           // 样本计数
+    QElapsedTimer m_triggerTimer;   // 统计定时器触发间隔
+    qint64 m_lastIntervalMs {0};
 };
 
 #endif // MOTORWORKER_H
