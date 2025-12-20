@@ -58,8 +58,8 @@ public slots:
     void stopVibration();
     void stopMdb();
     void stopMotor();
-    void startNewRound(const QString &operatorName = QString(),
-                       const QString &note = QString());
+    int startNewRound(const QString &operatorName = QString(),
+                      const QString &note = QString());
     void endCurrentRound();
 
 signals:

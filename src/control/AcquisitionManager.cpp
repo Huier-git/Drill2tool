@@ -240,7 +240,12 @@ void AcquisitionManager::startAll()
 
     // 如果还没有轮次，创建一个
     if (m_currentRoundId == 0) {
-        startNewRound();
+        int newRoundId = startNewRound();
+        if (newRoundId < 0) {
+            LOG_ERROR("AcquisitionManager", "Failed to start acquisition because round creation failed");
+            emit errorOccurred("AcquisitionManager", "无法启动采集：创建采集轮次失败");
+            return;
+        }
     }
 
     // 启动所有Worker
@@ -310,17 +315,35 @@ void AcquisitionManager::stopMotor()
     QMetaObject::invokeMethod(m_motorWorker, "stop", Qt::QueuedConnection);
 }
 
-void AcquisitionManager::startNewRound(const QString &operatorName, const QString &note)
+int AcquisitionManager::startNewRound(const QString &operatorName, const QString &note)
 {
     LOG_DEBUG("AcquisitionManager", "Starting new round...");
 
+    if (!m_isInitialized) {
+        LOG_ERROR("AcquisitionManager", "Cannot start new round: manager not initialized");
+        emit errorOccurred("AcquisitionManager", "无法创建新的采集轮次：采集管理器未初始化");
+        return -1;
+    }
+
+    if (!m_dbWriter) {
+        LOG_ERROR("AcquisitionManager", "Cannot start new round: DbWriter not initialized");
+        emit errorOccurred("AcquisitionManager", "无法创建新的采集轮次：数据库写入器未初始化");
+        return -1;
+    }
+
     // 在DbWriter线程中创建新轮次
-    int roundId = 0;
-    QMetaObject::invokeMethod(m_dbWriter, "startNewRound",
-                              Qt::BlockingQueuedConnection,
-                              Q_RETURN_ARG(int, roundId),
-                              Q_ARG(QString, operatorName),
-                              Q_ARG(QString, note));
+    int roundId = -1;
+    bool invokeResult = QMetaObject::invokeMethod(m_dbWriter, "startNewRound",
+                                                  Qt::BlockingQueuedConnection,
+                                                  Q_RETURN_ARG(int, roundId),
+                                                  Q_ARG(QString, operatorName),
+                                                  Q_ARG(QString, note));
+
+    if (!invokeResult || roundId < 0) {
+        LOG_ERROR_STREAM("AcquisitionManager") << "Failed to start new round, invalid ID:" << roundId;
+        emit errorOccurred("AcquisitionManager", "无法创建新的采集轮次，请检查数据库连接");
+        return -1;
+    }
 
     m_currentRoundId = roundId;
 
@@ -332,6 +355,7 @@ void AcquisitionManager::startNewRound(const QString &operatorName, const QStrin
     emit roundChanged(m_currentRoundId);
 
     LOG_DEBUG_STREAM("AcquisitionManager") << "New round started, ID:" << m_currentRoundId;
+    return m_currentRoundId;
 }
 
 void AcquisitionManager::endCurrentRound()
