@@ -121,7 +121,32 @@ CREATE INDEX IF NOT EXISTS idx_event_round ON events(round_id);
 CREATE INDEX IF NOT EXISTS idx_event_type ON events(event_type);
 
 -- ==================================================
--- 6. 频率变化日志表（frequency_log）
+-- 6. 自动任务事件表（auto_task_events）
+-- 记录自动任务执行的状态与关键传感器快照
+-- ==================================================
+CREATE TABLE IF NOT EXISTS auto_task_events (
+    event_id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    round_id            INTEGER NOT NULL,
+    task_file           TEXT,
+    step_index          INTEGER,
+    state               TEXT NOT NULL,           -- started/step_started/step_completed/finished/failed
+    reason              TEXT,
+    depth_mm            REAL,
+    torque_nm           REAL,
+    pressure_n          REAL,
+    velocity_mm_per_min REAL,
+    force_upper_n       REAL,
+    force_lower_n       REAL,
+    timestamp_us        INTEGER NOT NULL,
+
+    FOREIGN KEY (round_id) REFERENCES rounds(round_id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_auto_task_round ON auto_task_events(round_id);
+CREATE INDEX IF NOT EXISTS idx_auto_task_task ON auto_task_events(task_file);
+
+-- ==================================================
+-- 7. 频率变化日志表（frequency_log）
 -- 保留原有功能
 -- ==================================================
 CREATE TABLE IF NOT EXISTS frequency_log (
@@ -139,7 +164,7 @@ CREATE TABLE IF NOT EXISTS frequency_log (
 CREATE INDEX IF NOT EXISTS idx_freq_round ON frequency_log(round_id);
 
 -- ==================================================
--- 7. 系统配置表（system_config）
+-- 8. 系统配置表（system_config）
 -- ==================================================
 CREATE TABLE IF NOT EXISTS system_config (
     key               TEXT PRIMARY KEY,
@@ -163,4 +188,5 @@ INSERT OR IGNORE INTO system_config (key, value, description) VALUES
 -- 2. 混合存储（BLOB + 预计算统计）
 -- 3. 多频率数据支持
 -- 4. 事件标记支持
+-- 5. 自动任务执行记录支持
 -- ==================================================

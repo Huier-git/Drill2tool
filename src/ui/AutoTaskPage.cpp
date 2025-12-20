@@ -5,6 +5,7 @@
 #include "control/RotationController.h"
 #include "control/PercussionController.h"
 #include "control/AcquisitionManager.h"
+#include "database/DbWriter.h"
 #include "dataACQ/MdbWorker.h"
 #include "dataACQ/MotorWorker.h"
 
@@ -15,6 +16,17 @@
 #include <QMessageBox>
 #include <QHeaderView>
 #include <QTableWidgetItem>
+#include <QSqlDatabase>
+#include <QSqlQuery>
+#include <QSqlError>
+#include <QSignalBlocker>
+#include <QStringList>
+#include <QtGlobal>
+#include <QFileInfo>
+#include <QHeaderView>
+#include <QAbstractItemView>
+#include <QVariant>
+#include <cmath>
 
 #ifdef ENABLE_TEST_MODE
 #include "MockDataGenerator.h"
@@ -38,6 +50,7 @@ AutoTaskPage::AutoTaskPage(QWidget *parent)
     , m_drillManager(nullptr)
     , m_elapsedTimer(new QTimer(this))
     , m_tasksDirectory("config/auto_tasks")
+    , m_eventDbConnectionName(QString("AutoTaskPage_%1").arg(reinterpret_cast<quintptr>(this)))
 #ifdef ENABLE_TEST_MODE
     , m_mockGenerator(nullptr)
 #endif
@@ -65,6 +78,9 @@ AutoTaskPage::AutoTaskPage(QWidget *parent)
 
     updateUIState();
     loadTasksFromDirectory();
+    setupRecordPanel();
+    reloadFilters();
+    reloadExecutionRecords();
 
 #ifdef ENABLE_TEST_MODE
     setupTestUI();
@@ -81,6 +97,15 @@ AutoTaskPage::~AutoTaskPage()
         m_mockGenerator->stopSimulation();
     }
 #endif
+
+    if (m_eventDb.isValid() && m_eventDb.isOpen()) {
+        m_eventDb.close();
+    }
+    m_eventDb = QSqlDatabase();
+    if (!m_eventDbConnectionName.isEmpty()) {
+        QSqlDatabase::removeDatabase(m_eventDbConnectionName);
+    }
+
     delete ui;
 }
 
@@ -119,6 +144,13 @@ void AutoTaskPage::setControllers(FeedController* feed,
         connect(m_drillManager, &AutoDrillManager::logMessage,
                 this, &AutoTaskPage::onLogMessage);
 
+        if (m_acquisitionManager) {
+            m_drillManager->setDataWorkers(m_acquisitionManager->mdbWorker(),
+                                           m_acquisitionManager->motorWorker());
+            m_drillManager->setDbWriter(m_acquisitionManager->dbWriter());
+            m_drillManager->setRoundId(m_acquisitionManager->currentRoundId());
+        }
+
 #ifdef ENABLE_TEST_MODE
         // 连接 MockDataGenerator 到新创建的 AutoDrillManager
         if (m_mockGenerator) {
@@ -145,6 +177,8 @@ void AutoTaskPage::setAcquisitionManager(AcquisitionManager* manager)
     // 如果drillManager已创建，将数据worker连接到它
     if (m_drillManager) {
         m_drillManager->setDataWorkers(manager->mdbWorker(), manager->motorWorker());
+        m_drillManager->setDbWriter(manager->dbWriter());
+        m_drillManager->setRoundId(manager->currentRoundId());
         appendLog(tr("数据采集已连接"));
     }
 }
@@ -176,6 +210,16 @@ void AutoTaskPage::setupConnections()
             this, &AutoTaskPage::onStopClicked);
     connect(ui->btn_emergency, &QPushButton::clicked,
             this, &AutoTaskPage::onEmergencyClicked);
+
+    // Execution record panel
+    connect(ui->btn_refresh_records, &QPushButton::clicked,
+            this, &AutoTaskPage::onRefreshRecordsClicked);
+    connect(ui->combo_round_filter, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &AutoTaskPage::onRoundFilterChanged);
+    connect(ui->combo_task_filter, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &AutoTaskPage::onTaskFilterChanged);
+    connect(ui->table_execution_records, &QTableWidget::itemSelectionChanged,
+            this, &AutoTaskPage::onRecordSelectionChanged);
 }
 
 void AutoTaskPage::onLoadTaskClicked()
@@ -287,6 +331,8 @@ void AutoTaskPage::onStartClicked()
         return;
     }
 
+    syncRoundContext();
+
     if (m_drillManager->start()) {
         m_taskElapsed.start();
         m_elapsedTimer->start();
@@ -304,6 +350,7 @@ void AutoTaskPage::onPauseClicked()
 void AutoTaskPage::onResumeClicked()
 {
     if (m_drillManager) {
+        syncRoundContext();
         if (m_drillManager->resume()) {
             m_elapsedTimer->start();
         }
@@ -379,9 +426,11 @@ void AutoTaskPage::onTaskListItemDoubleClicked()
 
 void AutoTaskPage::onTaskStateChanged(AutoTaskState state, const QString& message)
 {
+    Q_UNUSED(state);
     ui->lbl_task_status->setText(tr("状态: %1").arg(m_drillManager->stateString()));
     appendLog(tr("[状态] %1").arg(message));
     updateUIState();
+    reloadRecordsAsync();
 }
 
 void AutoTaskPage::onStepStarted(int index, const TaskStep& step)
@@ -409,11 +458,13 @@ void AutoTaskPage::onStepStarted(int index, const TaskStep& step)
 
     highlightCurrentStep(index);
     updateStepStatus(index, "▶");
+    reloadRecordsAsync();
 }
 
 void AutoTaskPage::onStepCompleted(int index)
 {
     updateStepStatus(index, "✓");
+    reloadRecordsAsync();
 }
 
 void AutoTaskPage::onProgressUpdated(double depthMm, double percent)
@@ -431,6 +482,7 @@ void AutoTaskPage::onTaskCompleted()
     appendLog(tr("[完成] 任务执行完成"));
 
     QMessageBox::information(this, tr("任务完成"), tr("自动钻进任务已完成！"));
+    reloadRecordsAsync();
 }
 
 void AutoTaskPage::onTaskFailed(const QString& reason)
@@ -439,6 +491,7 @@ void AutoTaskPage::onTaskFailed(const QString& reason)
     appendLog(tr("[失败] %1").arg(reason));
 
     QMessageBox::critical(this, tr("任务失败"), reason);
+    reloadRecordsAsync();
 }
 
 void AutoTaskPage::onLogMessage(const QString& message)
@@ -654,6 +707,16 @@ QString AutoTaskPage::formatElapsedTime(qint64 msec) const
         .arg(seconds, 2, 10, QLatin1Char('0'));
 }
 
+void AutoTaskPage::syncRoundContext()
+{
+    if (!m_drillManager || !m_acquisitionManager) {
+        return;
+    }
+
+    m_drillManager->setRoundId(m_acquisitionManager->currentRoundId());
+    m_drillManager->setDbWriter(m_acquisitionManager->dbWriter());
+}
+
 // ==================================================
 // AutoTask-Acquisition 集成方法
 // ==================================================
@@ -706,6 +769,7 @@ bool AutoTaskPage::ensureAcquisitionReady()
         }
 
         appendLog(tr("[数据采集] 已启动，轮次ID: %1").arg(newRoundId));
+        syncRoundContext();
         return true;
     }
 
@@ -722,6 +786,7 @@ bool AutoTaskPage::ensureAcquisitionReady()
         }
 
         appendLog(tr("[数据采集] 已创建轮次: %1").arg(newRoundId));
+        syncRoundContext();
         return true;
     }
 
@@ -748,6 +813,7 @@ bool AutoTaskPage::ensureAcquisitionReady()
         }
     }
 
+    syncRoundContext();
     return true;
 }
 
@@ -766,6 +832,312 @@ void AutoTaskPage::logAcquisitionEvent(bool running)
         appendLog(tr("[数据采集] 已启动"));
     } else {
         appendLog(tr("[数据采集] 已停止"));
+    }
+}
+
+void AutoTaskPage::onRefreshRecordsClicked()
+{
+    reloadFilters();
+    reloadExecutionRecords();
+}
+
+void AutoTaskPage::onRoundFilterChanged(int)
+{
+    reloadFilters();
+    reloadExecutionRecords();
+}
+
+void AutoTaskPage::onTaskFilterChanged(int)
+{
+    reloadExecutionRecords();
+}
+
+void AutoTaskPage::onRecordSelectionChanged()
+{
+    showRecordDetails(ui->table_execution_records->currentRow());
+}
+
+void AutoTaskPage::setupRecordPanel()
+{
+    ui->table_execution_records->setSelectionBehavior(QAbstractItemView::SelectRows);
+    ui->table_execution_records->setSelectionMode(QAbstractItemView::SingleSelection);
+    ui->table_execution_records->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    ui->table_execution_records->setAlternatingRowColors(true);
+    ui->table_execution_records->horizontalHeader()->setStretchLastSection(true);
+    ui->table_execution_records->setColumnWidth(0, 140); // 时间
+    ui->table_execution_records->setColumnWidth(1, 90);  // 状态
+    ui->table_execution_records->setColumnWidth(2, 70);  // 步骤
+    ui->table_execution_records->setColumnWidth(3, 90);  // 深度
+    ui->table_execution_records->setColumnWidth(4, 90);  // 扭矩
+    ui->table_execution_records->setColumnWidth(5, 90);  // 钻压
+}
+
+bool AutoTaskPage::ensureEventDatabase()
+{
+    if (m_eventDb.isValid() && m_eventDb.isOpen()) {
+        return true;
+    }
+
+    if (!m_eventDb.isValid()) {
+        m_eventDb = QSqlDatabase::addDatabase("QSQLITE", m_eventDbConnectionName);
+        m_eventDb.setDatabaseName("database/drill_data.db");
+    }
+
+    if (!m_eventDb.isOpen() && !m_eventDb.open()) {
+        appendLog(tr("无法打开执行记录数据库: %1").arg(m_eventDb.lastError().text()));
+        return false;
+    }
+
+    return true;
+}
+
+void AutoTaskPage::reloadFilters()
+{
+    if (!ensureEventDatabase()) {
+        return;
+    }
+
+    int currentRound = ui->combo_round_filter->currentData().toInt();
+    QString currentTask = ui->combo_task_filter->currentData().toString();
+
+    QSignalBlocker roundBlocker(ui->combo_round_filter);
+    ui->combo_round_filter->clear();
+    ui->combo_round_filter->addItem(tr("全部轮次"), 0);
+
+    QSqlQuery roundQuery(m_eventDb);
+    if (roundQuery.exec("SELECT DISTINCT round_id FROM auto_task_events ORDER BY round_id DESC")) {
+        while (roundQuery.next()) {
+            int roundId = roundQuery.value(0).toInt();
+            ui->combo_round_filter->addItem(QString::number(roundId), roundId);
+        }
+    } else {
+        appendLog(tr("读取轮次过滤器失败: %1").arg(roundQuery.lastError().text()));
+    }
+
+    int roundIndex = ui->combo_round_filter->findData(currentRound);
+    if (roundIndex >= 0) {
+        ui->combo_round_filter->setCurrentIndex(roundIndex);
+    }
+
+    int selectedRound = ui->combo_round_filter->currentData().toInt();
+
+    QSignalBlocker taskBlocker(ui->combo_task_filter);
+    ui->combo_task_filter->clear();
+    ui->combo_task_filter->addItem(tr("全部任务"), QString());
+
+    QString taskSql = "SELECT DISTINCT task_file FROM auto_task_events";
+    if (selectedRound > 0) {
+        taskSql += " WHERE round_id = :round_id";
+    }
+    taskSql += " ORDER BY task_file";
+
+    QSqlQuery taskQuery(m_eventDb);
+    taskQuery.prepare(taskSql);
+    if (selectedRound > 0) {
+        taskQuery.bindValue(":round_id", selectedRound);
+    }
+
+    if (taskQuery.exec()) {
+        while (taskQuery.next()) {
+            QString taskFile = taskQuery.value(0).toString();
+            QString displayName = taskFile.isEmpty()
+                ? tr("<未命名任务>")
+                : QFileInfo(taskFile).fileName();
+            ui->combo_task_filter->addItem(displayName, taskFile);
+        }
+    } else {
+        appendLog(tr("读取任务过滤器失败: %1").arg(taskQuery.lastError().text()));
+    }
+
+    int taskIndex = ui->combo_task_filter->findData(currentTask);
+    if (taskIndex >= 0) {
+        ui->combo_task_filter->setCurrentIndex(taskIndex);
+    }
+}
+
+void AutoTaskPage::reloadRecordsAsync()
+{
+    QTimer::singleShot(150, this, [this]() {
+        reloadFilters();
+        reloadExecutionRecords();
+    });
+}
+
+void AutoTaskPage::reloadExecutionRecords()
+{
+    if (!ensureEventDatabase()) {
+        return;
+    }
+
+    m_executionRecords.clear();
+
+    int roundFilter = ui->combo_round_filter->currentData().toInt();
+    QString taskFilter = ui->combo_task_filter->currentData().toString();
+
+    QStringList conditions;
+    if (roundFilter > 0) {
+        conditions << "round_id = :round_id";
+    }
+    if (!taskFilter.isEmpty()) {
+        conditions << "task_file = :task_file";
+    }
+
+    QString sql = "SELECT event_id, round_id, task_file, step_index, state, reason, "
+                  "depth_mm, torque_nm, pressure_n, velocity_mm_per_min, "
+                  "force_upper_n, force_lower_n, timestamp_us "
+                  "FROM auto_task_events";
+    if (!conditions.isEmpty()) {
+        sql += " WHERE " + conditions.join(" AND ");
+    }
+    sql += " ORDER BY timestamp_us DESC";
+
+    QSqlQuery query(m_eventDb);
+    query.prepare(sql);
+    if (roundFilter > 0) {
+        query.bindValue(":round_id", roundFilter);
+    }
+    if (!taskFilter.isEmpty()) {
+        query.bindValue(":task_file", taskFilter);
+    }
+
+    if (!query.exec()) {
+        appendLog(tr("读取执行记录失败: %1").arg(query.lastError().text()));
+        return;
+    }
+
+    auto readDouble = [](const QVariant& value) {
+        return value.isNull() ? qQNaN() : value.toDouble();
+    };
+
+    while (query.next()) {
+        ExecutionRecord record;
+        record.eventId = query.value(0).toInt();
+        record.roundId = query.value(1).toInt();
+        record.taskFile = query.value(2).toString();
+        record.stepIndex = query.value(3).isNull() ? -1 : query.value(3).toInt();
+        record.state = query.value(4).toString();
+        record.reason = query.value(5).toString();
+        record.depthMm = readDouble(query.value(6));
+        record.torqueNm = readDouble(query.value(7));
+        record.pressureN = readDouble(query.value(8));
+        record.velocityMmPerMin = readDouble(query.value(9));
+        record.forceUpperN = readDouble(query.value(10));
+        record.forceLowerN = readDouble(query.value(11));
+        record.timestampUs = query.value(12).toLongLong();
+        m_executionRecords.append(record);
+    }
+
+    updateRecordTable();
+    showRecordDetails(!m_executionRecords.isEmpty() ? 0 : -1);
+}
+
+QString AutoTaskPage::formatRecordTimestamp(qint64 timestampUs) const
+{
+    if (timestampUs <= 0) {
+        return "--";
+    }
+    QDateTime dt = QDateTime::fromMSecsSinceEpoch(timestampUs / 1000);
+    return dt.toString("MM-dd hh:mm:ss");
+}
+
+QString AutoTaskPage::formatSensorSnapshot(const ExecutionRecord& record) const
+{
+    auto valueOrPlaceholder = [](double value, const QString& unit) {
+        if (std::isnan(value)) {
+            return QStringLiteral("-- %1").arg(unit);
+        }
+        return QString("%1 %2").arg(QString::number(value, 'f', 1), unit);
+    };
+
+    QStringList parts;
+    parts << tr("深度 %1").arg(valueOrPlaceholder(record.depthMm, "mm"));
+    parts << tr("扭矩 %1").arg(valueOrPlaceholder(record.torqueNm, "Nm"));
+    parts << tr("钻压 %1").arg(valueOrPlaceholder(record.pressureN, "N"));
+    parts << tr("速度 %1").arg(valueOrPlaceholder(record.velocityMmPerMin, "mm/min"));
+    parts << tr("上拉 %1").arg(valueOrPlaceholder(record.forceUpperN, "N"));
+    parts << tr("下拉 %1").arg(valueOrPlaceholder(record.forceLowerN, "N"));
+    return parts.join(" | ");
+}
+
+void AutoTaskPage::updateRecordTable()
+{
+    ui->table_execution_records->setRowCount(m_executionRecords.size());
+
+    auto displayState = [this](const QString& state) -> QString {
+        if (state == "started") return tr("开始");
+        if (state == "resumed") return tr("恢复");
+        if (state == "step_started") return tr("步骤开始");
+        if (state == "step_completed") return tr("步骤完成");
+        if (state == "finished") return tr("完成");
+        if (state == "failed") return tr("失败");
+        return state;
+    };
+
+    auto formatNumber = [](double value) {
+        return std::isnan(value) ? QStringLiteral("--") : QString::number(value, 'f', 1);
+    };
+
+    for (int row = 0; row < m_executionRecords.size(); ++row) {
+        const ExecutionRecord& record = m_executionRecords.at(row);
+
+        ui->table_execution_records->setItem(row, 0,
+            new QTableWidgetItem(formatRecordTimestamp(record.timestampUs)));
+        ui->table_execution_records->setItem(row, 1,
+            new QTableWidgetItem(displayState(record.state)));
+        QString stepText = (record.stepIndex >= 0)
+            ? QString::number(record.stepIndex + 1)
+            : QStringLiteral("--");
+        ui->table_execution_records->setItem(row, 2, new QTableWidgetItem(stepText));
+        ui->table_execution_records->setItem(row, 3,
+            new QTableWidgetItem(formatNumber(record.depthMm)));
+        ui->table_execution_records->setItem(row, 4,
+            new QTableWidgetItem(formatNumber(record.torqueNm)));
+        ui->table_execution_records->setItem(row, 5,
+            new QTableWidgetItem(formatNumber(record.pressureN)));
+        ui->table_execution_records->setItem(row, 6,
+            new QTableWidgetItem(record.reason));
+    }
+
+    ui->table_execution_records->resizeRowsToContents();
+
+    if (!m_executionRecords.isEmpty()) {
+        ui->table_execution_records->setCurrentCell(0, 0);
+    } else {
+        ui->table_execution_records->clearSelection();
+    }
+}
+
+void AutoTaskPage::showRecordDetails(int row)
+{
+    if (row < 0 || row >= m_executionRecords.size()) {
+        ui->lbl_record_summary->setText(tr("未选择记录"));
+        ui->lbl_sensor_snapshot->setText(tr("传感器摘要将显示在此处"));
+        return;
+    }
+
+    const ExecutionRecord& record = m_executionRecords.at(row);
+    QString displayState = ui->table_execution_records->item(row, 1)
+        ? ui->table_execution_records->item(row, 1)->text()
+        : record.state;
+    QString taskLabel = record.taskFile.isEmpty()
+        ? tr("<未命名任务>")
+        : QFileInfo(record.taskFile).fileName();
+    QString stepText = (record.stepIndex >= 0)
+        ? QString::number(record.stepIndex + 1)
+        : QStringLiteral("--");
+
+    ui->lbl_record_summary->setText(
+        tr("轮次 %1 | 任务: %2 | 状态: %3 | 步骤: %4 | 时间: %5")
+            .arg(record.roundId)
+            .arg(taskLabel)
+            .arg(displayState)
+            .arg(stepText)
+            .arg(formatRecordTimestamp(record.timestampUs)));
+
+    ui->lbl_sensor_snapshot->setText(formatSensorSnapshot(record));
+
+    if (record.stepIndex >= 0) {
+        highlightCurrentStep(record.stepIndex);
     }
 }
 

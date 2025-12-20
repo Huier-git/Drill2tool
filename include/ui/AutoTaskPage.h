@@ -4,6 +4,8 @@
 #include <QWidget>
 #include <QString>
 #include <QMap>
+#include <QSqlDatabase>
+#include <QVector>
 
 #include "control/DrillParameterPreset.h"
 #include "control/AutoDrillManager.h"
@@ -23,6 +25,22 @@ class AutoTaskPage : public QWidget
     Q_OBJECT
 
 public:
+    struct ExecutionRecord {
+        int eventId = 0;
+        int roundId = 0;
+        QString taskFile;
+        int stepIndex = -1;
+        QString state;
+        QString reason;
+        double depthMm = 0.0;
+        double torqueNm = 0.0;
+        double pressureN = 0.0;
+        double velocityMmPerMin = 0.0;
+        double forceUpperN = 0.0;
+        double forceLowerN = 0.0;
+        qint64 timestampUs = 0;
+    };
+
     explicit AutoTaskPage(QWidget *parent = nullptr);
     ~AutoTaskPage();
 
@@ -59,6 +77,12 @@ private slots:
     // Timer slots
     void onElapsedTimerTick();
 
+    // Execution record slots
+    void onRefreshRecordsClicked();
+    void onRoundFilterChanged(int index);
+    void onTaskFilterChanged(int index);
+    void onRecordSelectionChanged();
+
     // Test mode slots (always declared to avoid moc issues)
     void onRunUnitTestsClicked();
     void onTestScenarioNormalClicked();
@@ -87,6 +111,18 @@ private:
     bool ensureAcquisitionReady();
     QString formatTaskNote() const;
     void logAcquisitionEvent(bool running);
+    void syncRoundContext();
+
+    // Execution record helpers
+    void setupRecordPanel();
+    bool ensureEventDatabase();
+    void reloadFilters();
+    void reloadRecordsAsync();
+    void reloadExecutionRecords();
+    void updateRecordTable();
+    QString formatRecordTimestamp(qint64 timestampUs) const;
+    void showRecordDetails(int row);
+    QString formatSensorSnapshot(const ExecutionRecord& record) const;
 
     Ui::AutoTaskPage *ui;
 
@@ -102,6 +138,9 @@ private:
     QString m_tasksDirectory;
     QStringList m_availableTasks;
     QString m_currentTaskFile;
+    QString m_eventDbConnectionName;
+    QSqlDatabase m_eventDb;
+    QVector<ExecutionRecord> m_executionRecords;
 
 #ifdef ENABLE_TEST_MODE
     class MockDataGenerator* m_mockGenerator;

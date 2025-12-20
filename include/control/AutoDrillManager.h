@@ -21,6 +21,7 @@ class PercussionController;
 class SafetyWatchdog;
 class MdbWorker;
 class MotorWorker;
+class DbWriter;
 
 enum class AutoTaskState {
     Idle,
@@ -88,6 +89,9 @@ public:
     // 数据采集连接
     void setDataWorkers(MdbWorker* mdbWorker, MotorWorker* motorWorker);
     bool hasSensorData() const;
+    void setDbWriter(DbWriter* writer) { m_dbWriter = writer; }
+    void setRoundId(int roundId) { m_roundId = roundId; }
+    int roundId() const { return m_roundId; }
 
 public slots:
     void onDataBlockReceived(const DataBlock& block);
@@ -124,6 +128,9 @@ private:
     void failTask(const QString& reason);
     void stopAllControllers();
     void applyPreset(const DrillParameterPreset& preset, TaskStep::Type type);
+    void recordTaskEvent(const QString& state,
+                         const QString& reason,
+                         int stepIndexOverride = -1);
 
     bool evaluateConditions(const TaskStep& step) const;
     bool evaluateSingleCondition(const QJsonObject& condition) const;
@@ -147,6 +154,7 @@ private:
     RotationController* m_rotation;
     PercussionController* m_percussion;
     SafetyWatchdog* m_watchdog;
+    DbWriter* m_dbWriter;
 
     // 数据采集Worker
     MdbWorker* m_mdbWorker;
@@ -167,6 +175,7 @@ private:
     bool m_hasActivePreset;
 
     double m_totalTargetDepth;
+    int m_roundId;
 };
 
 Q_DECLARE_METATYPE(AutoTaskState)

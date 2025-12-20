@@ -5,6 +5,8 @@
 #include "control/RotationController.h"
 #include "control/PercussionController.h"
 #include "control/SafetyWatchdog.h"
+#include "database/DbWriter.h"
+#include <QMetaObject>
 #include "control/MotionLockManager.h"
 #include "control/MechanismTypes.h"
 #include "dataACQ/MdbWorker.h"
@@ -100,6 +102,7 @@ AutoDrillManager::AutoDrillManager(FeedController* feed,
     , m_rotation(rotation)
     , m_percussion(percussion)
     , m_watchdog(new SafetyWatchdog(this))
+    , m_dbWriter(nullptr)
     , m_mdbWorker(nullptr)
     , m_motorWorker(nullptr)
     , m_stepTimeoutTimer(new QTimer(this))
@@ -113,6 +116,7 @@ AutoDrillManager::AutoDrillManager(FeedController* feed,
     , m_lastStallDetected(false)
     , m_hasActivePreset(false)
     , m_totalTargetDepth(0.0)
+    , m_roundId(0)
 {
     m_stepTimeoutTimer->setSingleShot(true);
     m_holdTimer->setSingleShot(true);
@@ -253,6 +257,7 @@ bool AutoDrillManager::start()
     m_stepExecutionState = StepExecutionState::Pending;
 
     emit logMessage(tr("开始执行自动任务"));
+    recordTaskEvent("started", tr("开始执行自动任务"));
     setState(AutoTaskState::Preparing, tr("准备执行任务"));
     return prepareNextStep();
 }
@@ -304,6 +309,7 @@ bool AutoDrillManager::resume()
     }
 
     emit logMessage(tr("恢复执行任务"));
+    recordTaskEvent("resumed", tr("恢复执行任务"), m_currentStepIndex);
     setState(AutoTaskState::Preparing, tr("恢复步骤 %1").arg(m_currentStepIndex + 1));
 
     executeStep(m_steps[m_currentStepIndex]);
@@ -570,6 +576,8 @@ bool AutoDrillManager::prepareNextStep()
         setState(AutoTaskState::Finished, tr("任务完成"));
         emit logMessage(tr("任务完成"));
         emit taskCompleted();
+        int lastStepIndex = m_steps.isEmpty() ? -1 : m_steps.size() - 1;
+        recordTaskEvent("finished", tr("任务完成"), lastStepIndex);
         return false;
     }
 
@@ -580,6 +588,7 @@ bool AutoDrillManager::prepareNextStep()
                         .arg(m_currentStepIndex + 1)
                         .arg(m_steps.size())
                         .arg(TaskStep::typeToString(step.type)));
+    recordTaskEvent("step_started", tr("进入步骤"), m_currentStepIndex);
     executeStep(step);
     return true;
 }
@@ -665,6 +674,7 @@ void AutoDrillManager::completeCurrentStep()
 
     emit logMessage(tr("步骤 %1 完成").arg(m_currentStepIndex + 1));
     emit stepCompleted(m_currentStepIndex);
+    recordTaskEvent("step_completed", tr("步骤完成"), m_currentStepIndex);
     prepareNextStep();
 }
 
@@ -695,6 +705,7 @@ void AutoDrillManager::failTask(const QString& reason)
 
     QString message = reason.isEmpty() ? tr("任务失败") : reason;
     setState(AutoTaskState::Error, message);
+    recordTaskEvent("failed", message, m_currentStepIndex);
     emit taskFailed(message);
 }
 
@@ -753,6 +764,33 @@ void AutoDrillManager::applyPreset(const DrillParameterPreset& preset, TaskStep:
             m_percussion->stopPercussion();
         }
     }
+}
+
+void AutoDrillManager::recordTaskEvent(const QString& state,
+                                       const QString& reason,
+                                       int stepIndexOverride)
+{
+    if (!m_dbWriter || m_roundId <= 0) {
+        return;
+    }
+
+    int stepIndex = (stepIndexOverride >= 0) ? stepIndexOverride : m_currentStepIndex;
+
+    QMetaObject::invokeMethod(
+        m_dbWriter,
+        "logAutoTaskEvent",
+        Qt::QueuedConnection,
+        Q_ARG(int, m_roundId),
+        Q_ARG(QString, m_taskFilePath),
+        Q_ARG(int, stepIndex),
+        Q_ARG(QString, state),
+        Q_ARG(QString, reason),
+        Q_ARG(double, m_lastDepthMm),
+        Q_ARG(double, m_lastTorqueNm),
+        Q_ARG(double, m_lastPressureN),
+        Q_ARG(double, m_lastVelocityMmPerMin),
+        Q_ARG(double, m_lastForceUpperN),
+        Q_ARG(double, m_lastForceLowerN));
 }
 
 bool AutoDrillManager::evaluateConditions(const TaskStep& step) const
