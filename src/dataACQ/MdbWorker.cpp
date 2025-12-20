@@ -75,27 +75,27 @@ void MdbWorker::runAcquisition()
 {
     LOG_DEBUG("MdbWorker", "Starting acquisition timer...");
 
-    // 启动定时器
-    m_readTimer->start();
+    // 启动定时器并记录触发间隔
+    m_sampleCount = 0;
+    m_triggerTimer.restart();
+    m_lastIntervalMs = 0;
 
-    // 进入事件循环（定时器会触发readSensors）
-    // Worker运行在独立线程，这里需要保持线程活跃
-    while (shouldContinue()) {
-        QThread::msleep(100);
-
-        // 每10秒输出统计
-        if (m_sampleCount > 0 && m_sampleCount % 100 == 0) {
-            emit statisticsUpdated(m_sampleCount, m_sampleRate);
-        }
+    if (m_readTimer) {
+        m_readTimer->start();
+        LOG_DEBUG_STREAM("MdbWorker") << "Read timer started, interval:" << m_readTimer->interval() << "ms";
+    } else {
+        emitError("Read timer not initialized");
     }
-
-    LOG_DEBUG("MdbWorker", "Acquisition loop ended");
 }
 
 void MdbWorker::readSensors()
 {
     if (!shouldContinue()) {
         return;
+    }
+
+    if (!m_triggerTimer.isValid()) {
+        m_triggerTimer.start();
     }
     
     // 读取4个传感器数据
@@ -123,6 +123,18 @@ void MdbWorker::readSensors()
     
     m_sampleCount++;
     m_samplesCollected += 4;  // 4个传感器
+
+    // 记录触发间隔并输出统计
+    m_lastIntervalMs = m_triggerTimer.restart();
+    int statisticStep = static_cast<int>(m_sampleRate * 10); // 约10秒
+    if (statisticStep <= 0) {
+        statisticStep = 100;
+    }
+    if (m_sampleCount > 0 && m_sampleCount % statisticStep == 0) {
+        emit statisticsUpdated(m_sampleCount, m_sampleRate);
+        LOG_DEBUG_STREAM("MdbWorker") << "Timer interval (ms):" << m_lastIntervalMs
+                                      << "Sample count:" << m_sampleCount;
+    }
 }
 
 void MdbWorker::performZeroCalibration()

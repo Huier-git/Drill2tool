@@ -92,32 +92,26 @@ void MotorWorker::runAcquisition()
 {
     LOG_DEBUG("MotorWorker", "Starting acquisition timer...");
 
-    // 启动定时器
-    m_readTimer->start();
+    m_sampleCount = 0;
+    m_triggerTimer.restart();
+    m_lastIntervalMs = 0;
 
-    // 进入事件循环
-    while (shouldContinue()) {
-        // 处理事件（让定时器能够触发）
-        QThread::msleep(50);
-
-        // 每10秒输出统计
-        if (m_sampleCount > 0 && m_sampleCount % 1000 == 0) {
-            emit statisticsUpdated(m_samplesCollected, m_sampleRate);
-        }
-    }
-
-    // 停止定时器
     if (m_readTimer) {
-        m_readTimer->stop();
+        m_readTimer->start();
+        LOG_DEBUG_STREAM("MotorWorker") << "Read timer started, interval:" << m_readTimer->interval() << "ms";
+    } else {
+        emitError("Read timer not initialized");
     }
-
-    LOG_DEBUG("MotorWorker", "Acquisition loop ended");
 }
 
 void MotorWorker::readMotorParameters()
 {
     if (!shouldContinue()) {
         return;
+    }
+
+    if (!m_triggerTimer.isValid()) {
+        m_triggerTimer.start();
     }
 
     // 检查全局句柄
@@ -164,6 +158,18 @@ void MotorWorker::readMotorParameters()
     int paramsPerMotor = (m_readPosition ? 1 : 0) + (m_readSpeed ? 1 : 0) +
                          (m_readTorque ? 1 : 0) + (m_readCurrent ? 1 : 0);
     m_samplesCollected += m_motorIds.size() * paramsPerMotor;
+
+    // 记录触发间隔并输出统计
+    m_lastIntervalMs = m_triggerTimer.restart();
+    int statisticStep = static_cast<int>(m_sampleRate * 10); // 约10秒
+    if (statisticStep <= 0) {
+        statisticStep = 1000;
+    }
+    if (m_sampleCount > 0 && m_sampleCount % statisticStep == 0) {
+        emit statisticsUpdated(m_samplesCollected, m_sampleRate);
+        LOG_DEBUG_STREAM("MotorWorker") << "Timer interval (ms):" << m_lastIntervalMs
+                                        << "Sample count:" << m_sampleCount;
+    }
 }
 
 bool MotorWorker::readMotorPosition(int motorId, double &position)

@@ -2,11 +2,12 @@
 #define MDBWORKER_H
 
 #include "dataACQ/BaseWorker.h"
-#include <QTimer>
-#include <QTcpSocket>
-#include <QModbusTcpClient>
+#include <QElapsedTimer>
 #include <QModbusDataUnit>
 #include <QModbusReply>
+#include <QModbusTcpClient>
+#include <QTimer>
+#include <QTcpSocket>
 
 /**
  * @brief MDB传感器采集Worker (Modbus TCP)
@@ -87,9 +88,11 @@ private:
     double m_lastForceLower;
     double m_lastTorque;
     double m_lastPosition;
-    
+
     bool m_isConnected;
     qint64 m_sampleCount;       // 样本计数
+    QElapsedTimer m_triggerTimer; // 统计定时器触发间隔
+    qint64 m_lastIntervalMs {0};
 };
 
 #endif // MDBWORKER_H
