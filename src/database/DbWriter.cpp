@@ -246,8 +246,17 @@ bool DbWriter::initializeDatabase()
         emit errorOccurred("Failed to open database: " + m_db.lastError().text());
         return false;
     }
-    
+
     qDebug() << "Database opened:" << m_dbPath;
+
+    QSqlQuery pragmaQuery(m_db);
+    if (!pragmaQuery.exec("PRAGMA journal_mode=WAL;")) {
+        qWarning() << "Failed to set journal mode WAL:" << pragmaQuery.lastError().text();
+    }
+
+    if (!pragmaQuery.exec("PRAGMA busy_timeout=3000;")) {
+        qWarning() << "Failed to set busy_timeout:" << pragmaQuery.lastError().text();
+    }
     
     // 创建表结构
     if (!createTables()) {

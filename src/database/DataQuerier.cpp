@@ -31,6 +31,11 @@ bool DataQuerier::initialize()
         return false;
     }
 
+    QSqlQuery pragmaQuery(m_db);
+    if (!pragmaQuery.exec("PRAGMA busy_timeout=3000;")) {
+        qWarning() << "Failed to set busy_timeout:" << pragmaQuery.lastError().text();
+    }
+
     m_isInitialized = true;
     qDebug() << "DataQuerier initialized:" << m_dbPath;
     return true;
