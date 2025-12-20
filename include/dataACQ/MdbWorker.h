@@ -3,6 +3,7 @@
 
 #include "dataACQ/BaseWorker.h"
 #include <QTimer>
+#include <QElapsedTimer>
 #include <QTcpSocket>
 #include <QModbusTcpClient>
 #include <QModbusDataUnit>
@@ -62,6 +63,7 @@ protected:
 
 private slots:
     void readSensors();  // 定时读取传感器
+    void reportStatistics();
 
 private:
     bool connectToServer();
@@ -75,6 +77,9 @@ private:
     
     QModbusTcpClient *m_modbusClient;  // Modbus TCP客户端
     QTimer *m_readTimer;               // 读取定时器
+    QTimer *m_statisticsTimer;         // 统计定时器
+    QElapsedTimer m_runtimeTimer;      // 运行计时
+    QElapsedTimer m_intervalTimer;     // 采样间隔计时
     
     // 零点校准值
     double m_forceUpperZero;

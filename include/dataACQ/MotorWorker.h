@@ -3,6 +3,7 @@
 
 #include "dataACQ/BaseWorker.h"
 #include <QTimer>
+#include <QElapsedTimer>
 #include <QVector>
 
 /**
@@ -46,6 +47,7 @@ public:
 
 public slots:
     void readMotorParameters();  // 读取电机参数
+    void reportStatistics();
 
 signals:
     // 连接状态改变（由外部连接管理器触发）
@@ -68,6 +70,9 @@ private:
     QString m_controllerAddress;    // 控制器地址（仅用于日志）
     QVector<int> m_motorIds;        // 电机ID列表
     QTimer *m_readTimer;            // 读取定时器
+    QTimer *m_statisticsTimer;      // 统计定时器
+    QElapsedTimer m_runtimeTimer;   // 运行计时
+    QElapsedTimer m_intervalTimer;  // 采样间隔计时
 
     // 读取参数开关
     bool m_readPosition;

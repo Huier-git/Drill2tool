@@ -11,6 +11,7 @@ MdbWorker::MdbWorker(QObject *parent)
     , m_serverPort(502)
     , m_modbusClient(nullptr)
     , m_readTimer(nullptr)
+    , m_statisticsTimer(nullptr)
     , m_forceUpperZero(0.0)
     , m_forceLowerZero(0.0)
     , m_torqueZero(0.0)
@@ -30,6 +31,11 @@ MdbWorker::~MdbWorker()
 {
     if (m_isConnected) {
         disconnectFromServer();
+    }
+    if (m_statisticsTimer) {
+        m_statisticsTimer->stop();
+        delete m_statisticsTimer;
+        m_statisticsTimer = nullptr;
     }
 }
 
@@ -64,6 +70,11 @@ void MdbWorker::shutdownHardware()
         delete m_readTimer;
         m_readTimer = nullptr;
     }
+    if (m_statisticsTimer) {
+        m_statisticsTimer->stop();
+        delete m_statisticsTimer;
+        m_statisticsTimer = nullptr;
+    }
 
     // 断开连接
     disconnectFromServer();
@@ -75,21 +86,24 @@ void MdbWorker::runAcquisition()
 {
     LOG_DEBUG("MdbWorker", "Starting acquisition timer...");
 
-    // 启动定时器
-    m_readTimer->start();
+    m_sampleCount = 0;
+    m_samplesCollected = 0;
+    m_runtimeTimer.restart();
+    m_intervalTimer.invalidate();
 
-    // 进入事件循环（定时器会触发readSensors）
-    // Worker运行在独立线程，这里需要保持线程活跃
-    while (shouldContinue()) {
-        QThread::msleep(100);
-
-        // 每10秒输出统计
-        if (m_sampleCount > 0 && m_sampleCount % 100 == 0) {
-            emit statisticsUpdated(m_sampleCount, m_sampleRate);
-        }
+    if (m_readTimer && !m_readTimer->isActive()) {
+        m_readTimer->start();
     }
 
-    LOG_DEBUG("MdbWorker", "Acquisition loop ended");
+    if (!m_statisticsTimer) {
+        m_statisticsTimer = new QTimer(this);
+        m_statisticsTimer->setInterval(10000);
+        connect(m_statisticsTimer, &QTimer::timeout, this, &MdbWorker::reportStatistics);
+    }
+    m_statisticsTimer->start();
+
+    LOG_DEBUG_STREAM("MdbWorker") << "Acquisition armed. Timer interval:"
+                                  << m_readTimer->interval() << "ms";
 }
 
 void MdbWorker::readSensors()
@@ -123,6 +137,30 @@ void MdbWorker::readSensors()
     
     m_sampleCount++;
     m_samplesCollected += 4;  // 4个传感器
+
+    if (!m_intervalTimer.isValid()) {
+        m_intervalTimer.start();
+    } else {
+        qint64 deltaMs = m_intervalTimer.restart();
+        if (m_sampleCount % static_cast<int>(m_sampleRate) == 0 && deltaMs > 0) {
+            double actualRate = 1000.0 / deltaMs;
+            LOG_DEBUG_STREAM("MdbWorker") << "Tick interval:" << deltaMs
+                                          << "ms (~" << actualRate << "Hz)";
+        }
+    }
+}
+
+void MdbWorker::reportStatistics()
+{
+    if (!m_runtimeTimer.isValid()) {
+        return;
+    }
+
+    double elapsedSec = m_runtimeTimer.elapsed() / 1000.0;
+    double effectiveRate = (elapsedSec > 0) ? (m_sampleCount / elapsedSec) : 0.0;
+    emit statisticsUpdated(m_samplesCollected, effectiveRate);
+    LOG_DEBUG_STREAM("MdbWorker") << "Stats: samples" << m_samplesCollected
+                                  << "effective rate" << effectiveRate << "Hz";
 }
 
 void MdbWorker::performZeroCalibration()
