@@ -1,5 +1,16 @@
+# AI 相关文件和文件夹
+.claude/
+CLAUDE.md
+*.claude.md
+.aider*
+.cursor/
+.copilot/
+.ai/
+
 # Qt编译输出
 build/
+debug/
+release/
 *.o
 *.obj
 moc_*.cpp
@@ -14,6 +25,8 @@ qrc_*.cpp
 *.dll
 *.pdb
 *.ilk
+*.exp
+*.lib
 
 # IDE配置
 .vscode/

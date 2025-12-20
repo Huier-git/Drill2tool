@@ -81,7 +81,7 @@ DrillControl/
 │       ├── ArmGripController.h   # 机械手夹紧 (Mg) ⭐ 新增
 │       ├── ArmRotationController.h # 机械手回转 (Mr) ⭐ 新增
 │       ├── DockingController.h   # 对接推杆 (Dh) ⭐ 新增
-│       ├── StorageController.h   # 料仓控制器 (Sr)
+│       ├── StorageController.h   # 钻管仓转位控制器 (Sr)
 │       └── ClampController.h     # 夹紧控制器 (Cb)
 ├── forms/                        # Qt UI文件
 │   ├── MainWindow.ui             # 主窗口界面
@@ -226,6 +226,18 @@ DrillControl/
 - **单一句柄架构**: 全局互斥锁保护，线程安全 ⭐ 新增
 - **模块化设计**: 清晰的目录结构和职责分离
 - **Python集成支持**: 预留Python脚本接口
+
+## 现场调试与测试
+
+- 现场测试的准备、执行顺序、数据记录模板详见 `docs/ONSITE_TESTING_PLAN.md`，务必遵循"低风险 → 高风险 → 数据采集/安全"的顺序推进。
+- 每个动作完成后立即导出 `logs/` 与 SQLite 数据库，连同驱动面板/传感器截图一并回填测试表，方便追溯。
+- 使用 DrillControlPage 状态栏监视 MotionLockManager，若出现 "Busy" 必须在动作前解除并记录责任人及原因。
+
+## 下位机 ZMotion 程序
+
+- ZMotion BASIC 源码位于 `ZmotionCode/Zbasic_/ECAT_Scan.bas`，负责 EtherCAT 扫描、节点映射与 PDO/轴参数初始化。
+- 通过 ZDevelop 或 ControlPage 终端运行 `ECAT_Scan.bas` 后，在 Command Terminal 输入 `?Map` 并截图，确认轴号、厂商号与 `config/mechanisms.json` 一致。
+- 优化后的代码包含统一的日志函数 `LogStage()`，会输出详细的节点信息、轴映射表、使能状态等，便于与上位机日志对齐。
 
 ### 线程架构 ⭐ 新增
 

@@ -1,0 +1,14 @@
+[Controller]
+TypeName=
+IfUpload=0
+UserVersion=1.0
+Files=1
+Breaks=0
+Watches=0
+[FileList]
+File1=ECAT_Scan.bas
+FileType1=1
+AutoRun1=0
+[OpenList]
+OpenFile1=ECAT_Scan.bas
+OpenLine1=79

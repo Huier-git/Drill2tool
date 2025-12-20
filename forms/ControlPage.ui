@@ -152,23 +152,8 @@ QCheckBox, QComboBox {
     font-size: 13px;
 }</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout_main">
-   <property name="spacing">
-    <number>15</number>
-   </property>
-   <property name="leftMargin">
-    <number>15</number>
-   </property>
-   <property name="topMargin">
-    <number>15</number>
-   </property>
-   <property name="rightMargin">
-    <number>15</number>
-   </property>
-   <property name="bottomMargin">
-    <number>15</number>
-   </property>
-   <item>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="0" column="0">
     <widget class="QGroupBox" name="group_control">
      <property name="title">
       <string>系统总控制</string>
@@ -250,163 +235,224 @@ QCheckBox, QComboBox {
      </layout>
     </widget>
    </item>
-   <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_content">
-     <property name="spacing">
-      <number>15</number>
-     </property>
+   <item row="1" column="0">
+    <layout class="QHBoxLayout" name="horizontalLayout" stretch="4,1">
      <item>
-      <widget class="QGroupBox" name="group_motor_table">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-         <horstretch>2</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="title">
-        <string>电机参数列表</string>
-       </property>
-       <layout class="QVBoxLayout" name="verticalLayout_table">
-        <property name="spacing">
-         <number>12</number>
-        </property>
-        <property name="leftMargin">
-         <number>15</number>
-        </property>
-        <property name="topMargin">
-         <number>15</number>
-        </property>
-        <property name="rightMargin">
-         <number>15</number>
-        </property>
-        <property name="bottomMargin">
-         <number>15</number>
-        </property>
-        <item>
-         <layout class="QHBoxLayout" name="horizontalLayout_table_controls">
+      <layout class="QVBoxLayout" name="verticalLayout" stretch="3,1">
+       <item>
+        <widget class="QGroupBox" name="group_motor_table">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+           <horstretch>2</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="title">
+          <string>电机参数列表</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_table">
           <property name="spacing">
+           <number>12</number>
+          </property>
+          <property name="leftMargin">
+           <number>15</number>
+          </property>
+          <property name="topMargin">
+           <number>15</number>
+          </property>
+          <property name="rightMargin">
+           <number>15</number>
+          </property>
+          <property name="bottomMargin">
            <number>15</number>
           </property>
           <item>
-           <widget class="QPushButton" name="btn_motor_parm_update">
-            <property name="minimumSize">
-             <size>
-              <width>90</width>
-              <height>30</height>
-             </size>
+           <layout class="QHBoxLayout" name="horizontalLayout_table_controls">
+            <property name="spacing">
+             <number>15</number>
             </property>
-            <property name="text">
-             <string>刷新列表</string>
-            </property>
-           </widget>
+            <item>
+             <widget class="QPushButton" name="btn_motor_parm_update">
+              <property name="minimumSize">
+               <size>
+                <width>90</width>
+                <height>30</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>刷新列表</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="cb_motor_parm_edit">
+              <property name="text">
+               <string>启用编辑模式</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="cb_motor_rt_refresh">
+              <property name="text">
+               <string>实时监控数据</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="cb_motor_pos_abs">
+              <property name="text">
+               <string>绝对位置模式</string>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="horizontalSpacer_2">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
           </item>
           <item>
-           <widget class="QCheckBox" name="cb_motor_parm_edit">
-            <property name="text">
-             <string>启用编辑模式</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QCheckBox" name="cb_motor_rt_refresh">
-            <property name="text">
-             <string>实时监控数据</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QCheckBox" name="cb_motor_pos_abs">
-            <property name="text">
-             <string>绝对位置模式</string>
-            </property>
-            <property name="checked">
+           <widget class="QTableWidget" name="tb_motor">
+            <property name="alternatingRowColors">
              <bool>true</bool>
             </property>
+            <property name="selectionMode">
+             <enum>QAbstractItemView::SingleSelection</enum>
+            </property>
+            <property name="selectionBehavior">
+             <enum>QAbstractItemView::SelectRows</enum>
+            </property>
+            <property name="showGrid">
+             <bool>true</bool>
+            </property>
+            <column>
+             <property name="text">
+              <string>ID</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>指令位置 (MPos)</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>实际位置 (Pos)</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>指令速度 (MVel)</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>实际速度 (Vel)</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>输出 (DAC)</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>轴类型</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>脉冲当量</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>加速度</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>减速度</string>
+             </property>
+            </column>
            </widget>
           </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="group_command">
+         <property name="title">
+          <string>命令调试终端</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_cmd">
+          <property name="spacing">
+           <number>12</number>
+          </property>
+          <property name="leftMargin">
+           <number>15</number>
+          </property>
+          <property name="topMargin">
+           <number>15</number>
+          </property>
+          <property name="rightMargin">
+           <number>15</number>
+          </property>
+          <property name="bottomMargin">
+           <number>15</number>
+          </property>
           <item>
-           <spacer name="horizontalSpacer_2">
-            <property name="orientation">
-             <enum>Qt::Horizontal</enum>
+           <widget class="QTextBrowser" name="tb_cmd_window"/>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_cmd">
+            <property name="spacing">
+             <number>15</number>
             </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>40</width>
-              <height>20</height>
-             </size>
-            </property>
-           </spacer>
+            <item>
+             <widget class="QLineEdit" name="tx_cmd">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>35</height>
+               </size>
+              </property>
+              <property name="placeholderText">
+               <string>在此输入运动控制指令...</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="btn_send_cmd">
+              <property name="minimumSize">
+               <size>
+                <width>100</width>
+                <height>35</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>发送指令</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
           </item>
          </layout>
-        </item>
-        <item>
-         <widget class="QTableWidget" name="tb_motor">
-          <property name="alternatingRowColors">
-           <bool>true</bool>
-          </property>
-          <property name="selectionMode">
-           <enum>QAbstractItemView::SingleSelection</enum>
-          </property>
-          <property name="selectionBehavior">
-           <enum>QAbstractItemView::SelectRows</enum>
-          </property>
-          <property name="showGrid">
-           <bool>true</bool>
-          </property>
-          <column>
-           <property name="text">
-            <string>ID</string>
-           </property>
-          </column>
-          <column>
-           <property name="text">
-            <string>指令位置 (MPos)</string>
-           </property>
-          </column>
-          <column>
-           <property name="text">
-            <string>实际位置 (Pos)</string>
-           </property>
-          </column>
-          <column>
-           <property name="text">
-            <string>指令速度 (MVel)</string>
-           </property>
-          </column>
-          <column>
-           <property name="text">
-            <string>实际速度 (Vel)</string>
-           </property>
-          </column>
-          <column>
-           <property name="text">
-            <string>输出 (DAC)</string>
-           </property>
-          </column>
-          <column>
-           <property name="text">
-            <string>轴类型</string>
-           </property>
-          </column>
-          <column>
-           <property name="text">
-            <string>脉冲当量</string>
-           </property>
-          </column>
-          <column>
-           <property name="text">
-            <string>加速度</string>
-           </property>
-          </column>
-          <column>
-           <property name="text">
-            <string>减速度</string>
-           </property>
-          </column>
-         </widget>
-        </item>
-       </layout>
-      </widget>
+        </widget>
+       </item>
+      </layout>
      </item>
      <item>
       <widget class="QGroupBox" name="group_axis_info">
@@ -525,8 +571,8 @@ QCheckBox, QComboBox {
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>362</width>
-             <height>369</height>
+             <width>232</width>
+             <height>586</height>
             </rect>
            </property>
            <layout class="QFormLayout" name="formLayout_params">
@@ -718,66 +764,6 @@ QCheckBox, QComboBox {
       </widget>
      </item>
     </layout>
-   </item>
-   <item>
-    <widget class="QGroupBox" name="group_command">
-     <property name="title">
-      <string>命令调试终端</string>
-     </property>
-     <layout class="QVBoxLayout" name="verticalLayout_cmd">
-      <property name="spacing">
-       <number>12</number>
-      </property>
-      <property name="leftMargin">
-       <number>15</number>
-      </property>
-      <property name="topMargin">
-       <number>15</number>
-      </property>
-      <property name="rightMargin">
-       <number>15</number>
-      </property>
-      <property name="bottomMargin">
-       <number>15</number>
-      </property>
-      <item>
-       <widget class="QTextBrowser" name="tb_cmd_window"/>
-      </item>
-      <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_cmd">
-        <property name="spacing">
-         <number>15</number>
-        </property>
-        <item>
-         <widget class="QLineEdit" name="tx_cmd">
-          <property name="minimumSize">
-           <size>
-            <width>0</width>
-            <height>35</height>
-           </size>
-          </property>
-          <property name="placeholderText">
-           <string>在此输入运动控制指令...</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="btn_send_cmd">
-          <property name="minimumSize">
-           <size>
-            <width>100</width>
-            <height>35</height>
-           </size>
-          </property>
-          <property name="text">
-           <string>发送指令</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </item>
-     </layout>
-    </widget>
    </item>
   </layout>
  </widget>
