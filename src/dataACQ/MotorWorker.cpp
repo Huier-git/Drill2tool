@@ -12,6 +12,7 @@ MotorWorker::MotorWorker(QObject *parent)
     : BaseWorker(parent)
     , m_controllerAddress("192.168.0.11")
     , m_readTimer(nullptr)
+    , m_statisticsTimer(nullptr)
     , m_readPosition(true)
     , m_readSpeed(true)
     , m_readTorque(true)
@@ -29,6 +30,11 @@ MotorWorker::~MotorWorker()
         m_readTimer->stop();
         delete m_readTimer;
         m_readTimer = nullptr;
+    }
+    if (m_statisticsTimer) {
+        m_statisticsTimer->stop();
+        delete m_statisticsTimer;
+        m_statisticsTimer = nullptr;
     }
 }
 
@@ -68,6 +74,10 @@ bool MotorWorker::initializeHardware()
     m_readTimer->setInterval(intervalMs);
     connect(m_readTimer, &QTimer::timeout, this, &MotorWorker::readMotorParameters);
 
+    m_statisticsTimer = new QTimer(this);
+    m_statisticsTimer->setInterval(10000);
+    connect(m_statisticsTimer, &QTimer::timeout, this, &MotorWorker::reportStatistics);
+
     LOG_DEBUG_STREAM("MotorWorker") << "Hardware initialized, read interval:" << intervalMs << "ms";
     return true;
 }
@@ -82,6 +92,11 @@ void MotorWorker::shutdownHardware()
         delete m_readTimer;
         m_readTimer = nullptr;
     }
+    if (m_statisticsTimer) {
+        m_statisticsTimer->stop();
+        delete m_statisticsTimer;
+        m_statisticsTimer = nullptr;
+    }
 
     // 不断开连接，连接由 ZMotionDriver 统一管理
 
@@ -92,26 +107,21 @@ void MotorWorker::runAcquisition()
 {
     LOG_DEBUG("MotorWorker", "Starting acquisition timer...");
 
-    // 启动定时器
-    m_readTimer->start();
+    m_sampleCount = 0;
+    m_samplesCollected = 0;
+    m_runtimeTimer.restart();
+    m_intervalTimer.invalidate();
 
-    // 进入事件循环
-    while (shouldContinue()) {
-        // 处理事件（让定时器能够触发）
-        QThread::msleep(50);
-
-        // 每10秒输出统计
-        if (m_sampleCount > 0 && m_sampleCount % 1000 == 0) {
-            emit statisticsUpdated(m_samplesCollected, m_sampleRate);
-        }
+    // 启动定时器并立即返回，让线程事件循环驱动采集
+    if (m_readTimer && !m_readTimer->isActive()) {
+        m_readTimer->start();
+    }
+    if (m_statisticsTimer && !m_statisticsTimer->isActive()) {
+        m_statisticsTimer->start();
     }
 
-    // 停止定时器
-    if (m_readTimer) {
-        m_readTimer->stop();
-    }
-
-    LOG_DEBUG("MotorWorker", "Acquisition loop ended");
+    LOG_DEBUG_STREAM("MotorWorker") << "Acquisition armed. Timer interval:"
+                                    << m_readTimer->interval() << "ms";
 }
 
 void MotorWorker::readMotorParameters()
@@ -164,6 +174,30 @@ void MotorWorker::readMotorParameters()
     int paramsPerMotor = (m_readPosition ? 1 : 0) + (m_readSpeed ? 1 : 0) +
                          (m_readTorque ? 1 : 0) + (m_readCurrent ? 1 : 0);
     m_samplesCollected += m_motorIds.size() * paramsPerMotor;
+
+    if (!m_intervalTimer.isValid()) {
+        m_intervalTimer.start();
+    } else {
+        qint64 deltaMs = m_intervalTimer.restart();
+        if (m_sampleCount % static_cast<int>(m_sampleRate) == 0 && deltaMs > 0) {
+            double actualRate = 1000.0 / deltaMs;
+            LOG_DEBUG_STREAM("MotorWorker") << "Tick interval:" << deltaMs
+                                            << "ms (~" << actualRate << "Hz)";
+        }
+    }
+}
+
+void MotorWorker::reportStatistics()
+{
+    if (!m_runtimeTimer.isValid()) {
+        return;
+    }
+
+    double elapsedSec = m_runtimeTimer.elapsed() / 1000.0;
+    double effectiveRate = (elapsedSec > 0) ? (m_sampleCount / elapsedSec) : 0.0;
+    emit statisticsUpdated(m_samplesCollected, effectiveRate);
+    LOG_DEBUG_STREAM("MotorWorker") << "Stats: samples" << m_samplesCollected
+                                    << "effective rate" << effectiveRate << "Hz";
 }
 
 bool MotorWorker::readMotorPosition(int motorId, double &position)
