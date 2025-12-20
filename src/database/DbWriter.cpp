@@ -8,6 +8,8 @@
 #include <QFile>
 #include <QThread>
 #include <QtMath>
+#include <QVariant>
+#include <cmath>
 #include <cfloat>
 
 DbWriter::DbWriter(const QString &dbPath, QObject *parent)
@@ -235,6 +237,60 @@ void DbWriter::logFrequencyChange(int roundId, SensorType sensorType,
     }
 }
 
+void DbWriter::logAutoTaskEvent(int roundId,
+                                const QString &taskFile,
+                                int stepIndex,
+                                const QString &state,
+                                const QString &reason,
+                                double depthMm,
+                                double torqueNm,
+                                double pressureN,
+                                double velocityMmPerMin,
+                                double forceUpperN,
+                                double forceLowerN)
+{
+    if (!m_isInitialized || roundId <= 0) {
+        return;
+    }
+
+    QSqlQuery query(m_db);
+    query.prepare(
+        "INSERT INTO auto_task_events "
+        "(round_id, task_file, step_index, state, reason, depth_mm, torque_nm, pressure_n, "
+        "velocity_mm_per_min, force_upper_n, force_lower_n, timestamp_us) "
+        "VALUES (:round_id, :task_file, :step_index, :state, :reason, :depth_mm, :torque_nm, "
+        ":pressure_n, :velocity_mm_per_min, :force_upper_n, :force_lower_n, :timestamp_us)");
+
+    auto bindNullable = [](QSqlQuery &q, const QString &placeholder, double value) {
+        if (std::isnan(value)) {
+            q.bindValue(placeholder, QVariant(QVariant::Double));
+        } else {
+            q.bindValue(placeholder, value);
+        }
+    };
+
+    query.bindValue(":round_id", roundId);
+    query.bindValue(":task_file", taskFile);
+    if (stepIndex >= 0) {
+        query.bindValue(":step_index", stepIndex);
+    } else {
+        query.bindValue(":step_index", QVariant(QVariant::Int));
+    }
+    query.bindValue(":state", state);
+    query.bindValue(":reason", reason);
+    bindNullable(query, ":depth_mm", depthMm);
+    bindNullable(query, ":torque_nm", torqueNm);
+    bindNullable(query, ":pressure_n", pressureN);
+    bindNullable(query, ":velocity_mm_per_min", velocityMmPerMin);
+    bindNullable(query, ":force_upper_n", forceUpperN);
+    bindNullable(query, ":force_lower_n", forceLowerN);
+    query.bindValue(":timestamp_us", getCurrentTimestampUs());
+
+    if (!query.exec()) {
+        emit errorOccurred("Failed to log auto task event: " + query.lastError().text());
+    }
+}
+
 bool DbWriter::initializeDatabase()
 {
     // 创建数据库连接（使用线程ID作为连接名）
@@ -290,6 +346,27 @@ bool DbWriter::createTables()
             qWarning() << "Statement:" << trimmed;
         }
     }
+
+    // 确保自动任务事件表存在（向后兼容旧schema）
+    QSqlQuery compatQuery(m_db);
+    compatQuery.exec(
+        "CREATE TABLE IF NOT EXISTS auto_task_events ("
+        "event_id INTEGER PRIMARY KEY AUTOINCREMENT, "
+        "round_id INTEGER NOT NULL, "
+        "task_file TEXT, "
+        "step_index INTEGER, "
+        "state TEXT NOT NULL, "
+        "reason TEXT, "
+        "depth_mm REAL, "
+        "torque_nm REAL, "
+        "pressure_n REAL, "
+        "velocity_mm_per_min REAL, "
+        "force_upper_n REAL, "
+        "force_lower_n REAL, "
+        "timestamp_us INTEGER NOT NULL, "
+        "FOREIGN KEY (round_id) REFERENCES rounds(round_id) ON DELETE CASCADE)");
+    compatQuery.exec("CREATE INDEX IF NOT EXISTS idx_auto_task_round ON auto_task_events(round_id)");
+    compatQuery.exec("CREATE INDEX IF NOT EXISTS idx_auto_task_task ON auto_task_events(task_file)");
     
     qDebug() << "Database tables created/verified";
     return true;
@@ -382,6 +459,30 @@ bool DbWriter::createTablesManually()
         emit errorOccurred("Failed to create events table: " + query.lastError().text());
         return false;
     }
+
+    // 创建auto_task_events表
+    if (!query.exec(
+        "CREATE TABLE IF NOT EXISTS auto_task_events ("
+        "event_id INTEGER PRIMARY KEY AUTOINCREMENT, "
+        "round_id INTEGER NOT NULL, "
+        "task_file TEXT, "
+        "step_index INTEGER, "
+        "state TEXT NOT NULL, "
+        "reason TEXT, "
+        "depth_mm REAL, "
+        "torque_nm REAL, "
+        "pressure_n REAL, "
+        "velocity_mm_per_min REAL, "
+        "force_upper_n REAL, "
+        "force_lower_n REAL, "
+        "timestamp_us INTEGER NOT NULL, "
+        "FOREIGN KEY (round_id) REFERENCES rounds(round_id) ON DELETE CASCADE)")) {
+        emit errorOccurred("Failed to create auto_task_events table: " + query.lastError().text());
+        return false;
+    }
+
+    query.exec("CREATE INDEX IF NOT EXISTS idx_auto_task_round ON auto_task_events(round_id)");
+    query.exec("CREATE INDEX IF NOT EXISTS idx_auto_task_task ON auto_task_events(task_file)");
 
     // 创建frequency_log表
     if (!query.exec(

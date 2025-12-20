@@ -88,3 +88,25 @@ INSERT OR IGNORE INTO system_config (key, value, description) VALUES
     ('default_mdb_rate', '10.0', '默认MDB采样频率(Hz)'),
     ('default_motor_rate', '100.0', '默认电机采样频率(Hz)'),
     ('db_version', '1.0', '数据库版本');
+
+-- 6. 自动任务事件表（auto_task_events）
+-- 记录自动钻进的开始、步骤切换、完成、失败等事件与传感器快照
+CREATE TABLE IF NOT EXISTS auto_task_events (
+    event_id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    round_id            INTEGER NOT NULL,
+    task_file           TEXT,
+    step_index          INTEGER,
+    state               TEXT NOT NULL,
+    reason              TEXT,
+    depth_mm            REAL,
+    torque_nm           REAL,
+    pressure_n          REAL,
+    velocity_mm_per_min REAL,
+    force_upper_n       REAL,
+    force_lower_n       REAL,
+    timestamp_us        INTEGER NOT NULL,
+    FOREIGN KEY (round_id) REFERENCES rounds(round_id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_auto_task_round ON auto_task_events(round_id);
+CREATE INDEX IF NOT EXISTS idx_auto_task_task ON auto_task_events(task_file);

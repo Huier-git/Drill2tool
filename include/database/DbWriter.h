@@ -72,6 +72,21 @@ public slots:
                            const QString &comment = QString());
 
     /**
+     * @brief 记录自动任务执行事件
+     */
+    void logAutoTaskEvent(int roundId,
+                          const QString &taskFile,
+                          int stepIndex,
+                          const QString &state,
+                          const QString &reason,
+                          double depthMm,
+                          double torqueNm,
+                          double pressureN,
+                          double velocityMmPerMin,
+                          double forceUpperN,
+                          double forceLowerN);
+
+    /**
      * @brief 获取或创建时间窗口
      * @param roundId 轮次ID
      * @param timestampUs 时间戳（微秒）
