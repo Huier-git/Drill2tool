@@ -3,6 +3,12 @@
 Scope: local commits ahead of origin/main.
 
 ## Commits
+- 37bfb52 Add physical unit toggle and plan duration estimation.
+  - Add ControlPage physical-unit display + conversion for table edits and status line.
+  - Add UnitConverter with `config/unit_conversions.csv` overrides for pulses-per-unit.
+  - Add PlanVisualizer auto duration estimation with `config/plan_step_map.csv` mapping.
+  - Track SensorPage round reset connection state fields.
+  - Update README recent updates.
 - fe74c6d Remove legacy AutoTask test scaffolding.
   - Remove test_mode build block, test UI, MockDataGenerator, and AutoTask unit test files.
 - 868f36d Silence unused AutoTask state parameter.
