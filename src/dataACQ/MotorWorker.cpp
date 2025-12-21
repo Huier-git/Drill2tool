@@ -92,26 +92,15 @@ void MotorWorker::runAcquisition()
 {
     LOG_DEBUG("MotorWorker", "Starting acquisition timer...");
 
-    // 启动定时器
+    if (!m_readTimer) {
+        emitError("Read timer not initialized");
+        setState(WorkerState::Error);
+        return;
+    }
+
+    // Start timer and return so the thread event loop can deliver timeouts.
     m_readTimer->start();
-
-    // 进入事件循环
-    while (shouldContinue()) {
-        // 处理事件（让定时器能够触发）
-        QThread::msleep(50);
-
-        // 每10秒输出统计
-        if (m_sampleCount > 0 && m_sampleCount % 1000 == 0) {
-            emit statisticsUpdated(m_samplesCollected, m_sampleRate);
-        }
-    }
-
-    // 停止定时器
-    if (m_readTimer) {
-        m_readTimer->stop();
-    }
-
-    LOG_DEBUG("MotorWorker", "Acquisition loop ended");
+    LOG_DEBUG("MotorWorker", "Acquisition timer started");
 }
 
 void MotorWorker::readMotorParameters()
@@ -164,6 +153,10 @@ void MotorWorker::readMotorParameters()
     int paramsPerMotor = (m_readPosition ? 1 : 0) + (m_readSpeed ? 1 : 0) +
                          (m_readTorque ? 1 : 0) + (m_readCurrent ? 1 : 0);
     m_samplesCollected += m_motorIds.size() * paramsPerMotor;
+
+    if (m_sampleCount > 0 && m_sampleCount % 1000 == 0) {
+        emit statisticsUpdated(m_samplesCollected, m_sampleRate);
+    }
 }
 
 bool MotorWorker::readMotorPosition(int motorId, double &position)

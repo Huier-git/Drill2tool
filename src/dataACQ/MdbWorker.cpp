@@ -75,21 +75,15 @@ void MdbWorker::runAcquisition()
 {
     LOG_DEBUG("MdbWorker", "Starting acquisition timer...");
 
-    // 启动定时器
-    m_readTimer->start();
-
-    // 进入事件循环（定时器会触发readSensors）
-    // Worker运行在独立线程，这里需要保持线程活跃
-    while (shouldContinue()) {
-        QThread::msleep(100);
-
-        // 每10秒输出统计
-        if (m_sampleCount > 0 && m_sampleCount % 100 == 0) {
-            emit statisticsUpdated(m_sampleCount, m_sampleRate);
-        }
+    if (!m_readTimer) {
+        emitError("Read timer not initialized");
+        setState(WorkerState::Error);
+        return;
     }
 
-    LOG_DEBUG("MdbWorker", "Acquisition loop ended");
+    // Start timer and return so the thread event loop can deliver timeouts.
+    m_readTimer->start();
+    LOG_DEBUG("MdbWorker", "Acquisition timer started");
 }
 
 void MdbWorker::readSensors()
@@ -123,6 +117,11 @@ void MdbWorker::readSensors()
     
     m_sampleCount++;
     m_samplesCollected += 4;  // 4个传感器
+
+    // Emit statistics roughly every 10 seconds at 10Hz.
+    if (m_sampleCount > 0 && m_sampleCount % 100 == 0) {
+        emit statisticsUpdated(m_sampleCount, m_sampleRate);
+    }
 }
 
 void MdbWorker::performZeroCalibration()
@@ -205,10 +204,22 @@ bool MdbWorker::connectToServer()
     }
 
     // 等待连接完成（最多5秒）
-    int waitMs = 0;
-    while (m_modbusClient->state() == QModbusDevice::ConnectingState && waitMs < 5000) {
-        QThread::msleep(100);
-        waitMs += 100;
+    if (m_modbusClient->state() == QModbusDevice::ConnectingState) {
+        QEventLoop loop;
+        QTimer timer;
+        timer.setSingleShot(true);
+
+        connect(m_modbusClient, &QModbusClient::stateChanged, &loop,
+                [&loop, this]() {
+                    if (m_modbusClient->state() != QModbusDevice::ConnectingState) {
+                        loop.quit();
+                    }
+                });
+        connect(m_modbusClient, &QModbusClient::errorOccurred, &loop, &QEventLoop::quit);
+        connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
+
+        timer.start(5000);
+        loop.exec();
     }
 
     // 检查连接状态
@@ -237,10 +248,21 @@ void MdbWorker::disconnectFromServer()
         m_modbusClient->disconnectDevice();
 
         // 等待断开完成
-        int waitMs = 0;
-        while (m_modbusClient->state() != QModbusDevice::UnconnectedState && waitMs < 2000) {
-            QThread::msleep(100);
-            waitMs += 100;
+        if (m_modbusClient->state() != QModbusDevice::UnconnectedState) {
+            QEventLoop loop;
+            QTimer timer;
+            timer.setSingleShot(true);
+
+            connect(m_modbusClient, &QModbusClient::stateChanged, &loop,
+                    [&loop, this]() {
+                        if (m_modbusClient->state() == QModbusDevice::UnconnectedState) {
+                            loop.quit();
+                        }
+                    });
+            connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
+
+            timer.start(2000);
+            loop.exec();
         }
     }
 

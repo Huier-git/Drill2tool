@@ -132,7 +132,7 @@ private:
     bool m_isInitialized;               // 是否已初始化
 
     // 时间窗口管理
-    QMap<qint64, int> m_windowCache;    // 窗口缓存：key=window_start_us, value=window_id
+    QMap<QPair<int, qint64>, int> m_windowCache;    // 窗口缓存：key=(round_id, window_start_us)
     int m_maxCacheSize;                 // 缓存大小限制（默认100）
 };
 

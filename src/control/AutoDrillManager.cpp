@@ -111,6 +111,7 @@ AutoDrillManager::AutoDrillManager(FeedController* feed,
     , m_lastForceLowerN(0.0)
     , m_lastPressureN(0.0)
     , m_lastStallDetected(false)
+    , m_lastSensorDataMs(0)
     , m_hasActivePreset(false)
     , m_totalTargetDepth(0.0)
 {
@@ -214,6 +215,7 @@ void AutoDrillManager::clearTask()
     m_lastForceLowerN = 0.0;
     m_lastPressureN = 0.0;
     m_lastStallDetected = false;
+    m_lastSensorDataMs = 0;
 
     if (m_watchdog) {
         m_watchdog->disarm();
@@ -379,7 +381,15 @@ void AutoDrillManager::setDataWorkers(MdbWorker* mdbWorker, MotorWorker* motorWo
 
 bool AutoDrillManager::hasSensorData() const
 {
-    return (m_mdbWorker != nullptr && m_motorWorker != nullptr);
+    if (!m_mdbWorker || !m_motorWorker) {
+        return false;
+    }
+
+    const bool connected = m_mdbWorker->isConnected() && m_motorWorker->isConnected();
+    const qint64 nowMs = QDateTime::currentMSecsSinceEpoch();
+    const qint64 staleMs = 2000;
+    const bool recentData = (m_lastSensorDataMs > 0) && ((nowMs - m_lastSensorDataMs) <= staleMs);
+    return connected || recentData;
 }
 
 void AutoDrillManager::onDataBlockReceived(const DataBlock& block)
@@ -390,6 +400,8 @@ void AutoDrillManager::onDataBlockReceived(const DataBlock& block)
 
     // 提取最新值
     double latestValue = block.values.last();
+
+    m_lastSensorDataMs = QDateTime::currentMSecsSinceEpoch();
 
     // 根据传感器类型收集原始数据
     switch (block.sensorType) {

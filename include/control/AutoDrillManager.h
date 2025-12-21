@@ -162,6 +162,7 @@ private:
     double m_lastForceLowerN;      // Lower force sensor (N)
     double m_lastPressureN;        // Calculated drilling pressure (N)
     bool m_lastStallDetected;
+    qint64 m_lastSensorDataMs;
 
     DrillParameterPreset m_activePreset;
     bool m_hasActivePreset;

@@ -119,6 +119,12 @@ void AutoTaskPage::setControllers(FeedController* feed,
         connect(m_drillManager, &AutoDrillManager::logMessage,
                 this, &AutoTaskPage::onLogMessage);
 
+        if (m_acquisitionManager) {
+            m_drillManager->setDataWorkers(
+                m_acquisitionManager->mdbWorker(),
+                m_acquisitionManager->motorWorker());
+        }
+
 #ifdef ENABLE_TEST_MODE
         // 连接 MockDataGenerator 到新创建的 AutoDrillManager
         if (m_mockGenerator) {

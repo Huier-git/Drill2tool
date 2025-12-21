@@ -190,6 +190,7 @@ int DbWriter::startNewRound(const QString &operatorName, const QString &note)
     }
     
     m_currentRoundId = query.lastInsertId().toInt();
+    clearWindowCache();
     qDebug() << "New round started, ID:" << m_currentRoundId;
     return m_currentRoundId;
 }
@@ -540,9 +541,11 @@ int DbWriter::getOrCreateWindow(int roundId, qint64 timestampUs)
     qint64 windowStart = (timestampUs / 1000000) * 1000000;
     qint64 windowEnd = windowStart + 1000000;
 
+    const auto cacheKey = qMakePair(roundId, windowStart);
+
     // 先查缓存
-    if (m_windowCache.contains(windowStart)) {
-        return m_windowCache[windowStart];
+    if (m_windowCache.contains(cacheKey)) {
+        return m_windowCache[cacheKey];
     }
 
     // 查询数据库
@@ -554,7 +557,7 @@ int DbWriter::getOrCreateWindow(int roundId, qint64 timestampUs)
 
     if (query.exec() && query.next()) {
         int windowId = query.value(0).toInt();
-        m_windowCache[windowStart] = windowId;
+        m_windowCache[cacheKey] = windowId;
         return windowId;
     }
 
@@ -572,7 +575,7 @@ int DbWriter::getOrCreateWindow(int roundId, qint64 timestampUs)
     }
 
     int windowId = query.lastInsertId().toInt();
-    m_windowCache[windowStart] = windowId;
+    m_windowCache[cacheKey] = windowId;
 
     // 缓存大小控制
     if (m_windowCache.size() > m_maxCacheSize) {
