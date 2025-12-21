@@ -8,6 +8,7 @@
 #include "dataACQ/MotorWorker.h"
 #include <QMessageBox>
 #include <QDebug>
+#include <QMutexLocker>
 
 SensorPage::SensorPage(QWidget *parent)
     : QWidget(parent)
@@ -199,15 +200,25 @@ void SensorPage::onMotorConnectClicked()
     QString address = ui->le_motor_address->text();
     ui->label_status->setText("正在连接 ZMotion...");
 
-    if (g_handle != nullptr) {
-        ZAux_Close(g_handle);
-        g_handle = nullptr;
+    int result = 0;
+    bool connected = false;
+
+    {
+        QMutexLocker locker(&g_mutex);
+        if (g_handle != nullptr) {
+            ZAux_Close(g_handle);
+            g_handle = nullptr;
+        }
+
+        QByteArray ipBytes = address.toLocal8Bit();
+        result = ZAux_OpenEth(ipBytes.data(), &g_handle);
+        connected = (result == 0 && g_handle != nullptr);
+        if (!connected) {
+            g_handle = nullptr;
+        }
     }
 
-    QByteArray ipBytes = address.toLocal8Bit();
-    int result = ZAux_OpenEth(ipBytes.data(), &g_handle);
-
-    if (result == 0 && g_handle != nullptr) {
+    if (connected) {
         m_motorConnected = true;
         updateUIState();
         ui->label_status->setText("ZMotion已连接");
@@ -229,9 +240,12 @@ void SensorPage::onMotorConnectClicked()
 
 void SensorPage::onMotorDisconnectClicked()
 {
-    if (g_handle != nullptr) {
-        ZAux_Close(g_handle);
-        g_handle = nullptr;
+    {
+        QMutexLocker locker(&g_mutex);
+        if (g_handle != nullptr) {
+            ZAux_Close(g_handle);
+            g_handle = nullptr;
+        }
     }
 
     m_motorConnected = false;

@@ -5,6 +5,7 @@
 #include "control/zmcaux.h"
 #include <QDebug>
 #include <QMessageBox>
+#include <QMutexLocker>
 #include <QTableWidgetItem>
 #include <QThread>
 
@@ -101,14 +102,23 @@ void ControlPage::setupConnections()
 
 void ControlPage::onBusInitClicked()
 {
-    if (g_handle == nullptr) {
+    bool hasHandle = false;
+    int ret = ERR_OK;
+    char cmdbuffAck[2048] = {};
+
+    {
+        QMutexLocker locker(&g_mutex);
+        hasHandle = (g_handle != nullptr);
+        if (hasHandle) {
+            ret = ZAux_Execute(g_handle, "RUNTASK 1,ECAT_Init", cmdbuffAck, 2048);
+        }
+    }
+
+    if (!hasHandle) {
         QMessageBox::warning(this, "错误", "请先在传感器页面连接ZMotion控制器");
         ui->tb_cmd_window->append("错误：未连接控制器");
         return;
     }
-
-    char cmdbuffAck[2048];
-    int ret = ZAux_Execute(g_handle, "RUNTASK 1,ECAT_Init", cmdbuffAck, 2048);
 
     ui->tb_cmd_window->append(toCmdWindow(cmdbuffAck));
 
@@ -133,15 +143,23 @@ void ControlPage::onBusInitClicked()
 
 void ControlPage::onStopAllMotorsClicked()
 {
-    if (g_handle == nullptr) {
-        QMessageBox::warning(this, "错误", "未连接控制器");
-        return;
+    bool hasHandle = false;
+
+    {
+        QMutexLocker locker(&g_mutex);
+        hasHandle = (g_handle != nullptr);
+        if (hasHandle) {
+            // 使用实际初始化的轴数，上限MAX_MOTOR_COUNT（MotorMap数组大小）
+            int n = (m_axisNum > 0) ? qMin(static_cast<int>(m_axisNum), MAX_MOTOR_COUNT) : MAX_MOTOR_COUNT;
+            for (int i = 0; i < n; ++i) {
+                ZAux_Direct_Single_Cancel(g_handle, MotorMap[i], 0);
+            }
+        }
     }
 
-    // 使用实际初始化的轴数，上限MAX_MOTOR_COUNT（MotorMap数组大小）
-    int n = (m_axisNum > 0) ? qMin(static_cast<int>(m_axisNum), MAX_MOTOR_COUNT) : MAX_MOTOR_COUNT;
-    for (int i = 0; i < n; ++i) {
-        ZAux_Direct_Single_Cancel(g_handle, MotorMap[i], 0);
+    if (!hasHandle) {
+        QMessageBox::warning(this, "错误", "未连接控制器");
+        return;
     }
 
     ui->tb_cmd_window->append("所有电机已停止");
@@ -214,7 +232,13 @@ void ControlPage::onUpdateClicked()
 
 void ControlPage::onSendCmdClicked()
 {
-    if (g_handle == nullptr) {
+    bool hasHandle = false;
+    {
+        QMutexLocker locker(&g_mutex);
+        hasHandle = (g_handle != nullptr);
+    }
+
+    if (!hasHandle) {
         ui->tb_cmd_window->append("错误：未连接控制器");
         return;
     }
@@ -237,9 +261,23 @@ void ControlPage::onSendCmdClicked()
     }
 
     // 发送命令到ZMotion控制器
-    char cmdbuffAck[2048];
+    bool callOk = false;
+    char cmdbuffAck[2048] = {};
     QByteArray cmdBytes = cmd.toLocal8Bit();
-    int ret = ZAux_DirectCommand(g_handle, cmdBytes.data(), cmdbuffAck, 2048);
+    int ret = ERR_OK;
+
+    {
+        QMutexLocker locker(&g_mutex);
+        callOk = (g_handle != nullptr);
+        if (callOk) {
+            ret = ZAux_DirectCommand(g_handle, cmdBytes.data(), cmdbuffAck, 2048);
+        }
+    }
+
+    if (!callOk) {
+        ui->tb_cmd_window->append("错误：未连接控制器");
+        return;
+    }
 
     if (ret == ERR_OK) {
         ui->tb_cmd_window->append(QString("> %1").arg(cmd));
@@ -257,7 +295,13 @@ void ControlPage::onSendCmdClicked()
 
 void ControlPage::initMotorTable()
 {
-    if (g_handle == nullptr || !m_initFlag) {
+    bool hasHandle = false;
+    {
+        QMutexLocker locker(&g_mutex);
+        hasHandle = (g_handle != nullptr);
+    }
+
+    if (!hasHandle || !m_initFlag) {
         qDebug() << "[ControlPage] 无法获取电机参数：未连接或未初始化";
         return;
     }
@@ -299,7 +343,13 @@ void ControlPage::initMotorTable()
 
 void ControlPage::refreshTableContent()
 {
-    if (g_handle == nullptr || !m_initFlag) {
+    bool hasHandle = false;
+    {
+        QMutexLocker locker(&g_mutex);
+        hasHandle = (g_handle != nullptr);
+    }
+
+    if (!hasHandle || !m_initFlag) {
         return;
     }
 
@@ -312,20 +362,26 @@ void ControlPage::refreshTableContent()
     // 读取电机的参数
     for (int i = 0; i < n; ++i) {
         int ret = 0;
-        ret += ZAux_Direct_GetAtype(g_handle, MotorMap[i], &iAType);
-        ret += ZAux_Direct_GetAxisEnable(g_handle, MotorMap[i], &iEN);
-        ret += ZAux_Direct_GetDpos(g_handle, MotorMap[i], &fDPos);
-        ret += ZAux_Direct_GetMpos(g_handle, MotorMap[i], &fMPos);
-        ret += ZAux_Direct_GetSpeed(g_handle, MotorMap[i], &fDVel);
-        ret += ZAux_Direct_GetMspeed(g_handle, MotorMap[i], &fMVel);
-        ret += ZAux_Direct_GetUnits(g_handle, MotorMap[i], &fUnit);
-        ret += ZAux_Direct_GetAccel(g_handle, MotorMap[i], &fAcc);
-        ret += ZAux_Direct_GetDecel(g_handle, MotorMap[i], &fDec);
+        {
+            QMutexLocker locker(&g_mutex);
+            if (!g_handle) {
+                return;
+            }
+            ret += ZAux_Direct_GetAtype(g_handle, MotorMap[i], &iAType);
+            ret += ZAux_Direct_GetAxisEnable(g_handle, MotorMap[i], &iEN);
+            ret += ZAux_Direct_GetDpos(g_handle, MotorMap[i], &fDPos);
+            ret += ZAux_Direct_GetMpos(g_handle, MotorMap[i], &fMPos);
+            ret += ZAux_Direct_GetSpeed(g_handle, MotorMap[i], &fDVel);
+            ret += ZAux_Direct_GetMspeed(g_handle, MotorMap[i], &fMVel);
+            ret += ZAux_Direct_GetUnits(g_handle, MotorMap[i], &fUnit);
+            ret += ZAux_Direct_GetAccel(g_handle, MotorMap[i], &fAcc);
+            ret += ZAux_Direct_GetDecel(g_handle, MotorMap[i], &fDec);
 
-        if (iAType == 65) {  // 位置模式下的DAC是0
-            fDAC = 0;
-        } else {
-            ZAux_Direct_GetDAC(g_handle, MotorMap[i], &fDAC);
+            if (iAType == 65) {  // 位置模式下的DAC是0
+                fDAC = 0;
+            } else {
+                ZAux_Direct_GetDAC(g_handle, MotorMap[i], &fDAC);
+            }
         }
 
         if (ret != ERR_OK) {
@@ -348,7 +404,13 @@ void ControlPage::refreshTableContent()
 
 void ControlPage::advanceInfoRefresh()
 {
-    if (g_handle == nullptr || !m_initFlag) {
+    bool hasHandle = false;
+    {
+        QMutexLocker locker(&g_mutex);
+        hasHandle = (g_handle != nullptr);
+    }
+
+    if (!hasHandle || !m_initFlag) {
         return;
     }
 
@@ -370,11 +432,17 @@ void ControlPage::advanceInfoRefresh()
     int m_atype, m_AxisStatus, m_Idle, m_bAxisEnable;
     float m_units, m_speed, m_accel, m_decel, m_fMpos, m_fDpos;
 
-    ZAux_Direct_GetAtype(g_handle, MotorMap[selectindex], &m_atype);
-    ZAux_Direct_GetUnits(g_handle, MotorMap[selectindex], &m_units);
-    ZAux_Direct_GetSpeed(g_handle, MotorMap[selectindex], &m_speed);
-    ZAux_Direct_GetAccel(g_handle, MotorMap[selectindex], &m_accel);
-    ZAux_Direct_GetDecel(g_handle, MotorMap[selectindex], &m_decel);
+    {
+        QMutexLocker locker(&g_mutex);
+        if (!g_handle) {
+            return;
+        }
+        ZAux_Direct_GetAtype(g_handle, MotorMap[selectindex], &m_atype);
+        ZAux_Direct_GetUnits(g_handle, MotorMap[selectindex], &m_units);
+        ZAux_Direct_GetSpeed(g_handle, MotorMap[selectindex], &m_speed);
+        ZAux_Direct_GetAccel(g_handle, MotorMap[selectindex], &m_accel);
+        ZAux_Direct_GetDecel(g_handle, MotorMap[selectindex], &m_decel);
+    }
 
     ui->le_atype->setText(QString::number(m_atype));
     ui->le_pulse_equivalent->setText(QString::number(m_units));
@@ -382,17 +450,23 @@ void ControlPage::advanceInfoRefresh()
     ui->le_accel->setText(QString::number(m_accel));
     ui->le_decel->setText(QString::number(m_decel));
 
-    ZAux_Direct_GetMpos(g_handle, MotorMap[selectindex], &m_fMpos);
-    ZAux_Direct_GetDpos(g_handle, MotorMap[selectindex], &m_fDpos);
-    ZAux_Direct_GetAxisStatus(g_handle, MotorMap[selectindex], &m_AxisStatus);
-    ZAux_Direct_GetIfIdle(g_handle, MotorMap[selectindex], &m_Idle);
+    {
+        QMutexLocker locker(&g_mutex);
+        if (!g_handle) {
+            return;
+        }
+        ZAux_Direct_GetMpos(g_handle, MotorMap[selectindex], &m_fMpos);
+        ZAux_Direct_GetDpos(g_handle, MotorMap[selectindex], &m_fDpos);
+        ZAux_Direct_GetAxisStatus(g_handle, MotorMap[selectindex], &m_AxisStatus);
+        ZAux_Direct_GetIfIdle(g_handle, MotorMap[selectindex], &m_Idle);
+        ZAux_Direct_GetAxisEnable(g_handle, MotorMap[selectindex], &m_bAxisEnable);
+    }
 
     ui->le_direct_axis_pos->setText(QString::number(m_fDpos));
     ui->le_current_axis_pos->setText(QString::number(m_fMpos));
     ui->le_axis_status->setText(QString::number(m_AxisStatus));
     ui->le_if_idle->setText(m_Idle == 0 ? "运动中" : (m_Idle == -1 ? "完成" : ""));
 
-    ZAux_Direct_GetAxisEnable(g_handle, MotorMap[selectindex], &m_bAxisEnable);
     ui->btn_enable->setText(m_bAxisEnable ? "禁用" : "使能");
     ui->le_enable_status->setText(m_bAxisEnable ? "开启" : "关闭");
     ui->btn_enable->setChecked(m_bAxisEnable);
@@ -400,17 +474,19 @@ void ControlPage::advanceInfoRefresh()
 
 void ControlPage::basicInfoRefresh()
 {
-    if (g_handle == nullptr) {
-        return;
-    }
-
-    int ret;
+    int ret = ERR_OK;
     char Bus_InitStatus[] = "ECAT_InitEnable";
     char Bus_TotalAxisnum[] = "BusAxis_Num";
 
-    ret = ZAux_Direct_GetUserVar(g_handle, Bus_InitStatus, &m_initStatus);
-    ret += ZAux_BusCmd_GetNodeNum(g_handle, 0, &m_nodeNum);
-    ret += ZAux_Direct_GetUserVar(g_handle, Bus_TotalAxisnum, &m_axisNum);
+    {
+        QMutexLocker locker(&g_mutex);
+        if (!g_handle) {
+            return;
+        }
+        ret = ZAux_Direct_GetUserVar(g_handle, Bus_InitStatus, &m_initStatus);
+        ret += ZAux_BusCmd_GetNodeNum(g_handle, 0, &m_nodeNum);
+        ret += ZAux_Direct_GetUserVar(g_handle, Bus_TotalAxisnum, &m_axisNum);
+    }
 
     if (ret != ERR_OK) {
         ui->le_bus_init_status->setText("初始化失败");
@@ -428,7 +504,13 @@ void ControlPage::basicInfoRefresh()
 
 void ControlPage::onEnableClicked()
 {
-    if (g_handle == nullptr) {
+    bool hasHandle = false;
+    {
+        QMutexLocker locker(&g_mutex);
+        hasHandle = (g_handle != nullptr);
+    }
+
+    if (!hasHandle) {
         QMessageBox::warning(this, "错误", "未连接控制器");
         return;
     }
@@ -440,12 +522,26 @@ void ControlPage::onEnableClicked()
     }
 
     int motorID = MotorMap[selectindex];
-    int currentEnable;
-    ZAux_Direct_GetAxisEnable(g_handle, motorID, &currentEnable);
+    int currentEnable = 0;
+    int newEnable = 0;
+    int ret = ERR_OK;
+    bool callOk = false;
 
-    // 切换使能状态
-    int newEnable = currentEnable ? 0 : 1;
-    int ret = ZAux_Direct_SetAxisEnable(g_handle, motorID, newEnable);
+    {
+        QMutexLocker locker(&g_mutex);
+        callOk = (g_handle != nullptr);
+        if (callOk) {
+            ZAux_Direct_GetAxisEnable(g_handle, motorID, &currentEnable);
+            // 切换使能状态
+            newEnable = currentEnable ? 0 : 1;
+            ret = ZAux_Direct_SetAxisEnable(g_handle, motorID, newEnable);
+        }
+    }
+
+    if (!callOk) {
+        QMessageBox::warning(this, "错误", "未连接控制器");
+        return;
+    }
 
     if (ret == ERR_OK) {
         ui->tb_cmd_window->append(QString("轴%1 %2成功").arg(selectindex).arg(newEnable ? "使能" : "禁用"));
@@ -458,7 +554,13 @@ void ControlPage::onEnableClicked()
 
 void ControlPage::onClearAlarmClicked()
 {
-    if (g_handle == nullptr) {
+    bool hasHandle = false;
+    {
+        QMutexLocker locker(&g_mutex);
+        hasHandle = (g_handle != nullptr);
+    }
+
+    if (!hasHandle) {
         QMessageBox::warning(this, "错误", "未连接控制器");
         return;
     }
@@ -470,7 +572,21 @@ void ControlPage::onClearAlarmClicked()
     }
 
     int motorID = MotorMap[selectindex];
-    int ret = ZAux_BusCmd_DriveClear(g_handle, motorID, 0);
+    int ret = ERR_OK;
+    bool callOk = false;
+
+    {
+        QMutexLocker locker(&g_mutex);
+        callOk = (g_handle != nullptr);
+        if (callOk) {
+            ret = ZAux_BusCmd_DriveClear(g_handle, motorID, 0);
+        }
+    }
+
+    if (!callOk) {
+        QMessageBox::warning(this, "错误", "未连接控制器");
+        return;
+    }
 
     if (ret == ERR_OK) {
         ui->tb_cmd_window->append(QString("✓ 轴%1 报警已清除").arg(selectindex));
@@ -483,7 +599,13 @@ void ControlPage::onClearAlarmClicked()
 
 void ControlPage::onSetZeroClicked()
 {
-    if (g_handle == nullptr) {
+    bool hasHandle = false;
+    {
+        QMutexLocker locker(&g_mutex);
+        hasHandle = (g_handle != nullptr);
+    }
+
+    if (!hasHandle) {
         QMessageBox::warning(this, "错误", "未连接控制器");
         return;
     }
@@ -495,7 +617,21 @@ void ControlPage::onSetZeroClicked()
     }
 
     int motorID = MotorMap[selectindex];
-    int ret = ZAux_Direct_SetMpos(g_handle, motorID, 0);
+    int ret = ERR_OK;
+    bool callOk = false;
+
+    {
+        QMutexLocker locker(&g_mutex);
+        callOk = (g_handle != nullptr);
+        if (callOk) {
+            ret = ZAux_Direct_SetMpos(g_handle, motorID, 0);
+        }
+    }
+
+    if (!callOk) {
+        QMessageBox::warning(this, "错误", "未连接控制器");
+        return;
+    }
 
     if (ret == ERR_OK) {
         ui->tb_cmd_window->append(QString("✓ 轴%1 已设置为零点").arg(selectindex));
@@ -521,7 +657,13 @@ void ControlPage::unmodifyMotorTable(int row, int column)
 
 void ControlPage::modifyMotorTable(QTableWidgetItem *item)
 {
-    if (g_handle == nullptr || !item) {
+    bool hasHandle = false;
+    {
+        QMutexLocker locker(&g_mutex);
+        hasHandle = (g_handle != nullptr);
+    }
+
+    if (!hasHandle || !item) {
         return;
     }
 
@@ -555,61 +697,124 @@ void ControlPage::modifyMotorTable(QTableWidgetItem *item)
 
     // 根据列号设置不同的参数
     switch (col) {
-        case 0:  // EN - 使能
+        case 0: {  // EN - 使能
+            QMutexLocker locker(&g_mutex);
+            if (!g_handle) {
+                ret = 1;
+                break;
+            }
             ret = ZAux_Direct_SetAxisEnable(g_handle, motorID, static_cast<int>(value));
             break;
+        }
 
         case 2: {  // Pos - 位置（需要触发运动）
             // 1. 先取消当前运动
-            ZAux_Direct_Single_Cancel(g_handle, motorID, 0);
+            {
+                QMutexLocker locker(&g_mutex);
+                if (!g_handle) {
+                    ret = 1;
+                    break;
+                }
+                ZAux_Direct_Single_Cancel(g_handle, motorID, 0);
+            }
             QThread::msleep(10);  // 短暂延时确保取消完成
 
             // 2. 根据UI选择使用绝对或相对运动
-            if (ui->cb_motor_pos_abs->isChecked()) {
-                // 绝对运动模式
-                ret = ZAux_Direct_Single_MoveAbs(g_handle, motorID, value);
-                qDebug() << "[ControlPage] 触发绝对运动到位置:" << value;
-            } else {
-                // 相对运动模式
-                ret = ZAux_Direct_Single_Move(g_handle, motorID, value);
-                qDebug() << "[ControlPage] 触发相对运动，距离:" << value;
+            {
+                QMutexLocker locker(&g_mutex);
+                if (!g_handle) {
+                    ret = 1;
+                    break;
+                }
+                if (ui->cb_motor_pos_abs->isChecked()) {
+                    // 绝对运动模式
+                    ret = ZAux_Direct_Single_MoveAbs(g_handle, motorID, value);
+                    qDebug() << "[ControlPage] 触发绝对运动到位置:" << value;
+                } else {
+                    // 相对运动模式
+                    ret = ZAux_Direct_Single_Move(g_handle, motorID, value);
+                    qDebug() << "[ControlPage] 触发相对运动，距离:" << value;
+                }
             }
             break;
         }
 
-        case 4:  // Vel - 速度
+        case 4: {  // Vel - 速度
+            QMutexLocker locker(&g_mutex);
+            if (!g_handle) {
+                ret = 1;
+                break;
+            }
             ret = ZAux_Direct_SetSpeed(g_handle, motorID, value);
             break;
+        }
 
         case 5: {  // DAC - 输出（需要检查轴类型）
-            int iAType;
-            ZAux_Direct_GetAtype(g_handle, motorID, &iAType);
+            int iAType = 0;
+            bool callOk = false;
 
-            // 只有力矩模式(66)或速度模式(67)才能设置DAC
-            if (iAType == 66 || iAType == 67) {
-                ret = ZAux_Direct_SetDAC(g_handle, motorID, value);
-            } else {
-                ret = ZAux_Direct_SetDAC(g_handle, motorID, 0);
+            {
+                QMutexLocker locker(&g_mutex);
+                callOk = (g_handle != nullptr);
+                if (callOk) {
+                    ZAux_Direct_GetAtype(g_handle, motorID, &iAType);
+
+                    // 只有力矩模式(66)或速度模式(67)才能设置DAC
+                    if (iAType == 66 || iAType == 67) {
+                        ret = ZAux_Direct_SetDAC(g_handle, motorID, value);
+                    } else {
+                        ret = ZAux_Direct_SetDAC(g_handle, motorID, 0);
+                    }
+                } else {
+                    ret = 1;
+                }
+            }
+
+            if (callOk && iAType != 66 && iAType != 67) {
                 ui->tb_cmd_window->append(QString("警告：电机%1的轴类型为%2，不是力矩/速度模式，DAC已设为0").arg(row).arg(iAType));
             }
             break;
         }
 
-        case 6:  // Atype - 轴类型
+        case 6: {  // Atype - 轴类型
+            QMutexLocker locker(&g_mutex);
+            if (!g_handle) {
+                ret = 1;
+                break;
+            }
             ret = ZAux_Direct_SetAtype(g_handle, motorID, static_cast<int>(value));
             break;
+        }
 
-        case 7:  // Unit - 脉冲当量
+        case 7: {  // Unit - 脉冲当量
+            QMutexLocker locker(&g_mutex);
+            if (!g_handle) {
+                ret = 1;
+                break;
+            }
             ret = ZAux_Direct_SetUnits(g_handle, motorID, value);
             break;
+        }
 
-        case 8:  // Acc - 加速度
+        case 8: {  // Acc - 加速度
+            QMutexLocker locker(&g_mutex);
+            if (!g_handle) {
+                ret = 1;
+                break;
+            }
             ret = ZAux_Direct_SetAccel(g_handle, motorID, value);
             break;
+        }
 
-        case 9:  // Dec - 减速度
+        case 9: {  // Dec - 减速度
+            QMutexLocker locker(&g_mutex);
+            if (!g_handle) {
+                ret = 1;
+                break;
+            }
             ret = ZAux_Direct_SetDecel(g_handle, motorID, value);
             break;
+        }
 
         default:
             break;

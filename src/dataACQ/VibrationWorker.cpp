@@ -2,7 +2,9 @@
 #include "VK70xNMC_DAQ2.h"  // VK701硬件库头文件
 #include "Logger.h"
 #include <QDebug>
+#include <QCoreApplication>
 #include <QDateTime>
+#include <QEventLoop>
 #include <QThread>
 
 VibrationWorker::VibrationWorker(QObject *parent)
@@ -92,6 +94,9 @@ void VibrationWorker::runAcquisition()
         if (m_blockSequence % 100 == 0) {
             emit statisticsUpdated(m_samplesCollected, m_sampleRate);
         }
+
+        // Allow queued stop/pause to be processed in this worker thread.
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 1);
     }
 
     LOG_DEBUG("VibrationWorker", "Acquisition loop ended");
@@ -281,12 +286,15 @@ bool VibrationWorker::readDataBlock()
     // 分配缓冲区用于接收4通道数据（VK701硬件限制）
     double *pucRecBuf = new double[4 * m_blockSize];
 
-    // 启动采样
-    int result = VK70xNMC_StartSampling(m_cardId);
-    if (result < 0) {
-        LOG_WARNING_STREAM("VibrationWorker") << "VK70xNMC_StartSampling failed before read: error code" << result;
-        delete[] pucRecBuf;
-        return false;
+    // Start sampling if needed to avoid restarting every read.
+    if (!m_isSampling) {
+        int result = VK70xNMC_StartSampling(m_cardId);
+        if (result < 0) {
+            LOG_WARNING_STREAM("VibrationWorker") << "VK70xNMC_StartSampling failed before read: error code" << result;
+            delete[] pucRecBuf;
+            return false;
+        }
+        m_isSampling = true;
     }
 
     // 读取4通道数据
