@@ -1089,8 +1089,11 @@ QHeaderView::section {
             <height>1026</height>
            </rect>
           </property>
-          <layout class="QVBoxLayout" name="configParamsLayout">
-           <item>
+          <layout class="QGridLayout" name="configParamsLayout">
+           <property name="spacing">
+            <number>10</number>
+           </property>
+           <item row="0" column="0">
             <widget class="QGroupBox" name="group_motion_params">
              <property name="title">
               <string>运动参数</string>
@@ -1183,7 +1186,7 @@ QHeaderView::section {
              </layout>
             </widget>
            </item>
-           <item>
+           <item row="1" column="0">
             <widget class="QGroupBox" name="group_position_params">
              <property name="title">
               <string>位置参数</string>
@@ -1316,7 +1319,7 @@ QHeaderView::section {
              </layout>
             </widget>
            </item>
-           <item>
+           <item row="0" column="1">
             <widget class="QGroupBox" name="group_torque_params">
              <property name="title">
               <string>力矩参数</string>
@@ -1418,7 +1421,7 @@ QHeaderView::section {
              </layout>
             </widget>
            </item>
-           <item>
+           <item row="1" column="1">
             <widget class="QGroupBox" name="group_conversion_params">
              <property name="title">
               <string>转换系数</string>
@@ -1461,7 +1464,7 @@ QHeaderView::section {
              </layout>
             </widget>
            </item>
-           <item>
+           <item row="2" column="0" colspan="2">
             <widget class="QGroupBox" name="group_key_positions">
              <property name="title">
               <string>关键位置 (A-J)</string>
@@ -1501,7 +1504,7 @@ QHeaderView::section {
              </layout>
             </widget>
            </item>
-           <item>
+           <item row="3" column="0" colspan="2">
             <spacer>
              <property name="orientation">
               <enum>Qt::Vertical</enum>
