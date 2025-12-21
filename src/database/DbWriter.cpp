@@ -225,20 +225,31 @@ void DbWriter::clearRoundData(int roundId)
 
     QSqlQuery query(m_db);
 
-    // 删除该轮次的所有传感器数据
-    query.prepare("DELETE FROM sensor_data WHERE round_id = :round_id");
-    query.bindValue(":round_id", roundId);
+    // 删除该轮次的标量数据
+    query.prepare("DELETE FROM scalar_samples WHERE round_id = ?");
+    query.addBindValue(roundId);
 
     if (!query.exec()) {
-        emit errorOccurred("Failed to clear sensor data: " + query.lastError().text());
+        emit errorOccurred("Failed to clear scalar samples: " + query.lastError().text());
         return;
     }
 
-    int deletedSensorData = query.numRowsAffected();
+    int deletedScalarSamples = query.numRowsAffected();
+
+    // 删除该轮次的振动数据
+    query.prepare("DELETE FROM vibration_blocks WHERE round_id = ?");
+    query.addBindValue(roundId);
+
+    if (!query.exec()) {
+        emit errorOccurred("Failed to clear vibration blocks: " + query.lastError().text());
+        return;
+    }
+
+    int deletedVibrationBlocks = query.numRowsAffected();
 
     // 删除该轮次的所有时间窗口
-    query.prepare("DELETE FROM time_windows WHERE round_id = :round_id");
-    query.bindValue(":round_id", roundId);
+    query.prepare("DELETE FROM time_windows WHERE round_id = ?");
+    query.addBindValue(roundId);
 
     if (!query.exec()) {
         emit errorOccurred("Failed to clear time windows: " + query.lastError().text());
@@ -246,6 +257,16 @@ void DbWriter::clearRoundData(int roundId)
     }
 
     int deletedWindows = query.numRowsAffected();
+
+    // 重置轮次的开始时间戳，允许重新使用同一个 round_id
+    query.prepare("UPDATE rounds SET start_ts_us = ?, end_ts_us = NULL WHERE round_id = ?");
+    query.addBindValue(getCurrentTimestampUs());
+    query.addBindValue(roundId);
+
+    if (!query.exec()) {
+        emit errorOccurred("Failed to reset round timestamp: " + query.lastError().text());
+        return;
+    }
 
     // 清除窗口缓存中该轮次的条目
     auto it = m_windowCache.begin();
@@ -258,7 +279,8 @@ void DbWriter::clearRoundData(int roundId)
     }
 
     qDebug() << "Round data cleared for ID:" << roundId
-             << "| Sensor data rows:" << deletedSensorData
+             << "| Scalar samples:" << deletedScalarSamples
+             << "| Vibration blocks:" << deletedVibrationBlocks
              << "| Windows:" << deletedWindows;
 }
 
