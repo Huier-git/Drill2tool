@@ -415,6 +415,7 @@ void AutoTaskPage::onTaskListItemDoubleClicked()
 
 void AutoTaskPage::onTaskStateChanged(AutoTaskState state, const QString& message)
 {
+    Q_UNUSED(state);
     ui->lbl_task_status->setText(tr("状态: %1").arg(m_drillManager->stateString()));
     appendLog(tr("[状态] %1").arg(message));
     updateUIState();
