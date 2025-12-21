@@ -285,12 +285,16 @@ void SensorPage::onStartNewRound()
     QString operatorName = ui->le_operator->text();
     QString note = ui->te_note->toPlainText();
     m_acquisitionManager->startNewRound(operatorName, note);
+
+    ui->label_status->setText("新建轮次成功");
 }
 
 void SensorPage::onEndRound()
 {
     if (!m_acquisitionManager) return;
     m_acquisitionManager->endCurrentRound();
+
+    ui->label_status->setText("轮次已结束");
 }
 
 void SensorPage::onResetRound()
@@ -368,7 +372,11 @@ void SensorPage::onAcquisitionStateChanged(bool isRunning)
 
 void SensorPage::onRoundChanged(int roundId)
 {
-    ui->label_round_id->setText(QString("当前轮次: %1").arg(roundId));
+    if (roundId == 0) {
+        ui->label_round_id->setText("系统状态: 空闲 (未开始轮次)");
+    } else {
+        ui->label_round_id->setText(QString("当前轮次: %1 (进行中)").arg(roundId));
+    }
 }
 
 void SensorPage::onErrorOccurred(const QString &workerName, const QString &error)
