@@ -370,28 +370,25 @@ void AcquisitionManager::endCurrentRound()
     LOG_DEBUG_STREAM("AcquisitionManager") << "Round" << oldRoundId << "ended";
 }
 
-void AcquisitionManager::resetCurrentRound()
+void AcquisitionManager::resetCurrentRound(int targetRound)
 {
     if (m_currentRoundId == 0) {
         LOG_WARNING("AcquisitionManager", "No active round to reset");
         return;
     }
 
-    LOG_DEBUG_STREAM("AcquisitionManager") << "Resetting round" << m_currentRoundId;
+    LOG_DEBUG_STREAM("AcquisitionManager") << "Resetting to round" << targetRound;
 
-    // 清除当前轮次的所有数据
-    QMetaObject::invokeMethod(m_dbWriter, "clearRoundData", Qt::BlockingQueuedConnection,
-                              Q_ARG(int, m_currentRoundId));
+    // Drop any queued data before clearing persistent data.
+    QMetaObject::invokeMethod(m_dbWriter, "clearQueue", Qt::BlockingQueuedConnection);
 
-    // 重置时间基准
-    const qint64 baseTimestampUs = QDateTime::currentMSecsSinceEpoch() * 1000;
-    QMetaObject::invokeMethod(m_vibrationWorker, "setTimeBase", Qt::QueuedConnection,
-                              Q_ARG(qint64, baseTimestampUs));
-    QMetaObject::invokeMethod(m_mdbWorker, "setTimeBase", Qt::QueuedConnection,
-                              Q_ARG(qint64, baseTimestampUs));
-    QMetaObject::invokeMethod(m_motorWorker, "setTimeBase", Qt::QueuedConnection,
-                              Q_ARG(qint64, baseTimestampUs));
+    // 重置到目标轮次
+    QMetaObject::invokeMethod(m_dbWriter, "resetToRound", Qt::BlockingQueuedConnection,
+                              Q_ARG(int, targetRound));
 
-    LOG_DEBUG_STREAM("AcquisitionManager") << "Round" << m_currentRoundId << "reset complete";
+    // 清零当前轮次ID
+    m_currentRoundId = 0;
+    emit roundChanged(0);
+
+    LOG_DEBUG_STREAM("AcquisitionManager") << "Reset to round" << targetRound << "complete, currentRoundId cleared to 0";
 }
-

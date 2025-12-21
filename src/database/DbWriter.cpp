@@ -113,6 +113,12 @@ void DbWriter::enqueueDataBlock(const DataBlock &block)
     }
 }
 
+void DbWriter::clearQueue()
+{
+    QMutexLocker locker(&m_queueMutex);
+    m_queue.clear();
+}
+
 void DbWriter::processBatch()
 {
     QMutexLocker locker(&m_queueMutex);
@@ -279,6 +285,71 @@ void DbWriter::clearRoundData(int roundId)
     }
 
     qDebug() << "Round data cleared for ID:" << roundId
+             << "| Scalar samples:" << deletedScalarSamples
+             << "| Vibration blocks:" << deletedVibrationBlocks
+             << "| Windows:" << deletedWindows;
+}
+
+void DbWriter::resetToRound(int targetRound)
+{
+    if (targetRound < 1) {
+        qWarning() << "Invalid target round:" << targetRound;
+        return;
+    }
+
+    qDebug() << "Resetting to round" << targetRound << "...";
+
+    QSqlQuery query(m_db);
+
+    // 删除所有 round_id >= targetRound 的标量数据
+    query.prepare("DELETE FROM scalar_samples WHERE round_id >= ?");
+    query.addBindValue(targetRound);
+    if (!query.exec()) {
+        emit errorOccurred("Failed to delete scalar samples: " + query.lastError().text());
+        return;
+    }
+    int deletedScalarSamples = query.numRowsAffected();
+
+    // 删除所有 round_id >= targetRound 的振动数据
+    query.prepare("DELETE FROM vibration_blocks WHERE round_id >= ?");
+    query.addBindValue(targetRound);
+    if (!query.exec()) {
+        emit errorOccurred("Failed to delete vibration blocks: " + query.lastError().text());
+        return;
+    }
+    int deletedVibrationBlocks = query.numRowsAffected();
+
+    // 删除所有 round_id >= targetRound 的时间窗口
+    query.prepare("DELETE FROM time_windows WHERE round_id >= ?");
+    query.addBindValue(targetRound);
+    if (!query.exec()) {
+        emit errorOccurred("Failed to delete time windows: " + query.lastError().text());
+        return;
+    }
+    int deletedWindows = query.numRowsAffected();
+
+    // 删除所有 round_id >= targetRound 的轮次记录
+    query.prepare("DELETE FROM rounds WHERE round_id >= ?");
+    query.addBindValue(targetRound);
+    if (!query.exec()) {
+        emit errorOccurred("Failed to delete rounds: " + query.lastError().text());
+        return;
+    }
+    int deletedRounds = query.numRowsAffected();
+
+    // 重置 AUTOINCREMENT 序列，使下次 INSERT 从 targetRound 开始
+    query.prepare("UPDATE sqlite_sequence SET seq = ? WHERE name = 'rounds'");
+    query.addBindValue(targetRound - 1);
+    if (!query.exec()) {
+        emit errorOccurred("Failed to reset sequence: " + query.lastError().text());
+        return;
+    }
+
+    // 清除窗口缓存
+    clearWindowCache();
+
+    qDebug() << "Reset to round" << targetRound << "complete."
+             << "| Deleted rounds:" << deletedRounds
              << "| Scalar samples:" << deletedScalarSamples
              << "| Vibration blocks:" << deletedVibrationBlocks
              << "| Windows:" << deletedWindows;

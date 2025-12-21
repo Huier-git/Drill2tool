@@ -850,6 +850,32 @@ QLabel#label_operator, QLabel#label_note_label {
            </widget>
           </item>
           <item>
+           <widget class="QLabel" name="label_reset_target">
+            <property name="text">
+             <string>重置到轮次:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QSpinBox" name="spin_reset_target">
+            <property name="minimumSize">
+             <size>
+              <width>80</width>
+              <height>45</height>
+             </size>
+            </property>
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="maximum">
+             <number>9999</number>
+            </property>
+            <property name="value">
+             <number>1</number>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QPushButton" name="btn_reset_round">
             <property name="minimumSize">
              <size>
@@ -858,7 +884,7 @@ QLabel#label_operator, QLabel#label_note_label {
              </size>
             </property>
             <property name="text">
-             <string>重置轮次</string>
+             <string>执行重置</string>
             </property>
            </widget>
           </item>

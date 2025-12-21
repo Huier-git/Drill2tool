@@ -17,6 +17,7 @@ SensorPage::SensorPage(QWidget *parent)
     , m_vk701Connected(false)
     , m_mdbConnected(false)
     , m_motorConnected(false)
+    , m_resetPending(false)
 {
     ui->setupUi(this);
     setupConnections();
@@ -296,18 +297,62 @@ void SensorPage::onResetRound()
 {
     if (!m_acquisitionManager) return;
 
+    if (m_resetPending) {
+        return;
+    }
+
+    int targetRound = ui->spin_reset_target->value();
+
+    if (m_acquisitionManager->isRunning()) {
+        QMessageBox::StandardButton reply;
+        reply = QMessageBox::warning(this, "确认重置轮次",
+                                     QString("采集正在运行，重置将停止采集并删除轮次 %1 及之后的所有数据。\n\n"
+                                            "此操作不可撤销。是否继续？").arg(targetRound),
+                                     QMessageBox::Yes | QMessageBox::No,
+                                     QMessageBox::No);
+        if (reply != QMessageBox::Yes) {
+            return;
+        }
+
+        m_resetPending = true;
+        disconnect(m_resetConnection);
+        m_resetConnection = connect(
+            m_acquisitionManager, &AcquisitionManager::acquisitionStateChanged,
+            this, [this, targetRound](bool running) {
+                if (running) {
+                    return;
+                }
+                disconnect(m_resetConnection);
+                m_resetConnection = QMetaObject::Connection();
+                m_resetPending = false;
+                if (!m_acquisitionManager) {
+                    return;
+                }
+                m_acquisitionManager->resetCurrentRound(targetRound);
+                ui->label_status->setText(QString("已重置到轮次 %1").arg(targetRound));
+                QMessageBox::information(this, "重置完成",
+                                        QString("轮次数据已清除，下次新建轮次将从 %1 开始。").arg(targetRound));
+            });
+
+        ui->label_status->setText("正在停止采集...");
+        m_acquisitionManager->stopAll();
+        return;
+    }
+
     // 确认对话框
     QMessageBox::StandardButton reply;
     reply = QMessageBox::warning(this, "确认重置轮次",
-                                 "警告：重置轮次将删除当前轮次的所有采集数据！\n\n"
-                                 "此操作不可撤销。是否继续？",
+                                 QString("警告：将删除轮次 %1 及之后的所有数据！\n\n"
+                                        "下次新建轮次将从轮次 %1 开始。\n\n"
+                                        "此操作不可撤销。是否继续？").arg(targetRound),
                                  QMessageBox::Yes | QMessageBox::No,
                                  QMessageBox::No);
 
     if (reply == QMessageBox::Yes) {
-        m_acquisitionManager->resetCurrentRound();
-        ui->label_status->setText("轮次已重置");
-        QMessageBox::information(this, "重置完成", "当前轮次数据已清除，可以重新开始采集。");
+        m_acquisitionManager->resetCurrentRound(targetRound);
+        ui->label_status->setText(QString("已重置到轮次 %1").arg(targetRound));
+        QMessageBox::information(this, "重置完成",
+                                QString("轮次数据已清除，下次新建轮次将从 %1 开始。").arg(targetRound));
     }
 }
 

@@ -71,6 +71,17 @@ public slots:
     void clearRoundData(int roundId);
 
     /**
+     * @brief Clear queued data blocks without writing.
+     */
+    void clearQueue();
+
+    /**
+     * @brief 重置到指定轮次（删除 >= targetRound 的所有数据并重置序列）
+     * @param targetRound 目标轮次号
+     */
+    void resetToRound(int targetRound);
+
+    /**
      * @brief 记录频率变化
      */
     void logFrequencyChange(int roundId, SensorType sensorType,
