@@ -315,6 +315,13 @@ void AcquisitionManager::startNewRound(const QString &operatorName, const QStrin
 {
     LOG_DEBUG("AcquisitionManager", "Starting new round...");
 
+    // 如果已经有活动的轮次（比如重置后），不创建新的
+    if (m_currentRoundId > 0) {
+        LOG_WARNING_STREAM("AcquisitionManager") << "Round already active, ID:" << m_currentRoundId;
+        emit roundChanged(m_currentRoundId);
+        return;
+    }
+
     // 在DbWriter线程中创建新轮次
     int roundId = 0;
     QMetaObject::invokeMethod(m_dbWriter, "startNewRound",
