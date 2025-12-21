@@ -1,4 +1,11 @@
-# DrillControl 钻机采集控制系统 v2.0
+﻿# DrillControl 钻机采集控制系统 v2.0
+## Recent Fixes (2025-12-21)
+- Fixed MDB/Motor sampling timers so QTimer timeouts are delivered.
+- Added event-loop-based Modbus connect/disconnect waits with timeouts.
+- Ensured auto-task reconnects data workers after controllers are set.
+- Scoped time-window cache by round to avoid cross-round window reuse.
+- Details: docs/BUGFIX_20251221_Acquisition_AutoTask.md
+
 
 ## 项目简介
 
