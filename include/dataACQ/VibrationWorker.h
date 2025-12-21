@@ -2,7 +2,6 @@
 #define VIBRATIONWORKER_H
 
 #include "dataACQ/BaseWorker.h"
-#include <QElapsedTimer>
 #include <QThread>
 
 /**
@@ -61,8 +60,6 @@ private:
     int m_channelCount;         // 通道数（固定为3）
     int m_blockSize;            // 每次读取的块大小（点数）
 
-    QElapsedTimer m_timer;      // 用于时间戳对齐
-    qint64 m_baseTimestamp;     // 采集开始时的基准时间戳
     int m_blockSequence;        // 块序号
 
     bool m_isCardConnected;     // 是否已连接采集卡

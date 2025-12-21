@@ -5,6 +5,7 @@
 #include "dataACQ/MotorWorker.h"
 #include "database/DbWriter.h"
 #include <QDebug>
+#include <QDateTime>
 
 AcquisitionManager::AcquisitionManager(QObject *parent)
     : QObject(parent)
@@ -323,6 +324,14 @@ void AcquisitionManager::startNewRound(const QString &operatorName, const QStrin
                               Q_ARG(QString, note));
 
     m_currentRoundId = roundId;
+
+    const qint64 baseTimestampUs = QDateTime::currentMSecsSinceEpoch() * 1000;
+    QMetaObject::invokeMethod(m_vibrationWorker, "setTimeBase", Qt::QueuedConnection,
+                              Q_ARG(qint64, baseTimestampUs));
+    QMetaObject::invokeMethod(m_mdbWorker, "setTimeBase", Qt::QueuedConnection,
+                              Q_ARG(qint64, baseTimestampUs));
+    QMetaObject::invokeMethod(m_motorWorker, "setTimeBase", Qt::QueuedConnection,
+                              Q_ARG(qint64, baseTimestampUs));
 
     // 通知所有Worker新的轮次ID
     QMetaObject::invokeMethod(m_vibrationWorker, "setRoundId", Qt::QueuedConnection, Q_ARG(int, roundId));

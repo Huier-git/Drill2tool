@@ -7,6 +7,7 @@
 #include <QSqlQuery>
 #include <QMutex>
 #include <QWaitCondition>
+#include <QElapsedTimer>
 #include "DataTypes.h"
 
 /**
@@ -61,6 +62,11 @@ public slots:
      * @brief 设置采样频率
      */
     virtual void setSampleRate(double rate);
+
+    /**
+     * @brief Set base timestamp (us) for aligned sampling.
+     */
+    void setTimeBase(qint64 baseTimestampUs);
 
 signals:
     /**
@@ -119,6 +125,11 @@ protected:
      */
     bool shouldContinue() const;
 
+    /**
+     * @brief Timestamp helper aligned to the current base time.
+     */
+    qint64 currentTimestampUs() const;
+
 protected:
     mutable QMutex m_mutex;         // 状态保护互斥锁
     WorkerState m_state;            // 当前状态
@@ -126,6 +137,9 @@ protected:
     double m_sampleRate;            // 采样频率
     qint64 m_samplesCollected;      // 已采集样本总数
     bool m_stopRequested;           // 停止请求标志
+    qint64 m_timeBaseUs;            // Base timestamp in microseconds
+    QElapsedTimer m_elapsedTimer;   // Monotonic timer since base
+    bool m_hasTimeBase;             // Whether a base timestamp is set
 };
 
 #endif // BASEWORKER_H

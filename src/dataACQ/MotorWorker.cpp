@@ -4,7 +4,6 @@
 #include "control/zmotion.h"
 #include "control/zmcaux.h"
 #include <QDebug>
-#include <QDateTime>
 #include <QThread>
 #include <QMutexLocker>
 
@@ -225,7 +224,7 @@ void MotorWorker::sendDataBlock(int motorId, SensorType type, double value)
     block.roundId = m_currentRoundId;
     block.sensorType = type;
     block.channelId = motorId;  // 通道ID = 电机ID
-    block.startTimestampUs = QDateTime::currentMSecsSinceEpoch() * 1000;
+    block.startTimestampUs = currentTimestampUs();
     block.sampleRate = m_sampleRate;
     block.numSamples = 1;
     block.values.append(value);

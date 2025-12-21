@@ -3,7 +3,6 @@
 #include "Logger.h"
 #include <QDebug>
 #include <QCoreApplication>
-#include <QDateTime>
 #include <QEventLoop>
 #include <QThread>
 
@@ -14,7 +13,6 @@ VibrationWorker::VibrationWorker(QObject *parent)
     , m_serverAddress("127.0.0.1")
     , m_channelCount(3)
     , m_blockSize(1000)
-    , m_baseTimestamp(0)
     , m_blockSequence(0)
     , m_isCardConnected(false)
     , m_isSampling(false)
@@ -53,9 +51,6 @@ bool VibrationWorker::initializeHardware()
         return false;
     }
 
-    // 记录基准时间戳
-    m_baseTimestamp = QDateTime::currentMSecsSinceEpoch() * 1000;
-    m_timer.start();
     m_blockSequence = 0;
 
     LOG_DEBUG("VibrationWorker", "Hardware initialized successfully");
@@ -347,8 +342,7 @@ void VibrationWorker::processAndSendData(float *ch0Data, float *ch1Data, float *
     }
 
     // 计算当前块的起始时间戳
-    qint64 elapsedUs = m_timer.nsecsElapsed() / 1000;
-    qint64 blockTimestamp = m_baseTimestamp + elapsedUs;
+    qint64 blockTimestamp = currentTimestampUs();
 
     // 为每个通道创建DataBlock并发送
     for (int ch = 0; ch < m_channelCount; ++ch) {

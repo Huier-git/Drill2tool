@@ -1,5 +1,6 @@
 #include "dataACQ/BaseWorker.h"
 #include <QDebug>
+#include <QDateTime>
 
 BaseWorker::BaseWorker(QObject *parent)
     : QObject(parent)
@@ -8,11 +9,15 @@ BaseWorker::BaseWorker(QObject *parent)
     , m_sampleRate(0.0)
     , m_samplesCollected(0)
     , m_stopRequested(false)
+    , m_timeBaseUs(0)
+    , m_hasTimeBase(false)
 {
     // 注册元类型，使其可以在跨线程信号槽中使用
     qRegisterMetaType<DataBlock>("DataBlock");
     qRegisterMetaType<SensorType>("SensorType");
     qRegisterMetaType<WorkerState>("WorkerState");
+
+    m_elapsedTimer.invalidate();
 }
 
 BaseWorker::~BaseWorker()
@@ -107,6 +112,14 @@ void BaseWorker::setSampleRate(double rate)
     qDebug() << "Worker sample rate set to:" << rate << "Hz";
 }
 
+void BaseWorker::setTimeBase(qint64 baseTimestampUs)
+{
+    QMutexLocker locker(&m_mutex);
+    m_timeBaseUs = baseTimestampUs;
+    m_elapsedTimer.restart();
+    m_hasTimeBase = true;
+}
+
 void BaseWorker::setState(WorkerState newState)
 {
     QMutexLocker locker(&m_mutex);
@@ -127,4 +140,13 @@ bool BaseWorker::shouldContinue() const
 {
     QMutexLocker locker(&m_mutex);
     return !m_stopRequested && m_state == WorkerState::Running;
+}
+
+qint64 BaseWorker::currentTimestampUs() const
+{
+    QMutexLocker locker(&m_mutex);
+    if (m_hasTimeBase && m_elapsedTimer.isValid()) {
+        return m_timeBaseUs + (m_elapsedTimer.nsecsElapsed() / 1000);
+    }
+    return QDateTime::currentMSecsSinceEpoch() * 1000;
 }

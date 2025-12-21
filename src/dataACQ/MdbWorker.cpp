@@ -2,7 +2,6 @@
 #include "Logger.h"
 #include "qeventloop.h"
 #include <QDebug>
-#include <QDateTime>
 #include <QThread>
 
 MdbWorker::MdbWorker(QObject *parent)
@@ -361,7 +360,7 @@ void MdbWorker::sendDataBlock(SensorType type, double value)
     block.roundId = m_currentRoundId;
     block.sensorType = type;
     block.channelId = 0;  // MDB传感器不分通道
-    block.startTimestampUs = QDateTime::currentMSecsSinceEpoch() * 1000;
+    block.startTimestampUs = currentTimestampUs();
     block.sampleRate = m_sampleRate;
     block.numSamples = 1;
     block.values.append(value);

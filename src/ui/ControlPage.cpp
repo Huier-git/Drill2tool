@@ -7,7 +7,6 @@
 #include <QMessageBox>
 #include <QMutexLocker>
 #include <QTableWidgetItem>
-#include <QThread>
 
 #define ERR_OK 0
 #define TIMER_BASIC_INFO_INTERVAL 500
@@ -717,7 +716,6 @@ void ControlPage::modifyMotorTable(QTableWidgetItem *item)
                 }
                 ZAux_Direct_Single_Cancel(g_handle, motorID, 0);
             }
-            QThread::msleep(10);  // 短暂延时确保取消完成
 
             // 2. 根据UI选择使用绝对或相对运动
             {
