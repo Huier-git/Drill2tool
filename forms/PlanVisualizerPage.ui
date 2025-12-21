@@ -263,14 +263,21 @@ QPushButton:pressed { background-color: #EF6C00; }</string>
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="resetDurButton">
-           <property name="text">
-            <string>重置默认</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
+         <widget class="QPushButton" name="resetDurButton">
+          <property name="text">
+           <string>重置默认</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="autoDurButton">
+          <property name="text">
+           <string>自动计算</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
       </layout>
      </widget>
      <!-- 右侧：可视化区域 -->

@@ -1,6 +1,8 @@
 #include "ui/PlanVisualizerPage.h"
 #include "ui_PlanVisualizerPage.h"
 #include "qcustomplot.h"
+#include "control/MotionConfigManager.h"
+#include "control/MechanismDefs.h"
 
 #include <QVBoxLayout>
 #include <QFileInfo>
@@ -14,6 +16,8 @@
 #include <QDebug>
 #include <QHeaderView>
 #include <QCoreApplication>
+#include <QStringList>
+#include <cmath>
 
 // 获取项目根目录（从build/debug向上两级）
 static QString getProjectRoot()
@@ -73,6 +77,154 @@ static const QMap<QString, int> DEFAULT_DURATIONS = {
     {"D_ME_Retract", 3}, {"D_MR_Retract", 3},
     {"D_ME_Store", 3}, {"D_MG_Release", 2}, {"D_ME_Back", 3}
 };
+
+namespace {
+enum class StepKind {
+    Move,
+    StepIndex
+};
+
+struct StepMapping {
+    QString axis;
+    QString start;
+    QString end;
+    StepKind kind = StepKind::Move;
+
+    bool valid() const
+    {
+        if (axis.isEmpty()) {
+            return false;
+        }
+        if (kind == StepKind::StepIndex) {
+            return true;
+        }
+        return !start.isEmpty() && !end.isEmpty();
+    }
+};
+
+QString normalizeAxisCode(const QString& code)
+{
+    QString upper = code.trimmed().toUpper();
+    if (upper.size() == 2) {
+        return QString("%1%2").arg(upper.left(1)).arg(upper.mid(1).toLower());
+    }
+    return upper;
+}
+
+QMap<QString, StepMapping> loadStepMappings(const QString& path, QStringList* warnings)
+{
+    QMap<QString, StepMapping> map;
+    QFileInfo info(path);
+    if (!info.exists()) {
+        return map;
+    }
+
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        if (warnings) {
+            warnings->append(QString("Failed to open step map CSV: %1").arg(path));
+        }
+        return map;
+    }
+
+    QTextStream in(&file);
+    int lineNo = 0;
+    int keyIdx = 0;
+    int axisIdx = 1;
+    int startIdx = 2;
+    int endIdx = 3;
+    int kindIdx = 4;
+    bool hasHeader = false;
+
+    while (!in.atEnd()) {
+        QString line = in.readLine();
+        ++lineNo;
+        QString trimmed = line.trimmed();
+        if (trimmed.isEmpty() || trimmed.startsWith('#')) {
+            continue;
+        }
+
+        QStringList cols = trimmed.split(',', Qt::KeepEmptyParts);
+        if (!hasHeader) {
+            QString first = cols.value(0).trimmed().toLower();
+            if (first == "step_key" || first.contains("axis") || first.contains("start")) {
+                for (int i = 0; i < cols.size(); ++i) {
+                    QString key = cols[i].trimmed().toLower();
+                    if (key == "step_key") keyIdx = i;
+                    else if (key == "axis_code" || key == "axis") axisIdx = i;
+                    else if (key == "start_key" || key == "start") startIdx = i;
+                    else if (key == "end_key" || key == "end") endIdx = i;
+                    else if (key == "kind") kindIdx = i;
+                }
+                hasHeader = true;
+                continue;
+            }
+        }
+        hasHeader = true;
+
+        QString stepKey = cols.value(keyIdx).trimmed();
+        QString axisCode = normalizeAxisCode(cols.value(axisIdx));
+        QString startKey = cols.value(startIdx).trimmed().toUpper();
+        QString endKey = cols.value(endIdx).trimmed().toUpper();
+        QString kindText = cols.value(kindIdx).trimmed().toLower();
+
+        if (stepKey.isEmpty() || axisCode.isEmpty()) {
+            continue;
+        }
+
+        StepMapping mapping;
+        mapping.axis = axisCode;
+        mapping.start = startKey;
+        mapping.end = endKey;
+        if (kindText == "index" || kindText == "step_index") {
+            mapping.kind = StepKind::StepIndex;
+        }
+        map.insert(stepKey, mapping);
+    }
+
+    return map;
+}
+
+StepMapping resolveMapping(const QString& key, const QMap<QString, StepMapping>& map)
+{
+    auto it = map.find(key);
+    if (it != map.end()) {
+        return it.value();
+    }
+
+    QRegularExpression re("^\\w_([A-Z]{2})_([A-J])([A-J])$",
+                          QRegularExpression::CaseInsensitiveOption);
+    QRegularExpressionMatch match = re.match(key);
+    if (match.hasMatch()) {
+        StepMapping mapping;
+        mapping.axis = normalizeAxisCode(match.captured(1));
+        mapping.start = match.captured(2).toUpper();
+        mapping.end = match.captured(3).toUpper();
+        return mapping;
+    }
+
+    return StepMapping();
+}
+
+double computeMoveTimeSec(double distance, double speed, double accel)
+{
+    if (distance <= 0.0 || speed <= 0.0) {
+        return 0.0;
+    }
+    if (accel <= 0.0) {
+        return distance / speed;
+    }
+
+    const double tAccel = speed / accel;
+    const double distAccel = 0.5 * accel * tAccel * tAccel;
+    if (2.0 * distAccel >= distance) {
+        return 2.0 * std::sqrt(distance / accel);
+    }
+
+    const double distCruise = distance - 2.0 * distAccel;
+    return 2.0 * tAccel + distCruise / speed;
+}
+} // namespace
 
 PlanVisualizerPage::PlanVisualizerPage(QWidget *parent)
     : QWidget(parent)
@@ -205,6 +357,7 @@ void PlanVisualizerPage::setupConnections()
     connect(ui->loadDurButton, &QPushButton::clicked, this, &PlanVisualizerPage::onLoadDurConfig);
     connect(ui->saveDurButton, &QPushButton::clicked, this, &PlanVisualizerPage::onSaveDurConfig);
     connect(ui->resetDurButton, &QPushButton::clicked, this, &PlanVisualizerPage::onResetDurConfig);
+    connect(ui->autoDurButton, &QPushButton::clicked, this, &PlanVisualizerPage::onAutoComputeDurations);
 }
 
 void PlanVisualizerPage::onRunPlan()
@@ -306,6 +459,90 @@ void PlanVisualizerPage::onResetDurConfig()
         m_durationsModified = true;
         ui->statusLabel->setText("已重置为默认配置");
     }
+}
+
+void PlanVisualizerPage::onAutoComputeDurations()
+{
+    auto* configMgr = MotionConfigManager::instance();
+    if (configMgr && configMgr->getAllConfigs().isEmpty()) {
+        const QString cfgPath = getProjectRoot() + "/config/mechanisms.json";
+        if (QFileInfo::exists(cfgPath)) {
+            configMgr->loadConfig(cfgPath);
+        }
+    }
+
+    const QMap<Mechanism::Code, MechanismParams> configs =
+        configMgr ? configMgr->getAllConfigs() : QMap<Mechanism::Code, MechanismParams>();
+    if (configs.isEmpty()) {
+        QMessageBox::warning(this, "配置缺失", "未加载机制配置，无法自动计算时长。");
+        return;
+    }
+
+    QStringList warnings;
+    const QString mapPath = getProjectRoot() + "/config/plan_step_map.csv";
+    const QMap<QString, StepMapping> stepMap = loadStepMappings(mapPath, &warnings);
+    if (!warnings.isEmpty()) {
+        qWarning() << "[PlanVisualizer] Step map warnings:" << warnings;
+    }
+
+    int updated = 0;
+    int skipped = 0;
+    for (auto it = m_durations.begin(); it != m_durations.end(); ++it) {
+        const QString key = it.key();
+        StepMapping mapping = resolveMapping(key, stepMap);
+        if (!mapping.valid()) {
+            ++skipped;
+            continue;
+        }
+
+        const Mechanism::Code code = Mechanism::fromCodeString(mapping.axis);
+        if (code < 0 || !configs.contains(code)) {
+            ++skipped;
+            continue;
+        }
+
+        const MechanismParams params = configs.value(code);
+        if (params.controlMode.toLower() != "position") {
+            ++skipped;
+            continue;
+        }
+
+        double distance = 0.0;
+        if (mapping.kind == StepKind::StepIndex) {
+            if (params.anglePerPosition <= 0.0 || params.pulsesPerDegree <= 0.0) {
+                ++skipped;
+                continue;
+            }
+            distance = std::abs(params.anglePerPosition * params.pulsesPerDegree);
+        } else {
+            if (!params.keyPositions.contains(mapping.start) ||
+                !params.keyPositions.contains(mapping.end)) {
+                ++skipped;
+                continue;
+            }
+            distance = std::abs(params.keyPositions.value(mapping.end) - params.keyPositions.value(mapping.start));
+        }
+
+        const double speed = params.speed;
+        double accel = params.acceleration;
+        if (params.deceleration > 0.0) {
+            accel = qMin(accel, params.deceleration);
+        }
+        const double timeSec = computeMoveTimeSec(distance, speed, accel);
+        if (timeSec <= 0.0) {
+            ++skipped;
+            continue;
+        }
+        const int duration = qMax(1, static_cast<int>(std::ceil(timeSec)));
+        it.value() = duration;
+        ++updated;
+    }
+
+    populateDurTable();
+    if (updated > 0) {
+        m_durationsModified = true;
+    }
+    ui->statusLabel->setText(QString("自动时长: 更新 %1, 跳过 %2").arg(updated).arg(skipped));
 }
 
 QString PlanVisualizerPage::getDurConfigPath() const

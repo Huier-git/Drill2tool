@@ -46,6 +46,7 @@ private slots:
     void onRunPlan();
     void onReplan();
     void onEditDurations();
+    void onAutoComputeDurations();
     void onExportJson();
     void onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus);
     void onProcessError(QProcess::ProcessError error);

@@ -52,6 +52,7 @@ SOURCES += \
     src/control/MotionLockManager.cpp \
     src/control/MotionConfigManager.cpp \
     src/control/MechanismTypes.cpp \
+    src/control/UnitConverter.cpp \
     src/control/ZMotionDriver.cpp \
     src/control/BaseMechanismController.cpp \
     src/control/StorageController.cpp \
@@ -95,6 +96,7 @@ HEADERS += \
     include/control/zmotion.h \
     include/control/zmcaux.h \
     include/control/MechanismTypes.h \
+    include/control/UnitConverter.h \
     include/control/IMotionDriver.h \
     include/control/ZMotionDriver.h \
     include/control/BaseMechanismController.h \

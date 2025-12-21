@@ -1,0 +1,13 @@
+# code,motor_index,unit_label,pulses_per_unit,notes
+code,motor_index,unit_label,pulses_per_unit,notes
+Fz,2,mm,13086.9,from mechanisms.json
+Sr,7,deg,591.11,from mechanisms.json
+Me,6,mm,,fill
+Mg,4,,,
+Mr,5,deg,144.44,from mechanisms.json
+Dh,-1,,,
+Pr,0,,,rotation axis
+Pi,1,,,percussion axis
+Cb,3,,,
+M8,8,,,
+M9,9,,,

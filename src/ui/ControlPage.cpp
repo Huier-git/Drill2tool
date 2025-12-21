@@ -1,12 +1,19 @@
 #include "ui/ControlPage.h"
 #include "ui_ControlPage.h"
 #include "Global.h"
+#include "control/MotionConfigManager.h"
 #include "control/zmotion.h"
 #include "control/zmcaux.h"
 #include <QDebug>
+#include <QCoreApplication>
+#include <QFileInfo>
+#include <QDir>
+#include <QStringList>
 #include <QMessageBox>
 #include <QMutexLocker>
 #include <QTableWidgetItem>
+#include <QSignalBlocker>
+#include <QItemSelectionModel>
 
 #define ERR_OK 0
 #define TIMER_BASIC_INFO_INTERVAL 500
@@ -26,6 +33,8 @@ ControlPage::ControlPage(QWidget *parent)
     , m_nodeNum(0)
     , m_oldRow(-1)
     , m_oldCol(-1)
+    , m_displayPhysicalUnits(false)
+    , m_tableSyncing(false)
 {
     ui->setupUi(this);
 
@@ -60,6 +69,8 @@ ControlPage::ControlPage(QWidget *parent)
     connect(m_advanceInfoTimer, &QTimer::timeout, this, &ControlPage::advanceInfoRefresh);
 
     setupConnections();
+    refreshUnitConfig();
+    updateUnitsStatus();
 
     // 禁用编辑模式下的更新按钮
     ui->btn_motor_parm_update->setEnabled(true);
@@ -83,6 +94,7 @@ void ControlPage::setupConnections()
     connect(ui->btn_motor_parm_update, &QPushButton::clicked, this, &ControlPage::onMotorParmUpdateClicked);
     connect(ui->cb_motor_parm_edit, &QCheckBox::stateChanged, this, &ControlPage::onMotorParmEditChanged);
     connect(ui->cb_motor_rt_refresh, &QCheckBox::stateChanged, this, &ControlPage::onMotorRtRefreshChanged);
+    connect(ui->cb_units_physical, &QCheckBox::stateChanged, this, &ControlPage::onUnitModeChanged);
 
     // 轴信息
     connect(ui->cb_auto_update, &QCheckBox::stateChanged, this, &ControlPage::onAutoUpdateChanged);
@@ -93,6 +105,13 @@ void ControlPage::setupConnections()
 
     // 命令
     connect(ui->btn_send_cmd, &QPushButton::clicked, this, &ControlPage::onSendCmdClicked);
+
+    if (ui->tb_motor->selectionModel()) {
+        connect(ui->tb_motor->selectionModel(), &QItemSelectionModel::currentRowChanged,
+                this, &ControlPage::onMotorTableSelectionChanged);
+    }
+    connect(ui->cb_axis_num, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &ControlPage::onMotorTableSelectionChanged);
 }
 
 // ============================================================================
@@ -203,6 +222,15 @@ void ControlPage::onMotorRtRefreshChanged(int state)
     }
 }
 
+void ControlPage::onUnitModeChanged(int state)
+{
+    m_displayPhysicalUnits = (state == Qt::Checked);
+    refreshUnitConfig();
+    refreshTableContent();
+    advanceInfoRefresh();
+    updateUnitsStatus();
+}
+
 // ============================================================================
 // 轴信息
 // ============================================================================
@@ -308,6 +336,8 @@ void ControlPage::initMotorTable()
     // 使用实际初始化的轴数，若未获取则默认MAX_MOTOR_COUNT，上限MAX_MOTOR_COUNT（MotorMap数组大小）
     int n = (m_axisNum > 0) ? qMin(static_cast<int>(m_axisNum), MAX_MOTOR_COUNT) : MAX_MOTOR_COUNT;
     ui->tb_motor->setRowCount(n);
+    QSignalBlocker blocker(ui->tb_motor);
+    m_tableSyncing = true;
 
     // 设置行头标签（电机名称）
     QStringList verticalHeaderLabels;
@@ -338,6 +368,8 @@ void ControlPage::initMotorTable()
             ui->tb_motor->setItem(i, j, item);
         }
     }
+
+    m_tableSyncing = false;
 }
 
 void ControlPage::refreshTableContent()
@@ -352,6 +384,9 @@ void ControlPage::refreshTableContent()
         return;
     }
 
+    QSignalBlocker blocker(ui->tb_motor);
+    m_tableSyncing = true;
+
     int iEN, iAType;
     float fMPos, fDPos, fMVel, fDVel, fDAC, fUnit, fAcc, fDec;
 
@@ -364,6 +399,7 @@ void ControlPage::refreshTableContent()
         {
             QMutexLocker locker(&g_mutex);
             if (!g_handle) {
+                m_tableSyncing = false;
                 return;
             }
             ret += ZAux_Direct_GetAtype(g_handle, MotorMap[i], &iAType);
@@ -388,17 +424,28 @@ void ControlPage::refreshTableContent()
         }
 
         // 更新表格
+        const int axisIndex = MotorMap[i];
+        const double mPos = displayValueFromDriver(fMPos, axisIndex, UnitValueType::Position);
+        const double dPos = displayValueFromDriver(fDPos, axisIndex, UnitValueType::Position);
+        const double mVel = displayValueFromDriver(fMVel, axisIndex, UnitValueType::Speed);
+        const double dVel = displayValueFromDriver(fDVel, axisIndex, UnitValueType::Speed);
+        const double acc = displayValueFromDriver(fAcc, axisIndex, UnitValueType::Acceleration);
+        const double dec = displayValueFromDriver(fDec, axisIndex, UnitValueType::Acceleration);
+
         ui->tb_motor->item(i, 0)->setText(QString::number(iEN));
-        ui->tb_motor->item(i, 1)->setText(QString::number(fMPos, 'f', 2));
-        ui->tb_motor->item(i, 2)->setText(QString::number(fDPos, 'f', 2));
-        ui->tb_motor->item(i, 3)->setText(QString::number(fMVel, 'f', 2));
-        ui->tb_motor->item(i, 4)->setText(QString::number(fDVel, 'f', 2));
+        ui->tb_motor->item(i, 1)->setText(QString::number(mPos, 'f', 2));
+        ui->tb_motor->item(i, 2)->setText(QString::number(dPos, 'f', 2));
+        ui->tb_motor->item(i, 3)->setText(QString::number(mVel, 'f', 2));
+        ui->tb_motor->item(i, 4)->setText(QString::number(dVel, 'f', 2));
         ui->tb_motor->item(i, 5)->setText(QString::number(fDAC, 'f', 2));
         ui->tb_motor->item(i, 6)->setText(QString::number(iAType));
         ui->tb_motor->item(i, 7)->setText(QString::number(fUnit, 'f', 0));
-        ui->tb_motor->item(i, 8)->setText(QString::number(fAcc, 'f', 2));
-        ui->tb_motor->item(i, 9)->setText(QString::number(fDec, 'f', 2));
+        ui->tb_motor->item(i, 8)->setText(QString::number(acc, 'f', 2));
+        ui->tb_motor->item(i, 9)->setText(QString::number(dec, 'f', 2));
     }
+
+    m_tableSyncing = false;
+    updateUnitsStatus();
 }
 
 void ControlPage::advanceInfoRefresh()
@@ -443,11 +490,16 @@ void ControlPage::advanceInfoRefresh()
         ZAux_Direct_GetDecel(g_handle, MotorMap[selectindex], &m_decel);
     }
 
+    const int axisIndex = MotorMap[selectindex];
+    const double dispSpeed = displayValueFromDriver(m_speed, axisIndex, UnitValueType::Speed);
+    const double dispAcc = displayValueFromDriver(m_accel, axisIndex, UnitValueType::Acceleration);
+    const double dispDec = displayValueFromDriver(m_decel, axisIndex, UnitValueType::Acceleration);
+
     ui->le_atype->setText(QString::number(m_atype));
     ui->le_pulse_equivalent->setText(QString::number(m_units));
-    ui->le_speed->setText(QString::number(m_speed));
-    ui->le_accel->setText(QString::number(m_accel));
-    ui->le_decel->setText(QString::number(m_decel));
+    ui->le_speed->setText(QString::number(dispSpeed));
+    ui->le_accel->setText(QString::number(dispAcc));
+    ui->le_decel->setText(QString::number(dispDec));
 
     {
         QMutexLocker locker(&g_mutex);
@@ -461,14 +513,17 @@ void ControlPage::advanceInfoRefresh()
         ZAux_Direct_GetAxisEnable(g_handle, MotorMap[selectindex], &m_bAxisEnable);
     }
 
-    ui->le_direct_axis_pos->setText(QString::number(m_fDpos));
-    ui->le_current_axis_pos->setText(QString::number(m_fMpos));
+    const double dispDPos = displayValueFromDriver(m_fDpos, axisIndex, UnitValueType::Position);
+    const double dispMPos = displayValueFromDriver(m_fMpos, axisIndex, UnitValueType::Position);
+    ui->le_direct_axis_pos->setText(QString::number(dispDPos));
+    ui->le_current_axis_pos->setText(QString::number(dispMPos));
     ui->le_axis_status->setText(QString::number(m_AxisStatus));
     ui->le_if_idle->setText(m_Idle == 0 ? "运动中" : (m_Idle == -1 ? "完成" : ""));
 
     ui->btn_enable->setText(m_bAxisEnable ? "禁用" : "使能");
     ui->le_enable_status->setText(m_bAxisEnable ? "开启" : "关闭");
     ui->btn_enable->setChecked(m_bAxisEnable);
+    updateUnitsStatus(axisIndex);
 }
 
 void ControlPage::basicInfoRefresh()
@@ -499,6 +554,11 @@ void ControlPage::basicInfoRefresh()
     m_initFlag = true;
     ui->le_bus_node_num->setText(QString::number(m_nodeNum));
     ui->le_total_axis_num->setText(QString::number(static_cast<int>(m_axisNum)));
+}
+
+void ControlPage::onMotorTableSelectionChanged()
+{
+    updateUnitsStatus();
 }
 
 void ControlPage::onEnableClicked()
@@ -665,6 +725,9 @@ void ControlPage::modifyMotorTable(QTableWidgetItem *item)
     if (!hasHandle || !item) {
         return;
     }
+    if (m_tableSyncing) {
+        return;
+    }
 
     int row = item->row();
     int col = item->column();
@@ -691,7 +754,18 @@ void ControlPage::modifyMotorTable(QTableWidgetItem *item)
     }
 
     int motorID = MotorMap[row];
-    float value = newCellValue.toFloat();
+    double displayValue = newCellValue.toDouble();
+    double driverValue = displayValue;
+    if (m_displayPhysicalUnits) {
+        if (col == 2) {
+            driverValue = driverValueFromDisplay(displayValue, motorID, UnitValueType::Position);
+        } else if (col == 4) {
+            driverValue = driverValueFromDisplay(displayValue, motorID, UnitValueType::Speed);
+        } else if (col == 8 || col == 9) {
+            driverValue = driverValueFromDisplay(displayValue, motorID, UnitValueType::Acceleration);
+        }
+    }
+    float value = static_cast<float>(driverValue);
     int ret = 1;
 
     // 根据列号设置不同的参数
@@ -848,4 +922,119 @@ QString ControlPage::toCmdWindow(const char* response)
     str.replace("\r", "\n");
 
     return str;
+}
+
+QString ControlPage::configDirPath() const
+{
+    auto* mgr = MotionConfigManager::instance();
+    if (mgr && !mgr->configFilePath().isEmpty()) {
+        return QFileInfo(mgr->configFilePath()).absolutePath();
+    }
+
+    QDir appDir(QCoreApplication::applicationDirPath());
+    return QDir::cleanPath(appDir.filePath("../..")) + "/config";
+}
+
+void ControlPage::refreshUnitConfig()
+{
+    QMap<Mechanism::Code, MechanismParams> configs;
+    auto* mgr = MotionConfigManager::instance();
+    if (mgr) {
+        if (mgr->getAllConfigs().isEmpty()) {
+            const QString defaultPath = QDir(configDirPath()).filePath("mechanisms.json");
+            if (QFileInfo::exists(defaultPath)) {
+                mgr->loadConfig(defaultPath);
+            }
+        }
+        configs = mgr->getAllConfigs();
+    }
+
+    const QString csvPath = QDir(configDirPath()).filePath("unit_conversions.csv");
+    QStringList warnings;
+    m_axisUnits = UnitConverter::loadAxisUnits(configs, csvPath, &warnings);
+    if (!warnings.isEmpty()) {
+        qWarning() << "[ControlPage] Unit conversion CSV warnings:" << warnings;
+    }
+}
+
+AxisUnitInfo ControlPage::axisUnitInfo(int axisIndex) const
+{
+    return m_axisUnits.value(axisIndex);
+}
+
+int ControlPage::currentAxisIndex() const
+{
+    if (!ui) {
+        return -1;
+    }
+    int row = ui->tb_motor->currentRow();
+    if (row >= 0 && row < MAX_MOTOR_COUNT) {
+        return MotorMap[row];
+    }
+    int index = ui->cb_axis_num->currentIndex();
+    if (index >= 0 && index < MAX_MOTOR_COUNT) {
+        return MotorMap[index];
+    }
+    return -1;
+}
+
+double ControlPage::displayValueFromDriver(double driverValue, int axisIndex, UnitValueType type) const
+{
+    if (!m_displayPhysicalUnits) {
+        return driverValue;
+    }
+    AxisUnitInfo info = axisUnitInfo(axisIndex);
+    return UnitConverter::driverToPhysical(driverValue, info, type);
+}
+
+double ControlPage::driverValueFromDisplay(double displayValue, int axisIndex, UnitValueType type) const
+{
+    if (!m_displayPhysicalUnits) {
+        return displayValue;
+    }
+    AxisUnitInfo info = axisUnitInfo(axisIndex);
+    return UnitConverter::physicalToDriver(displayValue, info, type);
+}
+
+QString ControlPage::unitLabelForAxis(int axisIndex) const
+{
+    AxisUnitInfo info = axisUnitInfo(axisIndex);
+    if (!info.unitLabel.isEmpty()) {
+        return info.unitLabel;
+    }
+    return "unit";
+}
+
+void ControlPage::updateUnitsStatus(int axisIndex)
+{
+    if (!ui || !ui->label_units_status) {
+        return;
+    }
+
+    int axis = axisIndex;
+    if (axis < 0) {
+        axis = currentAxisIndex();
+    }
+
+    if (!m_displayPhysicalUnits) {
+        ui->label_units_status->setText("Units: Driver (pulses, pulses/s)");
+        return;
+    }
+
+    AxisUnitInfo info = axisUnitInfo(axis);
+    QString axisLabel = info.code.isEmpty()
+        ? (axis >= 0 ? QString("Axis %1").arg(axis) : QString("Axis ?"))
+        : info.code;
+
+    if (!info.valid()) {
+        ui->label_units_status->setText(QString("Units: Physical (mm/min). Driver: pulses/s. %1: no conversion").arg(axisLabel));
+        return;
+    }
+
+    QString unit = unitLabelForAxis(axis);
+    ui->label_units_status->setText(
+        QString("Units: Physical (%1, %1/min). Driver: pulses/s. %2: %3 pulses/%1")
+            .arg(unit)
+            .arg(axisLabel)
+            .arg(info.pulsesPerUnit, 0, 'f', 2));
 }

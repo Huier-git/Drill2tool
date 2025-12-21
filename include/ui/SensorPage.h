@@ -2,6 +2,7 @@
 #define SENSORPAGE_H
 
 #include <QWidget>
+#include <QMetaObject>
 #include "control/AcquisitionManager.h"
 #include "control/zmotion.h"
 
@@ -69,6 +70,8 @@ private:
     bool m_vk701Connected;
     bool m_mdbConnected;
     bool m_motorConnected;
+    bool m_resetPending;
+    QMetaObject::Connection m_resetConnection;
 };
 
 #endif // SENSORPAGE_H

@@ -1,0 +1,76 @@
+# step_key,axis_code,start_key,end_key,kind,notes
+step_key,axis_code,start_key,end_key,kind,notes
+A_FZ_AH,Fz,A,H,move,feed move
+A_ME_to_store,Me,A,B,move,arm to storage
+A_MG_grip,Mg,A,B,move,grip
+A_ME_back,Me,B,A,move,arm back
+A_MR_to_head,Mr,A,B,move,arm rotation to head
+A_ME_to_head,Me,A,C,move,arm to head
+A_FZ_HG,Fz,H,G,move,feed move
+A_COUPLE_GE,Fz,G,E,move,coupling
+A_DH_lock,Dh,A,B,move,lock
+A_MG_release,Mg,B,A,move,release
+A_ME_back_from_head,Me,C,A,move,arm back
+A_MR_back_to_store,Mr,B,A,move,arm rotation back
+A_DRILL,Fz,E,A,move,drill advance
+A_CB_clamp,Cb,A,B,move,clamp
+A_DH_unlock,Dh,B,A,move,unlock
+A_BREAK_AC,Fz,A,C,move,break
+A_FZ_CH,Fz,C,H,move,feed move
+SR_INDEX,Sr,,,step_index,storage index forward
+B_ME_to_store,Me,A,B,move,arm to storage
+B_MG_grip,Mg,A,B,move,grip
+B_ME_back,Me,B,A,move,arm back
+B_MR_to_head,Mr,A,B,move,arm rotation to head
+B_ME_to_head,Me,A,C,move,arm to head
+B_FZ_HF,Fz,H,F,move,feed move
+B_COUPLE_FD,Fz,F,D,move,coupling
+B_DH_lock,Dh,A,B,move,lock
+B_MG_release,Mg,B,A,move,release
+B_ME_back_from_head,Me,C,A,move,arm back
+B_MR_back_to_store,Mr,B,A,move,arm rotation back
+B_FZ_DJ,Fz,D,J,move,feed move
+B_COUPLE_JI,Fz,J,I,move,coupling
+B_CB_release,Cb,B,A,move,clamp release
+B_DRILL,Fz,I,A,move,drill advance
+B_CB_clamp,Cb,A,B,move,clamp
+B_DH_unlock,Dh,B,A,move,unlock
+B_BREAK_AC,Fz,A,C,move,break
+B_FZ_CH,Fz,C,H,move,feed move
+C_FZ_HC,Fz,H,C,move,feed move
+C_COUPLE_CB,Fz,C,B,move,coupling
+C_DH_lock,Dh,A,B,move,lock
+C_CB_release,Cb,B,A,move,clamp release
+C_FZ_BI,Fz,B,I,move,feed move
+C_CB_clamp,Cb,A,B,move,clamp
+C_BREAK_IJ,Fz,I,J,move,break
+C_FZ_JD,Fz,J,D,move,feed move
+C_MR_Assist,Mr,A,B,move,assist rotation
+C_ME_Assist,Me,A,C,move,assist extension
+C_MG_Grip,Mg,A,B,move,assist grip
+C_DH_unlock,Dh,B,A,move,unlock
+C_BREAK_DF,Fz,D,F,move,break
+C_FZ_FH,Fz,F,H,move,feed move
+C_ME_Retract,Me,C,A,move,retract
+C_MR_Retract,Mr,B,A,move,retract
+C_ME_Store,Me,A,B,move,arm to storage
+C_MG_Release,Mg,B,A,move,release
+C_ME_Back,Me,B,A,move,arm back
+C_SR_Next,Sr,,,step_index,storage index back
+D_FZ_HC,Fz,H,C,move,feed move
+D_COUPLE_CB,Fz,C,B,move,coupling
+D_DH_lock,Dh,A,B,move,lock
+D_CB_release,Cb,B,A,move,clamp release
+D_FZ_BE,Fz,B,E,move,feed move
+D_MR_Assist,Mr,A,B,move,assist rotation
+D_ME_Assist,Me,A,C,move,assist extension
+D_MG_Grip,Mg,A,B,move,assist grip
+D_DH_unlock,Dh,B,A,move,unlock
+D_BREAK_EG,Fz,E,G,move,break
+D_FZ_GH,Fz,G,H,move,feed move
+D_SR_Reset,Sr,,,step_index,storage reset
+D_ME_Retract,Me,C,A,move,retract
+D_MR_Retract,Mr,B,A,move,retract
+D_ME_Store,Me,A,B,move,arm to storage
+D_MG_Release,Mg,B,A,move,release
+D_ME_Back,Me,B,A,move,arm back

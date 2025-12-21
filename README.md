@@ -1,4 +1,9 @@
 ﻿# DrillControl 钻机采集控制系统 v2.0
+## Recent Updates (2025-12-22)
+- Added a physical-unit toggle (mm/min or deg/min) for the ControlPage motor table; driver units shown in the status line.
+- Added `config/unit_conversions.csv` to override pulses-per-unit mappings (fill blanks as needed).
+- Added auto duration estimation in PlanVisualizer using `config/plan_step_map.csv` and mechanism parameters.
+
 ## Recent Fixes (2025-12-21)
 - Fixed MDB/Motor sampling timers so QTimer timeouts are delivered.
 - Added event-loop-based Modbus connect/disconnect waits with timeouts.
@@ -390,4 +395,3 @@ DrillControl.exe
 - [ ] 取样自动化流程
 - [ ] 故障检测与处理
 - [ ] 远程监控接口
-

@@ -3,6 +3,9 @@
 
 #include <QWidget>
 #include <QTimer>
+#include <QMap>
+
+#include "control/UnitConverter.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class ControlPage; }
@@ -39,6 +42,7 @@ private slots:
     void onMotorParmUpdateClicked();
     void onMotorParmEditChanged(int state);
     void onMotorRtRefreshChanged(int state);
+    void onUnitModeChanged(int state);
 
     // 轴信息
     void onAutoUpdateChanged(int state);
@@ -54,9 +58,18 @@ private slots:
     void refreshTableContent();
     void advanceInfoRefresh();
     void basicInfoRefresh();
+    void onMotorTableSelectionChanged();
 
 private:
     void setupConnections();
+    void refreshUnitConfig();
+    AxisUnitInfo axisUnitInfo(int axisIndex) const;
+    int currentAxisIndex() const;
+    double displayValueFromDriver(double driverValue, int axisIndex, UnitValueType type) const;
+    double driverValueFromDisplay(double displayValue, int axisIndex, UnitValueType type) const;
+    void updateUnitsStatus(int axisIndex = -1);
+    QString unitLabelForAxis(int axisIndex) const;
+    QString configDirPath() const;
     void initMotorTable();
     void modifyMotorTable(QTableWidgetItem *item);
     void unmodifyMotorTable(int row, int column);
@@ -83,6 +96,10 @@ private:
     QString m_oldCellValue;  // 保存旧值用于恢复
     int m_oldRow;
     int m_oldCol;
+
+    bool m_displayPhysicalUnits;
+    bool m_tableSyncing;
+    QMap<int, AxisUnitInfo> m_axisUnits;
 };
 
 #endif // CONTROLPAGE_H
