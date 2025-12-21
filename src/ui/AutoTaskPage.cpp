@@ -15,6 +15,9 @@
 #include <QMessageBox>
 #include <QHeaderView>
 #include <QTableWidgetItem>
+#include <QJsonDocument>
+#include <QJsonParseError>
+#include <QJsonObject>
 
 #ifdef ENABLE_TEST_MODE
 #include "MockDataGenerator.h"
@@ -239,9 +242,36 @@ void AutoTaskPage::onImportTaskClicked()
         return;
     }
 
+    QFile file(fileName);
+    if (!file.open(QIODevice::ReadOnly)) {
+        QMessageBox::warning(this, tr("错误"), tr("无法打开任务文件"));
+        return;
+    }
+
+    QJsonParseError parseError;
+    QJsonDocument doc = QJsonDocument::fromJson(file.readAll(), &parseError);
+    file.close();
+    if (parseError.error != QJsonParseError::NoError || !doc.isObject()) {
+        QMessageBox::warning(this, tr("错误"),
+            tr("任务文件不是有效的JSON对象: %1").arg(parseError.errorString()));
+        return;
+    }
+
+    QJsonObject root = doc.object();
+    if (!root.contains("steps") || !root.value("steps").isArray()) {
+        QMessageBox::warning(this, tr("错误"),
+            tr("任务文件缺少 steps 数组"));
+        return;
+    }
+
     // Copy file to tasks directory
     QFileInfo fileInfo(fileName);
-    QString destPath = QDir(m_tasksDirectory).filePath(fileInfo.fileName());
+    QDir tasksDir(m_tasksDirectory);
+    if (!tasksDir.exists() && !tasksDir.mkpath(".")) {
+        QMessageBox::warning(this, tr("错误"), tr("无法创建任务目录"));
+        return;
+    }
+    QString destPath = tasksDir.filePath(fileInfo.fileName());
 
     if (QFile::exists(destPath)) {
         QMessageBox::StandardButton reply = QMessageBox::question(

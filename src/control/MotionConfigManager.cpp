@@ -7,6 +7,10 @@
 #include "control/ArmRotationController.h"
 #include "control/DockingController.h"
 #include <QFile>
+#include <QFileInfo>
+#include <QDir>
+#include <QSaveFile>
+#include <QSignalBlocker>
 #include <QJsonArray>
 #include <QDebug>
 #include <QTimer>
@@ -235,6 +239,13 @@ bool MotionConfigManager::saveConfig(const QString& filePath)
         return false;
     }
 
+    QFileInfo info(savePath);
+    QDir dir(info.absolutePath());
+    if (!dir.exists() && !dir.mkpath(".")) {
+        emit errorOccurred(tr("无法创建配置目录: %1").arg(info.absolutePath()));
+        return false;
+    }
+
     QJsonObject root;
     root["_version"] = m_configVersion;
     root["_comment"] = "机构运动参数配置文件";
@@ -247,14 +258,28 @@ bool MotionConfigManager::saveConfig(const QString& filePath)
 
     QJsonDocument doc(root);
 
-    QFile file(savePath);
+    QSignalBlocker blocker(m_fileWatcher);
+
+    QSaveFile file(savePath);
     if (!file.open(QIODevice::WriteOnly)) {
         emit errorOccurred(tr("无法写入配置文件: %1").arg(savePath));
         return false;
     }
 
-    file.write(doc.toJson(QJsonDocument::Indented));
-    file.close();
+    if (file.write(doc.toJson(QJsonDocument::Indented)) == -1) {
+        emit errorOccurred(tr("写入配置文件失败: %1").arg(savePath));
+        return false;
+    }
+
+    if (!file.commit()) {
+        emit errorOccurred(tr("保存配置文件失败: %1").arg(savePath));
+        return false;
+    }
+
+    m_configFilePath = savePath;
+    if (m_fileWatchEnabled && !m_fileWatcher->files().contains(savePath)) {
+        m_fileWatcher->addPath(savePath);
+    }
 
     qDebug() << "[MotionConfigManager] Saved config to:" << savePath;
     return true;

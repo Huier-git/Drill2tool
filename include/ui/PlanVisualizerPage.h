@@ -72,8 +72,8 @@ private:
     // 时长配置
     void loadDefaultDurations();
     void populateDurTable();
-    void saveDurationsToJson(const QString& filePath);
-    void loadDurationsFromJson(const QString& filePath);
+    bool saveDurationsToJson(const QString& filePath, bool showErrors = true);
+    bool loadDurationsFromJson(const QString& filePath, bool showErrors = true);
     void writeDurationsToTempFile();
 
     // 解析ASCII提取任务

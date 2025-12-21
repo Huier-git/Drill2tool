@@ -8,6 +8,8 @@
 #include <QMessageBox>
 #include <QFileDialog>
 #include <QJsonDocument>
+#include <QJsonParseError>
+#include <QSaveFile>
 #include <QRegularExpression>
 #include <QDebug>
 #include <QHeaderView>
@@ -104,7 +106,9 @@ void PlanVisualizerPage::loadDefaultDurations()
     m_durations = DEFAULT_DURATIONS;
     QString configPath = getDurConfigPath();
     if (QFileInfo::exists(configPath)) {
-        loadDurationsFromJson(configPath);
+        if (!loadDurationsFromJson(configPath, false)) {
+            qWarning() << "Failed to load durations from:" << configPath;
+        }
     }
 }
 
@@ -271,7 +275,10 @@ void PlanVisualizerPage::onLoadDurConfig()
         "加载时长配置", getDurConfigPath(), "JSON文件 (*.json)");
     if (fileName.isEmpty()) return;
 
-    loadDurationsFromJson(fileName);
+    if (!loadDurationsFromJson(fileName, true)) {
+        ui->statusLabel->setText("加载配置失败");
+        return;
+    }
     populateDurTable();
     m_durationsModified = true;
     ui->statusLabel->setText("已加载配置: " + QFileInfo(fileName).fileName());
@@ -283,7 +290,10 @@ void PlanVisualizerPage::onSaveDurConfig()
         "保存时长配置", getDurConfigPath(), "JSON文件 (*.json)");
     if (fileName.isEmpty()) return;
 
-    saveDurationsToJson(fileName);
+    if (!saveDurationsToJson(fileName, true)) {
+        ui->statusLabel->setText("保存配置失败");
+        return;
+    }
     ui->statusLabel->setText("已保存配置: " + QFileInfo(fileName).fileName());
 }
 
@@ -303,27 +313,73 @@ QString PlanVisualizerPage::getDurConfigPath() const
     return getProjectRoot() + "/config/durations.json";
 }
 
-void PlanVisualizerPage::saveDurationsToJson(const QString& filePath)
+bool PlanVisualizerPage::saveDurationsToJson(const QString& filePath, bool showErrors)
 {
     QJsonObject obj;
     for (auto it = m_durations.constBegin(); it != m_durations.constEnd(); ++it) {
         obj[it.key()] = it.value();
     }
-    QFile file(filePath);
-    if (file.open(QIODevice::WriteOnly)) {
-        file.write(QJsonDocument(obj).toJson(QJsonDocument::Indented));
-        file.close();
+    QJsonDocument doc(obj);
+
+    QFileInfo info(filePath);
+    QDir dir(info.absolutePath());
+    if (!dir.exists() && !dir.mkpath(".")) {
+        if (showErrors) {
+            QMessageBox::warning(this, "保存失败",
+                QString("无法创建目录: %1").arg(info.absolutePath()));
+        }
+        return false;
     }
+
+    QSaveFile file(filePath);
+    if (!file.open(QIODevice::WriteOnly)) {
+        if (showErrors) {
+            QMessageBox::warning(this, "保存失败",
+                QString("无法写入文件: %1").arg(file.errorString()));
+        }
+        return false;
+    }
+
+    if (file.write(doc.toJson(QJsonDocument::Indented)) == -1) {
+        if (showErrors) {
+            QMessageBox::warning(this, "保存失败",
+                QString("写入文件失败: %1").arg(file.errorString()));
+        }
+        return false;
+    }
+
+    if (!file.commit()) {
+        if (showErrors) {
+            QMessageBox::warning(this, "保存失败",
+                QString("保存文件失败: %1").arg(file.errorString()));
+        }
+        return false;
+    }
+
+    return true;
 }
 
-void PlanVisualizerPage::loadDurationsFromJson(const QString& filePath)
+bool PlanVisualizerPage::loadDurationsFromJson(const QString& filePath, bool showErrors)
 {
     QFile file(filePath);
-    if (!file.open(QIODevice::ReadOnly)) return;
+    if (!file.open(QIODevice::ReadOnly)) {
+        if (showErrors) {
+            QMessageBox::warning(this, "加载失败",
+                QString("无法打开文件: %1").arg(file.errorString()));
+        }
+        return false;
+    }
 
-    QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
+    QJsonParseError parseError;
+    QJsonDocument doc = QJsonDocument::fromJson(file.readAll(), &parseError);
     file.close();
-    if (!doc.isObject()) return;
+    if (parseError.error != QJsonParseError::NoError || !doc.isObject()) {
+        if (showErrors) {
+            QMessageBox::warning(this, "加载失败",
+                QString("JSON解析错误: %1").arg(parseError.errorString()));
+        }
+        return false;
+    }
 
     QJsonObject obj = doc.object();
     for (auto it = obj.constBegin(); it != obj.constEnd(); ++it) {
@@ -331,13 +387,18 @@ void PlanVisualizerPage::loadDurationsFromJson(const QString& filePath)
             m_durations[it.key()] = it.value().toInt();
         }
     }
+
+    return true;
 }
 
 void PlanVisualizerPage::writeDurationsToTempFile()
 {
     QString tempPath = getProjectRoot() + "/python/multi_rig_plan/durations_override.json";
-    saveDurationsToJson(tempPath);
-    qDebug() << "Written durations to:" << tempPath;
+    if (saveDurationsToJson(tempPath, false)) {
+        qDebug() << "Written durations to:" << tempPath;
+    } else {
+        qWarning() << "Failed to write durations to:" << tempPath;
+    }
 }
 
 void PlanVisualizerPage::onExportJson()

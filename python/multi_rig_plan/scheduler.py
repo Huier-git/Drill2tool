@@ -61,11 +61,20 @@ def load_durations_from_file(config_path: str):
     """从JSON文件加载时长配置"""
     global DUR
     if os.path.exists(config_path):
-        with open(config_path, 'r', encoding='utf-8') as f:
-            custom_dur = json.load(f)
-            for key, value in custom_dur.items():
-                if key in DUR:
-                    DUR[key] = value
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                custom_dur = json.load(f)
+        except Exception as exc:
+            print(f"[WARN] Failed to load durations from {config_path}: {exc}")
+            return
+
+        if not isinstance(custom_dur, dict):
+            print(f"[WARN] Durations config is not a JSON object: {config_path}")
+            return
+
+        for key, value in custom_dur.items():
+            if key in DUR and isinstance(value, (int, float)):
+                DUR[key] = int(value)
         print(f"[INFO] Loaded custom durations from: {config_path}")
 
 
