@@ -59,15 +59,6 @@ private slots:
     // Timer slots
     void onElapsedTimerTick();
 
-    // Test mode slots (always declared to avoid moc issues)
-    void onRunUnitTestsClicked();
-    void onTestScenarioNormalClicked();
-    void onTestScenarioTorqueClicked();
-    void onTestScenarioPressureClicked();
-    void onTestScenarioStallClicked();
-    void onTestScenarioProgressiveClicked();
-    void onStopMockDataClicked();
-
 private:
     void setupConnections();
     void loadTasksFromDirectory();
@@ -103,10 +94,6 @@ private:
     QStringList m_availableTasks;
     QString m_currentTaskFile;
 
-#ifdef ENABLE_TEST_MODE
-    class MockDataGenerator* m_mockGenerator;
-    void setupTestUI();
-#endif
 };
 
 #endif // AUTOTASKPAGE_H

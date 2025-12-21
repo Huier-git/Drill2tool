@@ -6,29 +6,6 @@ QT += core gui widgets sql network concurrent serialbus printsupport
 
 CONFIG += c++17
 
-# ==================================================
-# 测试模式开关
-# ==================================================
-# 启用测试：取消下面的注释
-# 禁用测试：注释掉下面的行（默认状态，用于发布）
-# CONFIG += test_mode
-
-test_mode {
-    DEFINES += ENABLE_TEST_MODE
-    message("测试模式已启用 - 包含测试代码")
-
-    SOURCES += \
-        $$PWD/tests/unit/test_autotask.cpp \
-        $$PWD/tests/mock/MockDataGenerator.cpp
-
-    HEADERS += \
-        $$PWD/tests/mock/MockDataGenerator.h
-
-    INCLUDEPATH += $$PWD/tests/mock
-} else {
-    message("测试模式已禁用 - 正常编译")
-}
-
 TARGET = DrillControl
 TEMPLATE = app
 

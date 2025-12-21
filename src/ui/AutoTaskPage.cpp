@@ -19,18 +19,6 @@
 #include <QJsonParseError>
 #include <QJsonObject>
 
-#ifdef ENABLE_TEST_MODE
-#include "MockDataGenerator.h"
-#include <QPushButton>
-#include <QGroupBox>
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QLabel>
-
-// 声明外部测试函数
-extern void testAutoTask();
-#endif
-
 AutoTaskPage::AutoTaskPage(QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::AutoTaskPage)
@@ -41,9 +29,6 @@ AutoTaskPage::AutoTaskPage(QWidget *parent)
     , m_drillManager(nullptr)
     , m_elapsedTimer(new QTimer(this))
     , m_tasksDirectory("config/auto_tasks")
-#ifdef ENABLE_TEST_MODE
-    , m_mockGenerator(nullptr)
-#endif
 {
     ui->setupUi(this);
     setupConnections();
@@ -69,9 +54,6 @@ AutoTaskPage::AutoTaskPage(QWidget *parent)
     updateUIState();
     loadTasksFromDirectory();
 
-#ifdef ENABLE_TEST_MODE
-    setupTestUI();
-#endif
 }
 
 AutoTaskPage::~AutoTaskPage()
@@ -79,11 +61,6 @@ AutoTaskPage::~AutoTaskPage()
     if (m_drillManager) {
         m_drillManager->abort();
     }
-#ifdef ENABLE_TEST_MODE
-    if (m_mockGenerator) {
-        m_mockGenerator->stopSimulation();
-    }
-#endif
     delete ui;
 }
 
@@ -128,14 +105,6 @@ void AutoTaskPage::setControllers(FeedController* feed,
                 m_acquisitionManager->motorWorker());
         }
 
-#ifdef ENABLE_TEST_MODE
-        // 连接 MockDataGenerator 到新创建的 AutoDrillManager
-        if (m_mockGenerator) {
-            connect(m_mockGenerator, &MockDataGenerator::dataBlockReady,
-                    m_drillManager, &AutoDrillManager::onDataBlockReceived,
-                    Qt::UniqueConnection);  // 防止重复连接
-        }
-#endif
     }
 }
 
@@ -805,179 +774,3 @@ void AutoTaskPage::logAcquisitionEvent(bool running)
         appendLog(tr("[数据采集] 已停止"));
     }
 }
-
-// ==================================================
-// 测试功能实现（仅在测试模式下编译）
-// ==================================================
-#ifdef ENABLE_TEST_MODE
-
-void AutoTaskPage::setupTestUI()
-{
-    // 创建测试控制面板
-    QGroupBox* testGroup = new QGroupBox(tr("🧪 测试功能（开发模式）"), this);
-    testGroup->setStyleSheet("QGroupBox { font-weight: bold; color: #FF6600; }");
-
-    QVBoxLayout* testLayout = new QVBoxLayout(testGroup);
-
-    // 单元测试按钮
-    QPushButton* btnUnitTest = new QPushButton(tr("运行单元测试"), this);
-    btnUnitTest->setStyleSheet("background-color: #4CAF50; color: white; font-weight: bold;");
-    connect(btnUnitTest, &QPushButton::clicked,
-            this, &AutoTaskPage::onRunUnitTestsClicked);
-    testLayout->addWidget(btnUnitTest);
-
-    // 分隔线
-    QLabel* separator1 = new QLabel(tr("--- 模拟数据场景 ---"), this);
-    separator1->setAlignment(Qt::AlignCenter);
-    testLayout->addWidget(separator1);
-
-    // 场景测试按钮组
-    QHBoxLayout* scenarioRow1 = new QHBoxLayout();
-    QPushButton* btnNormal = new QPushButton(tr("正常钻进"), this);
-    QPushButton* btnTorque = new QPushButton(tr("扭矩超限"), this);
-    connect(btnNormal, &QPushButton::clicked,
-            this, &AutoTaskPage::onTestScenarioNormalClicked);
-    connect(btnTorque, &QPushButton::clicked,
-            this, &AutoTaskPage::onTestScenarioTorqueClicked);
-    scenarioRow1->addWidget(btnNormal);
-    scenarioRow1->addWidget(btnTorque);
-    testLayout->addLayout(scenarioRow1);
-
-    QHBoxLayout* scenarioRow2 = new QHBoxLayout();
-    QPushButton* btnPressure = new QPushButton(tr("钻压超限"), this);
-    QPushButton* btnStall = new QPushButton(tr("堵转"), this);
-    connect(btnPressure, &QPushButton::clicked,
-            this, &AutoTaskPage::onTestScenarioPressureClicked);
-    connect(btnStall, &QPushButton::clicked,
-            this, &AutoTaskPage::onTestScenarioStallClicked);
-    scenarioRow2->addWidget(btnPressure);
-    scenarioRow2->addWidget(btnStall);
-    testLayout->addLayout(scenarioRow2);
-
-    QPushButton* btnProgressive = new QPushButton(tr("逐步恶化"), this);
-    connect(btnProgressive, &QPushButton::clicked,
-            this, &AutoTaskPage::onTestScenarioProgressiveClicked);
-    testLayout->addWidget(btnProgressive);
-
-    // 停止模拟按钮
-    QPushButton* btnStopMock = new QPushButton(tr("停止模拟数据"), this);
-    btnStopMock->setStyleSheet("background-color: #F44336; color: white;");
-    connect(btnStopMock, &QPushButton::clicked,
-            this, &AutoTaskPage::onStopMockDataClicked);
-    testLayout->addWidget(btnStopMock);
-
-    // 添加到主布局（假设主布局是QVBoxLayout）
-    if (QVBoxLayout* mainLayout = qobject_cast<QVBoxLayout*>(this->layout())) {
-        mainLayout->addWidget(testGroup);
-    } else {
-        // 如果主布局不是VBoxLayout，尝试找到合适的位置添加
-        testGroup->setParent(this);
-        testGroup->setGeometry(10, 10, 200, 300);
-        testGroup->show();
-    }
-
-    // 创建MockDataGenerator
-    m_mockGenerator = new MockDataGenerator(this);
-
-    // 连接到AutoDrillManager（如果已创建）
-    if (m_drillManager) {
-        connect(m_mockGenerator, &MockDataGenerator::dataBlockReady,
-                m_drillManager, &AutoDrillManager::onDataBlockReceived,
-                Qt::UniqueConnection);
-    }
-    // 注意：如果 drillManager 还未创建，会在 setControllers() 中连接
-
-    connect(m_mockGenerator, &MockDataGenerator::scenarioChanged,
-            [this](const QString& desc) {
-        appendLog(tr("[测试] %1").arg(desc));
-    });
-
-    appendLog(tr("[测试模式] 测试功能已启用"));
-}
-
-void AutoTaskPage::onRunUnitTestsClicked()
-{
-    appendLog(tr("开始运行单元测试..."));
-    testAutoTask();
-    appendLog(tr("单元测试完成，请查看调试输出窗口"));
-}
-
-void AutoTaskPage::onTestScenarioNormalClicked()
-{
-    if (!m_mockGenerator) return;
-
-    m_mockGenerator->setScenario(MockDataGenerator::SimulationScenario::NormalDrilling);
-    m_mockGenerator->setUpdateInterval(100);  // 10Hz
-    m_mockGenerator->startSimulation();
-
-    appendLog(tr("[测试] 开始模拟：正常钻进场景"));
-}
-
-void AutoTaskPage::onTestScenarioTorqueClicked()
-{
-    if (!m_mockGenerator) return;
-
-    m_mockGenerator->setScenario(MockDataGenerator::SimulationScenario::TorqueOverload);
-    m_mockGenerator->setUpdateInterval(100);
-    m_mockGenerator->startSimulation();
-
-    appendLog(tr("[测试] 开始模拟：扭矩超限场景（30帧后触发）"));
-}
-
-void AutoTaskPage::onTestScenarioPressureClicked()
-{
-    if (!m_mockGenerator) return;
-
-    m_mockGenerator->setScenario(MockDataGenerator::SimulationScenario::PressureOverload);
-    m_mockGenerator->setUpdateInterval(100);
-    m_mockGenerator->startSimulation();
-
-    appendLog(tr("[测试] 开始模拟：钻压超限场景（20帧后触发）"));
-}
-
-void AutoTaskPage::onTestScenarioStallClicked()
-{
-    if (!m_mockGenerator) return;
-
-    m_mockGenerator->setScenario(MockDataGenerator::SimulationScenario::Stall);
-    m_mockGenerator->setUpdateInterval(100);
-    m_mockGenerator->startSimulation();
-
-    appendLog(tr("[测试] 开始模拟：堵转场景（1秒后触发）"));
-}
-
-void AutoTaskPage::onTestScenarioProgressiveClicked()
-{
-    if (!m_mockGenerator) return;
-
-    m_mockGenerator->setScenario(MockDataGenerator::SimulationScenario::ProgressiveFailure);
-    m_mockGenerator->setUpdateInterval(100);
-    m_mockGenerator->startSimulation();
-
-    appendLog(tr("[测试] 开始模拟：逐步恶化场景（正常→异常→故障）"));
-}
-
-void AutoTaskPage::onStopMockDataClicked()
-{
-    if (!m_mockGenerator) return;
-
-    m_mockGenerator->stopSimulation();
-    appendLog(tr("[测试] 模拟数据已停止"));
-}
-
-#endif  // ENABLE_TEST_MODE
-
-// ==================================================
-// 测试功能存根（禁用测试模式时防止链接错误）
-// ==================================================
-#ifndef ENABLE_TEST_MODE
-// 当测试模式禁用时，moc 可能仍然引用这些槽函数
-// 提供空实现以避免链接错误
-void AutoTaskPage::onRunUnitTestsClicked() {}
-void AutoTaskPage::onTestScenarioNormalClicked() {}
-void AutoTaskPage::onTestScenarioTorqueClicked() {}
-void AutoTaskPage::onTestScenarioPressureClicked() {}
-void AutoTaskPage::onTestScenarioStallClicked() {}
-void AutoTaskPage::onTestScenarioProgressiveClicked() {}
-void AutoTaskPage::onStopMockDataClicked() {}
-#endif  // !ENABLE_TEST_MODE
