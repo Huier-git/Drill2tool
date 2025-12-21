@@ -202,6 +202,17 @@ QPushButton#btn_end_round:hover {
     border-color: #909399;
 }
 
+QPushButton#btn_reset_round {
+    background-color: #fdf6ec;
+    color: #e6a23c;
+    border: 1px solid #f5dab1;
+}
+QPushButton#btn_reset_round:hover {
+    background-color: #e6a23c;
+    color: white;
+    border-color: #e6a23c;
+}
+
 /* Global Start/Stop */
 QPushButton#btn_start_all {
     background-color: #409eff;
@@ -823,7 +834,7 @@ QLabel#label_operator, QLabel#label_note_label {
         <item row="2" column="0" colspan="3">
          <layout class="QHBoxLayout" name="horizontalLayout_rounds">
           <property name="spacing">
-           <number>15</number>
+           <number>12</number>
           </property>
           <item>
            <widget class="QPushButton" name="btn_new_round">
@@ -835,6 +846,19 @@ QLabel#label_operator, QLabel#label_note_label {
             </property>
             <property name="text">
              <string>+ 新建轮次</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="btn_reset_round">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>45</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>重置轮次</string>
             </property>
            </widget>
           </item>

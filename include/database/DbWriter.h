@@ -65,6 +65,12 @@ public slots:
     void endCurrentRound();
 
     /**
+     * @brief 清除指定轮次的所有数据
+     * @param roundId 要清除的轮次ID
+     */
+    void clearRoundData(int roundId);
+
+    /**
      * @brief 记录频率变化
      */
     void logFrequencyChange(int roundId, SensorType sensorType,

@@ -216,6 +216,52 @@ void DbWriter::endCurrentRound()
     m_currentRoundId = 0;
 }
 
+void DbWriter::clearRoundData(int roundId)
+{
+    if (roundId <= 0) {
+        qWarning() << "Invalid round ID for clearing:" << roundId;
+        return;
+    }
+
+    QSqlQuery query(m_db);
+
+    // 删除该轮次的所有传感器数据
+    query.prepare("DELETE FROM sensor_data WHERE round_id = :round_id");
+    query.bindValue(":round_id", roundId);
+
+    if (!query.exec()) {
+        emit errorOccurred("Failed to clear sensor data: " + query.lastError().text());
+        return;
+    }
+
+    int deletedSensorData = query.numRowsAffected();
+
+    // 删除该轮次的所有时间窗口
+    query.prepare("DELETE FROM time_windows WHERE round_id = :round_id");
+    query.bindValue(":round_id", roundId);
+
+    if (!query.exec()) {
+        emit errorOccurred("Failed to clear time windows: " + query.lastError().text());
+        return;
+    }
+
+    int deletedWindows = query.numRowsAffected();
+
+    // 清除窗口缓存中该轮次的条目
+    auto it = m_windowCache.begin();
+    while (it != m_windowCache.end()) {
+        if (it.key().first == roundId) {
+            it = m_windowCache.erase(it);
+        } else {
+            ++it;
+        }
+    }
+
+    qDebug() << "Round data cleared for ID:" << roundId
+             << "| Sensor data rows:" << deletedSensorData
+             << "| Windows:" << deletedWindows;
+}
+
 void DbWriter::logFrequencyChange(int roundId, SensorType sensorType, 
                                    double oldFreq, double newFreq, 
                                    const QString &comment)

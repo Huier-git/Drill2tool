@@ -49,6 +49,7 @@ private slots:
     void onStartAll();
     void onStopAll();
     void onStartNewRound();
+    void onResetRound();
     void onEndRound();
 
     // 状态更新

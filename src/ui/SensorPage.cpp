@@ -68,6 +68,7 @@ void SensorPage::setupConnections()
     connect(ui->btn_start_all, &QPushButton::clicked, this, &SensorPage::onStartAll);
     connect(ui->btn_stop_all, &QPushButton::clicked, this, &SensorPage::onStopAll);
     connect(ui->btn_new_round, &QPushButton::clicked, this, &SensorPage::onStartNewRound);
+    connect(ui->btn_reset_round, &QPushButton::clicked, this, &SensorPage::onResetRound);
     connect(ui->btn_end_round, &QPushButton::clicked, this, &SensorPage::onEndRound);
 }
 
@@ -289,6 +290,25 @@ void SensorPage::onEndRound()
 {
     if (!m_acquisitionManager) return;
     m_acquisitionManager->endCurrentRound();
+}
+
+void SensorPage::onResetRound()
+{
+    if (!m_acquisitionManager) return;
+
+    // 确认对话框
+    QMessageBox::StandardButton reply;
+    reply = QMessageBox::warning(this, "确认重置轮次",
+                                 "警告：重置轮次将删除当前轮次的所有采集数据！\n\n"
+                                 "此操作不可撤销。是否继续？",
+                                 QMessageBox::Yes | QMessageBox::No,
+                                 QMessageBox::No);
+
+    if (reply == QMessageBox::Yes) {
+        m_acquisitionManager->resetCurrentRound();
+        ui->label_status->setText("轮次已重置");
+        QMessageBox::information(this, "重置完成", "当前轮次数据已清除，可以重新开始采集。");
+    }
 }
 
 void SensorPage::onAcquisitionStateChanged(bool isRunning)

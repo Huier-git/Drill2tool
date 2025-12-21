@@ -362,3 +362,29 @@ void AcquisitionManager::endCurrentRound()
 
     LOG_DEBUG_STREAM("AcquisitionManager") << "Round" << oldRoundId << "ended";
 }
+
+void AcquisitionManager::resetCurrentRound()
+{
+    if (m_currentRoundId == 0) {
+        LOG_WARNING("AcquisitionManager", "No active round to reset");
+        return;
+    }
+
+    LOG_DEBUG_STREAM("AcquisitionManager") << "Resetting round" << m_currentRoundId;
+
+    // 清除当前轮次的所有数据
+    QMetaObject::invokeMethod(m_dbWriter, "clearRoundData", Qt::BlockingQueuedConnection,
+                              Q_ARG(int, m_currentRoundId));
+
+    // 重置时间基准
+    const qint64 baseTimestampUs = QDateTime::currentMSecsSinceEpoch() * 1000;
+    QMetaObject::invokeMethod(m_vibrationWorker, "setTimeBase", Qt::QueuedConnection,
+                              Q_ARG(qint64, baseTimestampUs));
+    QMetaObject::invokeMethod(m_mdbWorker, "setTimeBase", Qt::QueuedConnection,
+                              Q_ARG(qint64, baseTimestampUs));
+    QMetaObject::invokeMethod(m_motorWorker, "setTimeBase", Qt::QueuedConnection,
+                              Q_ARG(qint64, baseTimestampUs));
+
+    LOG_DEBUG_STREAM("AcquisitionManager") << "Round" << m_currentRoundId << "reset complete";
+}
+

@@ -61,6 +61,7 @@ public slots:
     void startNewRound(const QString &operatorName = QString(),
                        const QString &note = QString());
     void endCurrentRound();
+    void resetCurrentRound();
 
 signals:
     void acquisitionStateChanged(bool isRunning);
