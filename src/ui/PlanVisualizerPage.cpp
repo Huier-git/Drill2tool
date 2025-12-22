@@ -81,7 +81,9 @@ static const QMap<QString, int> DEFAULT_DURATIONS = {
 namespace {
 enum class StepKind {
     Move,
-    StepIndex
+    StepIndex,
+    Spin,
+    Hold
 };
 
 struct StepMapping {
@@ -95,12 +97,15 @@ struct StepMapping {
         if (axis.isEmpty()) {
             return false;
         }
-        if (kind == StepKind::StepIndex) {
-            return true;
+        if (kind == StepKind::Move) {
+            return !start.isEmpty() && !end.isEmpty();
         }
-        return !start.isEmpty() && !end.isEmpty();
+        return true;
     }
 };
+
+using StepMappingList = QList<StepMapping>;
+using StepMappingMap = QMap<QString, StepMappingList>;
 
 QString normalizeAxisCode(const QString& code)
 {
@@ -111,9 +116,9 @@ QString normalizeAxisCode(const QString& code)
     return upper;
 }
 
-QMap<QString, StepMapping> loadStepMappings(const QString& path, QStringList* warnings)
+StepMappingMap loadStepMappings(const QString& path, QStringList* warnings)
 {
-    QMap<QString, StepMapping> map;
+    StepMappingMap map;
     QFileInfo info(path);
     if (!info.exists()) {
         return map;
@@ -178,14 +183,18 @@ QMap<QString, StepMapping> loadStepMappings(const QString& path, QStringList* wa
         mapping.end = endKey;
         if (kindText == "index" || kindText == "step_index") {
             mapping.kind = StepKind::StepIndex;
+        } else if (kindText == "spin") {
+            mapping.kind = StepKind::Spin;
+        } else if (kindText == "hold") {
+            mapping.kind = StepKind::Hold;
         }
-        map.insert(stepKey, mapping);
+        map[stepKey].append(mapping);
     }
 
     return map;
 }
 
-StepMapping resolveMapping(const QString& key, const QMap<QString, StepMapping>& map)
+StepMappingList resolveMappings(const QString& key, const StepMappingMap& map)
 {
     auto it = map.find(key);
     if (it != map.end()) {
@@ -200,10 +209,10 @@ StepMapping resolveMapping(const QString& key, const QMap<QString, StepMapping>&
         mapping.axis = normalizeAxisCode(match.captured(1));
         mapping.start = match.captured(2).toUpper();
         mapping.end = match.captured(3).toUpper();
-        return mapping;
+        return StepMappingList{mapping};
     }
 
-    return StepMapping();
+    return StepMappingList();
 }
 
 double computeMoveTimeSec(double distance, double speed, double accel)
@@ -480,7 +489,7 @@ void PlanVisualizerPage::onAutoComputeDurations()
 
     QStringList warnings;
     const QString mapPath = getProjectRoot() + "/config/plan_step_map.csv";
-    const QMap<QString, StepMapping> stepMap = loadStepMappings(mapPath, &warnings);
+    const StepMappingMap stepMap = loadStepMappings(mapPath, &warnings);
     if (!warnings.isEmpty()) {
         qWarning() << "[PlanVisualizer] Step map warnings:" << warnings;
     }
@@ -489,51 +498,64 @@ void PlanVisualizerPage::onAutoComputeDurations()
     int skipped = 0;
     for (auto it = m_durations.begin(); it != m_durations.end(); ++it) {
         const QString key = it.key();
-        StepMapping mapping = resolveMapping(key, stepMap);
-        if (!mapping.valid()) {
+        const StepMappingList mappings = resolveMappings(key, stepMap);
+        if (mappings.isEmpty()) {
             ++skipped;
             continue;
         }
 
-        const Mechanism::Code code = Mechanism::fromCodeString(mapping.axis);
-        if (code < 0 || !configs.contains(code)) {
-            ++skipped;
-            continue;
-        }
-
-        const MechanismParams params = configs.value(code);
-        if (params.controlMode.toLower() != "position") {
-            ++skipped;
-            continue;
-        }
-
-        double distance = 0.0;
-        if (mapping.kind == StepKind::StepIndex) {
-            if (params.anglePerPosition <= 0.0 || params.pulsesPerDegree <= 0.0) {
-                ++skipped;
+        double maxTimeSec = 0.0;
+        bool computed = false;
+        for (const StepMapping& mapping : mappings) {
+            if (!mapping.valid()) {
                 continue;
             }
-            distance = std::abs(params.anglePerPosition * params.pulsesPerDegree);
-        } else {
-            if (!params.keyPositions.contains(mapping.start) ||
-                !params.keyPositions.contains(mapping.end)) {
-                ++skipped;
+            if (mapping.kind == StepKind::Spin || mapping.kind == StepKind::Hold) {
                 continue;
             }
-            distance = std::abs(params.keyPositions.value(mapping.end) - params.keyPositions.value(mapping.start));
+
+            const Mechanism::Code code = Mechanism::fromCodeString(mapping.axis);
+            if (code < 0 || !configs.contains(code)) {
+                continue;
+            }
+
+            const MechanismParams params = configs.value(code);
+            if (params.controlMode.toLower() != "position") {
+                continue;
+            }
+
+            double distance = 0.0;
+            if (mapping.kind == StepKind::StepIndex) {
+                if (params.anglePerPosition <= 0.0 || params.pulsesPerDegree <= 0.0) {
+                    continue;
+                }
+                distance = std::abs(params.anglePerPosition * params.pulsesPerDegree);
+            } else {
+                if (!params.keyPositions.contains(mapping.start) ||
+                    !params.keyPositions.contains(mapping.end)) {
+                    continue;
+                }
+                distance = std::abs(params.keyPositions.value(mapping.end) - params.keyPositions.value(mapping.start));
+            }
+
+            const double speed = params.speed;
+            double accel = params.acceleration;
+            if (params.deceleration > 0.0) {
+                accel = qMin(accel, params.deceleration);
+            }
+            const double timeSec = computeMoveTimeSec(distance, speed, accel);
+            if (timeSec <= 0.0) {
+                continue;
+            }
+            computed = true;
+            maxTimeSec = qMax(maxTimeSec, timeSec);
         }
 
-        const double speed = params.speed;
-        double accel = params.acceleration;
-        if (params.deceleration > 0.0) {
-            accel = qMin(accel, params.deceleration);
-        }
-        const double timeSec = computeMoveTimeSec(distance, speed, accel);
-        if (timeSec <= 0.0) {
+        if (!computed) {
             ++skipped;
             continue;
         }
-        const int duration = qMax(1, static_cast<int>(std::ceil(timeSec)));
+        const int duration = qMax(1, static_cast<int>(std::ceil(maxTimeSec)));
         it.value() = duration;
         ++updated;
     }

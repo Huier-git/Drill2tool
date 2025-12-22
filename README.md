@@ -3,6 +3,7 @@
 - Added a physical-unit toggle (mm/min or deg/min) for the ControlPage motor table; driver units shown in the status line.
 - Added `config/unit_conversions.csv` to override pulses-per-unit mappings (fill blanks as needed).
 - Added auto duration estimation in PlanVisualizer using `config/plan_step_map.csv` and mechanism parameters.
+- Plan step mapping now supports parallel ops per step (duration uses the slowest move).
 
 ## Recent Fixes (2025-12-21)
 - Fixed MDB/Motor sampling timers so QTimer timeouts are delivered.
