@@ -11,10 +11,10 @@ AxisUnitInfo buildAxisInfo(Mechanism::Code code, const MechanismParams& params)
     AxisUnitInfo info;
     info.code = Mechanism::getCodeString(code);
     info.motorIndex = Mechanism::getMotorIndex(code);
-    if (params.pulsesPerMm > 0.0) {
+    if (params.hasPulsesPerMm && params.pulsesPerMm > 0.0) {
         info.unitLabel = "mm";
         info.pulsesPerUnit = params.pulsesPerMm;
-    } else if (params.pulsesPerDegree > 0.0) {
+    } else if (params.hasPulsesPerDegree && params.pulsesPerDegree > 0.0) {
         info.unitLabel = "deg";
         info.pulsesPerUnit = params.pulsesPerDegree;
     }

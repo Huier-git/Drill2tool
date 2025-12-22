@@ -242,6 +242,11 @@ void AcquisitionManager::startAll()
     // 如果还没有轮次，创建一个
     if (m_currentRoundId == 0) {
         startNewRound();
+        if (m_currentRoundId <= 0) {
+            LOG_WARNING("AcquisitionManager", "Failed to create round, acquisition start aborted");
+            emit errorOccurred("AcquisitionManager", "Failed to create acquisition round");
+            return;
+        }
     }
 
     // 启动所有Worker
@@ -322,6 +327,11 @@ void AcquisitionManager::startNewRound(const QString &operatorName, const QStrin
         return;
     }
 
+    if (!m_dbWriter) {
+        emit errorOccurred("DbWriter", "DbWriter not initialized");
+        return;
+    }
+
     // 在DbWriter线程中创建新轮次
     int roundId = 0;
     QMetaObject::invokeMethod(m_dbWriter, "startNewRound",
@@ -329,6 +339,11 @@ void AcquisitionManager::startNewRound(const QString &operatorName, const QStrin
                               Q_RETURN_ARG(int, roundId),
                               Q_ARG(QString, operatorName),
                               Q_ARG(QString, note));
+
+    if (roundId <= 0) {
+        emit errorOccurred("DbWriter", "Failed to create new round");
+        return;
+    }
 
     m_currentRoundId = roundId;
 

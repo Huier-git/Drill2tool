@@ -48,6 +48,7 @@ public:
     // 获取当前状态
     int currentRoundId() const { return m_currentRoundId; }
     bool isRunning() const { return m_isRunning; }
+    QString dbPath() const { return m_dbPath; }
 
 public slots:
     void startAll();

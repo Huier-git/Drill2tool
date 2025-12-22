@@ -18,6 +18,7 @@ class DatabasePage : public QWidget
 public:
     explicit DatabasePage(QWidget *parent = nullptr);
     ~DatabasePage();
+    void setDatabasePath(const QString &dbPath);
 
 private slots:
     void onRefreshRounds();
@@ -85,6 +86,7 @@ private:
     int m_currentRoundId;
     qint64 m_currentRoundStartUs;
     qint64 m_currentRoundDurationSec;
+    QString m_dbPath;
 };
 
 #endif // DATABASEPAGE_H

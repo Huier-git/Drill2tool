@@ -44,6 +44,8 @@ struct MechanismParams {
     // 位置控制参数
     double pulsesPerMm = 1.0;
     double pulsesPerDegree = 1.0;
+    bool hasPulsesPerMm = false;
+    bool hasPulsesPerDegree = false;
     int positions = 1;          // 离散位置数（存储机构用）
     double anglePerPosition = 0.0;
 

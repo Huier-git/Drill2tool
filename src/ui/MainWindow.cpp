@@ -144,6 +144,9 @@ void MainWindow::setupPages()
     if (m_vibrationPage) m_vibrationPage->setAcquisitionManager(m_acquisitionManager);
     if (m_mdbPage) m_mdbPage->setAcquisitionManager(m_acquisitionManager);
     if (m_motorPage) m_motorPage->setAcquisitionManager(m_acquisitionManager);
+    if (m_databasePage && m_acquisitionManager) {
+        m_databasePage->setDatabasePath(m_acquisitionManager->dbPath());
+    }
 
     // 设置 AutoTaskPage 的 AcquisitionManager（用于传感器数据）
     if (m_autoTaskPage) {

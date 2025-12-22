@@ -1053,6 +1053,8 @@ void DrillControlPage::onApplyConfigClicked()
     // 更新转换系数
     params.pulsesPerMm = ui->spin_pulses_per_mm->value();
     params.pulsesPerDegree = ui->spin_pulses_per_degree->value();
+    params.hasPulsesPerMm = (params.pulsesPerMm > 0.0);
+    params.hasPulsesPerDegree = (params.pulsesPerDegree > 0.0);
 
     // 从表格读取关键位置
     saveKeyPositionsFromTable(params);

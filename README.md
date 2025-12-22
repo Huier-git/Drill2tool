@@ -7,6 +7,24 @@
 - Plan step mapping supports parallel ops per step (duration uses the slowest move).
 - Added default duration auto-load when `--dur_config` is omitted in `python/multi_rig_plan/scheduler.py` and `python/multi_rig_plan/serial_autoload.py`.
 
+## Feature Overview
+- Data acquisition: VK701 vibration (high-rate), Modbus TCP sensors, and ZMotion motor telemetry with independent sample rates and aligned timestamps.
+- Round management: start/stop all, new/reset/end rounds, round notes, and AutoTask-triggered round creation.
+- Motion control UI: EtherCAT bus init, per-axis enable/stop/zero/clear alarm, realtime parameter table, command console, and driver/physical unit toggle.
+- Motion controllers: feed (Fz), rotation (Pr), percussion (Pi), arm extension/grip/rotation (Me/Mg/Mr), docking head (Dh), storage (Sr), and clamp (Cb).
+- AutoTask: JSON task load/import, presets, state machine execution, step progress, pause/resume/stop/emergency, and logging.
+- Planning & visualization: Python serial/scheduler planners, duration table with auto-compute, Gantt chart, ASCII timeline, and JSON export.
+- Database & query: SQLite round storage, scalar/vibration blocks, time-window queries, and plots/export.
+- Database path is shared between acquisition and queries (set at startup by AcquisitionManager).
+
+## Configuration Files
+- `config/mechanisms.json`: mechanism parameters, key positions, limits, and control modes.
+- `config/unit_conversions.csv`: driver/physical conversion (pulses_per_unit or pulses_per_rev + reduction_ratio [+ mm_per_rev]).
+- `config/plan_step_map.json`: plan step to axis mapping (supports parallel ops per step).
+- `config/durations.json`: computed plan durations used by planners and UI.
+- `config/auto_tasks/`: AutoTask JSON tasks and presets (user-provided).
+- `python/multi_rig_plan/`: planning scripts (`serial.py`, `serial_autoload.py`, `scheduler.py`) and overrides.
+
 ## Recent Fixes (2025-12-21)
 - Fixed MDB/Motor sampling timers so QTimer timeouts are delivered.
 - Added event-loop-based Modbus connect/disconnect waits with timeouts.

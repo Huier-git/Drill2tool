@@ -23,10 +23,11 @@ DatabasePage::DatabasePage(QWidget *parent)
     , m_currentRoundId(-1)
     , m_currentRoundStartUs(0)
     , m_currentRoundDurationSec(0)
+    , m_dbPath("database/drill_data.db")
 {
     ui->setupUi(this);
 
-    m_querier = new DataQuerier("database/drill_data.db", this);
+    m_querier = new DataQuerier(m_dbPath, this);
     if (!m_querier->initialize()) {
         qWarning() << "DataQuerier初始化失败";
     }
@@ -89,6 +90,25 @@ DatabasePage::DatabasePage(QWidget *parent)
 DatabasePage::~DatabasePage()
 {
     delete ui;
+}
+
+void DatabasePage::setDatabasePath(const QString &dbPath)
+{
+    if (dbPath.isEmpty() || dbPath == m_dbPath) {
+        return;
+    }
+
+    m_dbPath = dbPath;
+    if (m_querier) {
+        delete m_querier;
+        m_querier = nullptr;
+    }
+
+    m_querier = new DataQuerier(m_dbPath, this);
+    if (!m_querier->initialize()) {
+        qWarning() << "DataQuerier初始化失败";
+    }
+    loadRoundsList();
 }
 
 void DatabasePage::onRefreshRounds()
@@ -226,6 +246,7 @@ void DatabasePage::onQuery()
 
     int startSec = ui->spin_start_sec->value();
     int endSec = ui->spin_end_sec->value();
+    QString dbPath = m_dbPath;
 
     // 计算实际的微秒时间戳
     qint64 startUs = m_currentRoundStartUs + (qint64)startSec * 1000000;
@@ -233,8 +254,8 @@ void DatabasePage::onQuery()
     int roundId = m_currentRoundId;
 
     // 启动异步查询
-    QFuture<QList<DataQuerier::WindowData>> future = QtConcurrent::run([roundId, startUs, endUs]() {
-        DataQuerier tempQuerier("database/drill_data.db");
+    QFuture<QList<DataQuerier::WindowData>> future = QtConcurrent::run([roundId, startUs, endUs, dbPath]() {
+        DataQuerier tempQuerier(dbPath);
         if (tempQuerier.initialize()) {
             return tempQuerier.getTimeRangeData(roundId, startUs, endUs);
         }
@@ -569,9 +590,10 @@ void DatabasePage::startExportAsync(const QString& filePath)
     qint64 endUs = m_currentRoundStartUs + (qint64)endSec * 1000000;
     int roundId = m_currentRoundId;
     qint64 roundStartUs = m_currentRoundStartUs;
+    QString dbPath = m_dbPath;
 
     // 在后台线程执行导出
-    QtConcurrent::run([this, roundId, startUs, endUs, filePath, progress, roundStartUs]() {
+    QtConcurrent::run([this, roundId, startUs, endUs, filePath, progress, roundStartUs, dbPath]() {
         QFile file(filePath);
         if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
             QMetaObject::invokeMethod(progress, "close", Qt::QueuedConnection);
@@ -593,7 +615,7 @@ void DatabasePage::startExportAsync(const QString& filePath)
         out << "timestamp_us,sensor_type,value\n";
 
         // 创建临时查询器
-        DataQuerier tempQuerier("database/drill_data.db");
+        DataQuerier tempQuerier(dbPath);
         if (!tempQuerier.initialize()) {
             file.close();
             QMetaObject::invokeMethod(progress, "close", Qt::QueuedConnection);

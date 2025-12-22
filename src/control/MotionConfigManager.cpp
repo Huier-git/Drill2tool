@@ -46,6 +46,8 @@ MechanismParams MechanismParams::fromJson(const QJsonObject& json)
     params.dacIncrement = json.value("dac_increment").toDouble(10.0);
 
     // 位置参数
+    params.hasPulsesPerMm = json.contains("pulses_per_mm");
+    params.hasPulsesPerDegree = json.contains("pulses_per_degree");
     params.pulsesPerMm = json.value("pulses_per_mm").toDouble(1.0);
     params.pulsesPerDegree = json.value("pulses_per_degree").toDouble(1.0);
     params.positions = json.value("positions").toInt(1);
