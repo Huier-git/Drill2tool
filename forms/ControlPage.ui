@@ -217,6 +217,33 @@ QCheckBox, QComboBox {
        </spacer>
       </item>
       <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_unit_status">
+        <item>
+         <widget class="QLabel" name="label_units_status">
+          <property name="styleSheet">
+           <string>color: #666; font-style: italic;</string>
+          </property>
+          <property name="text">
+           <string>单位: 驱动 (脉冲)</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer_3">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </item>
+      <item>
        <widget class="QPushButton" name="btn_stop_all_motors">
         <property name="minimumSize">
          <size>
@@ -230,38 +257,11 @@ QCheckBox, QComboBox {
         <property name="text">
          <string>停止所有电机</string>
         </property>
-            </widget>
-           </item>
-           <item>
-            <layout class="QHBoxLayout" name="horizontalLayout_unit_status">
-             <item>
-              <widget class="QLabel" name="label_units_status">
-               <property name="text">
-                <string>单位: 驱动 (脉冲)</string>
-               </property>
-               <property name="styleSheet">
-                <string>color: #666; font-style: italic;</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <spacer name="horizontalSpacer_3">
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-               </property>
-               <property name="sizeHint" stdset="0">
-                <size>
-                 <width>40</width>
-                 <height>20</height>
-                </size>
-               </property>
-              </spacer>
-             </item>
-            </layout>
-           </item>
-          </layout>
-         </widget>
-        </item>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
    <item row="1" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout" stretch="4,1">
      <item>
@@ -333,18 +333,18 @@ QCheckBox, QComboBox {
               <property name="checked">
                <bool>true</bool>
               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QCheckBox" name="cb_units_physical">
-               <property name="text">
-                <string>物理单位 (mm/min)</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <spacer name="horizontalSpacer_2">
-               <property name="orientation">
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="cb_units_physical">
+              <property name="text">
+               <string>物理单位 (mm/min)</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="horizontalSpacer_2">
+              <property name="orientation">
                <enum>Qt::Horizontal</enum>
               </property>
               <property name="sizeHint" stdset="0">
@@ -606,7 +606,7 @@ QCheckBox, QComboBox {
              <x>0</x>
              <y>0</y>
              <width>232</width>
-             <height>586</height>
+             <height>576</height>
             </rect>
            </property>
            <layout class="QFormLayout" name="formLayout_params">

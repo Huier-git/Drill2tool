@@ -375,7 +375,7 @@ QHeaderView::section {
    <item>
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
-      <number>1</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="tab_manual">
       <attribute name="title">
@@ -392,8 +392,8 @@ QHeaderView::section {
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>1157</width>
-            <height>683</height>
+            <width>1137</width>
+            <height>804</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout">
@@ -1085,8 +1085,8 @@ QHeaderView::section {
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>1157</width>
-            <height>1026</height>
+            <width>1137</width>
+            <height>769</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="configParamsLayout">

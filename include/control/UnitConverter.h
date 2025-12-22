@@ -6,7 +6,6 @@
 #include <QStringList>
 
 #include "control/MechanismDefs.h"
-#include "control/MechanismTypes.h"
 
 struct MechanismParams;
 
