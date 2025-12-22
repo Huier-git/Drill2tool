@@ -56,6 +56,9 @@ QMap<int, AxisUnitInfo> UnitConverter::loadAxisUnits(const QMap<Mechanism::Code,
     int motorIdx = 1;
     int labelIdx = 2;
     int pulsesIdx = 3;
+    int pulsesRevIdx = -1;
+    int reductionIdx = -1;
+    int mmPerRevIdx = -1;
     bool hasHeader = false;
 
     while (!in.atEnd()) {
@@ -76,6 +79,9 @@ QMap<int, AxisUnitInfo> UnitConverter::loadAxisUnits(const QMap<Mechanism::Code,
                     else if (key == "motor_index" || key == "motor") motorIdx = i;
                     else if (key == "unit_label") labelIdx = i;
                     else if (key == "pulses_per_unit") pulsesIdx = i;
+                    else if (key == "pulses_per_rev" || key == "pulses_per_turn") pulsesRevIdx = i;
+                    else if (key == "reduction_ratio" || key == "gear_ratio") reductionIdx = i;
+                    else if (key == "mm_per_rev" || key == "mm_per_turn" || key == "lead_mm") mmPerRevIdx = i;
                 }
                 hasHeader = true;
                 continue;
@@ -87,12 +93,21 @@ QMap<int, AxisUnitInfo> UnitConverter::loadAxisUnits(const QMap<Mechanism::Code,
         QString motorStr = cols.value(motorIdx).trimmed();
         QString label = cols.value(labelIdx).trimmed();
         QString pulsesStr = cols.value(pulsesIdx).trimmed();
+        QString pulsesRevStr = (pulsesRevIdx >= 0) ? cols.value(pulsesRevIdx).trimmed() : QString();
+        QString reductionStr = (reductionIdx >= 0) ? cols.value(reductionIdx).trimmed() : QString();
+        QString mmPerRevStr = (mmPerRevIdx >= 0) ? cols.value(mmPerRevIdx).trimmed() : QString();
 
         bool okPulse = false;
         double pulsesPerUnit = pulsesStr.toDouble(&okPulse);
-        if (!okPulse || pulsesPerUnit <= 0.0) {
-            continue;
-        }
+
+        bool okRev = false;
+        double pulsesPerRev = pulsesRevStr.toDouble(&okRev);
+
+        bool okRatio = false;
+        double reductionRatio = reductionStr.toDouble(&okRatio);
+
+        bool okMmPerRev = false;
+        double mmPerRev = mmPerRevStr.toDouble(&okMmPerRev);
 
         bool okMotor = false;
         int motorIndex = motorStr.toInt(&okMotor);
@@ -117,6 +132,27 @@ QMap<int, AxisUnitInfo> UnitConverter::loadAxisUnits(const QMap<Mechanism::Code,
         if (!label.isEmpty()) {
             info.unitLabel = label;
         }
+
+        if (!okPulse || pulsesPerUnit <= 0.0) {
+            if (okRev && okRatio && reductionRatio > 0.0) {
+                QString resolvedLabel = info.unitLabel;
+                QString labelLower = resolvedLabel.toLower();
+                const bool isMm = labelLower.contains("mm");
+                const bool isDeg = labelLower.contains("deg");
+                if (isMm && okMmPerRev && mmPerRev > 0.0) {
+                    pulsesPerUnit = pulsesPerRev * reductionRatio / mmPerRev;
+                    okPulse = true;
+                } else if (isDeg) {
+                    pulsesPerUnit = pulsesPerRev * reductionRatio / 360.0;
+                    okPulse = true;
+                }
+            }
+        }
+
+        if (!okPulse || pulsesPerUnit <= 0.0) {
+            continue;
+        }
+
         info.pulsesPerUnit = pulsesPerUnit;
         map.insert(motorIndex, info);
     }

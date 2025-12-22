@@ -1,10 +1,11 @@
 ﻿# DrillControl 钻机采集控制系统 v2.0
 ## Recent Updates (2025-12-22)
 - Added a physical-unit toggle (mm/min or deg/min) for the ControlPage motor table; driver units shown in the status line.
-- Added `config/unit_conversions.csv` to override pulses-per-unit mappings (fill blanks as needed).
+- Added `config/unit_conversions.csv` with optional `pulses_per_rev`, `reduction_ratio`, and `mm_per_rev` fields.
 - Added auto duration estimation in PlanVisualizer using `config/plan_step_map.json` and mechanism parameters.
 - Auto-computed durations are saved to `config/durations.json`.
 - Plan step mapping supports parallel ops per step (duration uses the slowest move).
+- Added default duration auto-load when `--dur_config` is omitted in `python/multi_rig_plan/scheduler.py` and `python/multi_rig_plan/serial_autoload.py`.
 
 ## Recent Fixes (2025-12-21)
 - Fixed MDB/Motor sampling timers so QTimer timeouts are delivered.

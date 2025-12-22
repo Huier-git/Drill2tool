@@ -533,6 +533,13 @@ if __name__ == "__main__":
     parser.add_argument('--dur_config', type=str, default='', help='Path to custom durations JSON file')
     args = parser.parse_args()
 
+    if not args.dur_config:
+        default_cfg = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                                   "..", "..", "config", "durations.json"))
+        if os.path.exists(default_cfg):
+            args.dur_config = default_cfg
+
+
     # 加载自定义时长配置
     if args.dur_config:
         load_durations_from_file(args.dur_config)
