@@ -3,6 +3,10 @@
 Scope: local commits ahead of origin/main.
 
 ## Commits
+- 55162c6 Handle parallel ops in plan duration estimation.
+  - Allow multiple mappings per step and take the slowest move for duration.
+  - Add spin entries to `config/plan_step_map.csv` for parallel ops in serial plan.
+  - Remove legacy auto task sample configs under `config/auto_tasks`.
 - 37bfb52 Add physical unit toggle and plan duration estimation.
   - Add ControlPage physical-unit display + conversion for table edits and status line.
   - Add UnitConverter with `config/unit_conversions.csv` overrides for pulses-per-unit.
