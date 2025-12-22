@@ -18,6 +18,8 @@ SensorPage::SensorPage(QWidget *parent)
     , m_mdbConnected(false)
     , m_motorConnected(false)
     , m_resetPending(false)
+    , m_lastRoundId(0)
+    , m_resetTargetRound(0)
 {
     ui->setupUi(this);
     setupConnections();
@@ -284,17 +286,19 @@ void SensorPage::onStartNewRound()
 
     QString operatorName = ui->le_operator->text();
     QString note = ui->te_note->toPlainText();
-    m_acquisitionManager->startNewRound(operatorName, note);
 
-    ui->label_status->setText("新建轮次成功");
+    ui->label_status->setText("正在创建新轮次...");
+    m_acquisitionManager->startNewRound(operatorName, note);
+    // 状态由roundChanged信号更新
 }
 
 void SensorPage::onEndRound()
 {
     if (!m_acquisitionManager) return;
-    m_acquisitionManager->endCurrentRound();
 
-    ui->label_status->setText("轮次已结束");
+    ui->label_status->setText("正在结束轮次...");
+    m_acquisitionManager->endCurrentRound();
+    // 状态由roundChanged信号更新
 }
 
 void SensorPage::onResetRound()
@@ -319,6 +323,7 @@ void SensorPage::onResetRound()
         }
 
         m_resetPending = true;
+        m_resetTargetRound = targetRound;
         disconnect(m_resetConnection);
         m_resetConnection = connect(
             m_acquisitionManager, &AcquisitionManager::acquisitionStateChanged,
@@ -332,10 +337,12 @@ void SensorPage::onResetRound()
                 if (!m_acquisitionManager) {
                     return;
                 }
+                ui->label_status->setText("正在重置轮次...");
                 m_acquisitionManager->resetCurrentRound(targetRound);
-                ui->label_status->setText(QString("已重置到轮次 %1").arg(targetRound));
+                // 状态由roundChanged信号更新
                 QMessageBox::information(this, "重置完成",
                                         QString("轮次数据已清除，下次新建轮次将从 %1 开始。").arg(targetRound));
+                m_resetTargetRound = 0;
             });
 
         ui->label_status->setText("正在停止采集...");
@@ -353,10 +360,13 @@ void SensorPage::onResetRound()
                                  QMessageBox::No);
 
     if (reply == QMessageBox::Yes) {
+        m_resetTargetRound = targetRound;
+        ui->label_status->setText("正在重置轮次...");
         m_acquisitionManager->resetCurrentRound(targetRound);
-        ui->label_status->setText(QString("已重置到轮次 %1").arg(targetRound));
+        // 状态由roundChanged信号更新
         QMessageBox::information(this, "重置完成",
                                 QString("轮次数据已清除，下次新建轮次将从 %1 开始。").arg(targetRound));
+        m_resetTargetRound = 0;
     }
 }
 
@@ -374,9 +384,22 @@ void SensorPage::onRoundChanged(int roundId)
 {
     if (roundId == 0) {
         ui->label_round_id->setText("系统状态: 空闲 (未开始轮次)");
+        // 判断是结束轮次还是重置轮次
+        if (m_lastRoundId > 0) {
+            if (m_resetTargetRound > 0) {
+                ui->label_status->setText(QString("已重置到轮次 %1").arg(m_resetTargetRound));
+            } else {
+                ui->label_status->setText("轮次已结束");
+            }
+        }
     } else {
         ui->label_round_id->setText(QString("当前轮次: %1 (进行中)").arg(roundId));
+        // 判断是新建轮次
+        if (roundId > m_lastRoundId) {
+            ui->label_status->setText(QString("新建轮次 %1 成功").arg(roundId));
+        }
     }
+    m_lastRoundId = roundId;
 }
 
 void SensorPage::onErrorOccurred(const QString &workerName, const QString &error)

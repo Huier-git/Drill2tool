@@ -72,6 +72,8 @@ private:
     bool m_motorConnected;
     bool m_resetPending;
     QMetaObject::Connection m_resetConnection;
+    int m_lastRoundId;  // 跟踪上一次的轮次ID，用于判断操作类型
+    int m_resetTargetRound;  // 重置的目标轮次号
 };
 
 #endif // SENSORPAGE_H
