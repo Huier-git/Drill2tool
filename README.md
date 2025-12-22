@@ -20,19 +20,18 @@
   - 修复重置后round_id持续递增问题
   - 防止重置轮次后重复创建新轮次记录
 
-**已知问题与待改进** (根据Code Review):
-- ⚠️ **高优先级**: 重置流程有并发风险
-  - 问题：stopAll()是异步的，重置时可能仍有数据在写入队列
-  - 建议：增加"已停止且队列已清空"的握手机制后再执行reset
-- ⚠️ **中优先级**: resetToRound未清理events和frequency_log表
-  - 问题：会留下孤儿数据或统计污染
-  - 建议：补齐这两个表的清理或建立外键级联删除
-- ⚠️ **中优先级**: 多表删除操作未使用事务
-  - 问题：任一SQL失败会留下部分删除的数据状态
-  - 建议：为resetToRound/clearRoundData加事务包裹
-- ⚠️ **低优先级**: UI提示过早
-  - 问题：在操作结果未知时就显示"成功"，若DB操作失败会误导用户
-  - 建议：等操作完成返回结果后再更新状态栏
+**关键Bug修复** (commit e9d925a - 解决Code Review发现的问题):
+- ✅ **修复高优先级并发问题**:
+  - 添加flushQueue方法：先写入队列数据再清空
+  - resetCurrentRound改进流程：flushQueue → 等待100ms → clearQueue → resetToRound
+  - 解决重置时可能仍有数据在队列导致的数据污染问题
+- ✅ **修复中优先级数据一致性问题**:
+  - resetToRound补齐events和frequency_log表的删除，避免孤儿数据
+  - resetToRound和clearRoundData添加完整的事务包裹
+  - 所有SQL失败时rollback，确保原子性，避免半删除状态
+
+**剩余待改进** (低优先级):
+- ⚠️ **UI反馈优化**: 等操作完成返回结果后再更新状态栏（当前是立即显示"成功"）
 
 ### Earlier Today
 - Added a physical-unit toggle (mm/min or deg/min) for the ControlPage motor table; driver units shown in the status line.
