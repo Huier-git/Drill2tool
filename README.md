@@ -20,18 +20,26 @@
   - 修复重置后round_id持续递增问题
   - 防止重置轮次后重复创建新轮次记录
 
-**关键Bug修复** (commit e9d925a - 解决Code Review发现的问题):
-- ✅ **修复高优先级并发问题**:
+**关键Bug修复** (Code Review发现的所有问题已全部修复):
+- ✅ **高优先级-并发数据一致性** (commit e9d925a):
   - 添加flushQueue方法：先写入队列数据再清空
   - resetCurrentRound改进流程：flushQueue → 等待100ms → clearQueue → resetToRound
   - 解决重置时可能仍有数据在队列导致的数据污染问题
-- ✅ **修复中优先级数据一致性问题**:
+- ✅ **中优先级-数据完整性** (commit e9d925a):
   - resetToRound补齐events和frequency_log表的删除，避免孤儿数据
   - resetToRound和clearRoundData添加完整的事务包裹
   - 所有SQL失败时rollback，确保原子性，避免半删除状态
+- ✅ **低优先级-UI反馈优化** (commit d081a18):
+  - 添加m_lastRoundId和m_resetTargetRound跟踪状态
+  - 操作时显示"正在..."，实际结果由roundChanged信号更新
+  - 智能判断操作类型（新建/结束/重置），基于实际结果提示
+  - 确保UI反馈准确，不会误导用户
 
-**剩余待改进** (低优先级):
-- ⚠️ **UI反馈优化**: 等操作完成返回结果后再更新状态栏（当前是立即显示"成功"）
+**技术总结**:
+本次会话通过codex代码审查发现3类6个问题，已全部修复完成。主要改进包括：
+1. 数据一致性保障：事务+队列刷新机制
+2. 并发安全性：解决异步停止导致的数据污染
+3. 用户体验优化：准确的状态反馈
 
 ### Earlier Today
 - Added a physical-unit toggle (mm/min or deg/min) for the ControlPage motor table; driver units shown in the status line.
