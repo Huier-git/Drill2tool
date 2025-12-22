@@ -3,14 +3,18 @@
 Scope: local commits ahead of origin/main.
 
 ## Commits
+- fd70a6b Auto-save durations and switch plan step map to JSON.
+  - Save auto-computed durations to `config/durations.json`.
+  - Load step mappings from `config/plan_step_map.json` (CSV fallback if present).
+  - Update README recent updates text.
 - 55162c6 Handle parallel ops in plan duration estimation.
   - Allow multiple mappings per step and take the slowest move for duration.
-  - Add spin entries to `config/plan_step_map.csv` for parallel ops in serial plan.
+  - Add spin entries to `config/plan_step_map.json` for parallel ops in serial plan.
   - Remove legacy auto task sample configs under `config/auto_tasks`.
 - 37bfb52 Add physical unit toggle and plan duration estimation.
   - Add ControlPage physical-unit display + conversion for table edits and status line.
   - Add UnitConverter with `config/unit_conversions.csv` overrides for pulses-per-unit.
-  - Add PlanVisualizer auto duration estimation with `config/plan_step_map.csv` mapping.
+  - Add PlanVisualizer auto duration estimation with `config/plan_step_map.json` mapping.
   - Track SensorPage round reset connection state fields.
   - Update README recent updates.
 - fe74c6d Remove legacy AutoTask test scaffolding.
