@@ -3,6 +3,10 @@
 Scope: local commits ahead of origin/main.
 
 ## Commits
+- 8ae0817 Auto-load durations and extend unit conversions.
+  - Add default durations.json auto-load in `python/multi_rig_plan/scheduler.py`.
+  - Add `python/multi_rig_plan/serial_autoload.py` with the same auto-load behavior (serial.py left unchanged).
+  - Extend `config/unit_conversions.csv` with reduction-ratio fields and compute pulses/unit when provided.
 - fd70a6b Auto-save durations and switch plan step map to JSON.
   - Save auto-computed durations to `config/durations.json`.
   - Load step mappings from `config/plan_step_map.json` (CSV fallback if present).
