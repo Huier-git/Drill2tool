@@ -3,6 +3,10 @@
 Scope: local commits ahead of origin/main.
 
 ## Commits
+- 0b640d6 Fix round creation guard and sync database path.
+  - Abort acquisition start if round creation fails; emit error and skip worker start.
+  - Sync DatabasePage queries/export with AcquisitionManager database path.
+  - Avoid treating missing pulses_per_mm/degree as valid conversions.
 - f760ff4 Fix unit converter type visibility.
   - Forward declare MechanismParams in UnitConverter header and include MotionConfigManager in cpp.
   - Remove unused variable warning in PlanVisualizer stage parsing.
