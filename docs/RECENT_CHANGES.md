@@ -3,6 +3,9 @@
 Scope: local commits ahead of origin/main.
 
 ## Commits
+- f760ff4 Fix unit converter type visibility.
+  - Forward declare MechanismParams in UnitConverter header and include MotionConfigManager in cpp.
+  - Remove unused variable warning in PlanVisualizer stage parsing.
 - 8ae0817 Auto-load durations and extend unit conversions.
   - Add default durations.json auto-load in `python/multi_rig_plan/scheduler.py`.
   - Add `python/multi_rig_plan/serial_autoload.py` with the same auto-load behavior (serial.py left unchanged).
