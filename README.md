@@ -1,5 +1,40 @@
 ﻿# DrillControl 钻机采集控制系统 v2.0
+
 ## Recent Updates (2025-12-22)
+
+### Latest Session (Today)
+**轮次管理与UI优化**:
+- ✅ 添加可指定目标轮次的重置功能 (commit c9f636c)
+  - UI增加输入框选择重置到哪个轮次号
+  - 删除指定轮次及之后的所有数据（rounds/scalar_samples/vibration_blocks/time_windows）
+  - 重置SQLite AUTOINCREMENT序列，下次新建从目标轮次开始
+  - 重置后m_currentRoundId清零，UI显示轮次0
+- ✅ 改进轮次状态显示 (commit 3fef195)
+  - 轮次=0时显示"系统状态: 空闲 (未开始轮次)"
+  - 轮次>0时显示"当前轮次: N (进行中)"
+  - 新建/结束/重置轮次后状态栏明确提示操作结果
+- ✅ 日志显示改为亮色主题 (commit ee2454e)
+  - AutoTaskPage和DrillControlPage日志背景从暗色改为白色
+  - 统一使用清爽的亮色主题，文字深灰色，边框浅灰色
+- ✅ 修复重置轮次bug (commit 2cd743b, 8235344)
+  - 修复重置后round_id持续递增问题
+  - 防止重置轮次后重复创建新轮次记录
+
+**已知问题与待改进** (根据Code Review):
+- ⚠️ **高优先级**: 重置流程有并发风险
+  - 问题：stopAll()是异步的，重置时可能仍有数据在写入队列
+  - 建议：增加"已停止且队列已清空"的握手机制后再执行reset
+- ⚠️ **中优先级**: resetToRound未清理events和frequency_log表
+  - 问题：会留下孤儿数据或统计污染
+  - 建议：补齐这两个表的清理或建立外键级联删除
+- ⚠️ **中优先级**: 多表删除操作未使用事务
+  - 问题：任一SQL失败会留下部分删除的数据状态
+  - 建议：为resetToRound/clearRoundData加事务包裹
+- ⚠️ **低优先级**: UI提示过早
+  - 问题：在操作结果未知时就显示"成功"，若DB操作失败会误导用户
+  - 建议：等操作完成返回结果后再更新状态栏
+
+### Earlier Today
 - Added a physical-unit toggle (mm/min or deg/min) for the ControlPage motor table; driver units shown in the status line.
 - Added `config/unit_conversions.csv` with optional `pulses_per_rev`, `reduction_ratio`, and `mm_per_rev` fields.
 - Added auto duration estimation in PlanVisualizer using `config/plan_step_map.json` and mechanism parameters.
