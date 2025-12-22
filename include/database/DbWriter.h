@@ -76,6 +76,11 @@ public slots:
     void clearQueue();
 
     /**
+     * @brief 刷新队列（写入所有待处理数据后清空）
+     */
+    void flushQueue();
+
+    /**
      * @brief 重置到指定轮次（删除 >= targetRound 的所有数据并重置序列）
      * @param targetRound 目标轮次号
      */

@@ -394,7 +394,13 @@ void AcquisitionManager::resetCurrentRound(int targetRound)
 
     LOG_DEBUG_STREAM("AcquisitionManager") << "Resetting to round" << targetRound;
 
-    // Drop any queued data before clearing persistent data.
+    // 先刷新队列，写入所有待处理的数据
+    QMetaObject::invokeMethod(m_dbWriter, "flushQueue", Qt::BlockingQueuedConnection);
+
+    // 等待100ms确保Worker完全停止产生新数据
+    QThread::msleep(100);
+
+    // 再次清空队列（处理可能在flush期间产生的少量新数据）
     QMetaObject::invokeMethod(m_dbWriter, "clearQueue", Qt::BlockingQueuedConnection);
 
     // 重置到目标轮次

@@ -119,6 +119,16 @@ void DbWriter::clearQueue()
     m_queue.clear();
 }
 
+void DbWriter::flushQueue()
+{
+    // 先处理所有待写入的数据
+    while (queueSize() > 0) {
+        processBatch();
+    }
+    // 然后清空队列（以防processBatch期间又有新数据进来）
+    clearQueue();
+}
+
 void DbWriter::processBatch()
 {
     QMutexLocker locker(&m_queueMutex);
@@ -229,6 +239,12 @@ void DbWriter::clearRoundData(int roundId)
         return;
     }
 
+    // 开始事务
+    if (!m_db.transaction()) {
+        emit errorOccurred("Failed to start transaction: " + m_db.lastError().text());
+        return;
+    }
+
     QSqlQuery query(m_db);
 
     // 删除该轮次的标量数据
@@ -236,6 +252,7 @@ void DbWriter::clearRoundData(int roundId)
     query.addBindValue(roundId);
 
     if (!query.exec()) {
+        m_db.rollback();
         emit errorOccurred("Failed to clear scalar samples: " + query.lastError().text());
         return;
     }
@@ -247,6 +264,7 @@ void DbWriter::clearRoundData(int roundId)
     query.addBindValue(roundId);
 
     if (!query.exec()) {
+        m_db.rollback();
         emit errorOccurred("Failed to clear vibration blocks: " + query.lastError().text());
         return;
     }
@@ -258,6 +276,7 @@ void DbWriter::clearRoundData(int roundId)
     query.addBindValue(roundId);
 
     if (!query.exec()) {
+        m_db.rollback();
         emit errorOccurred("Failed to clear time windows: " + query.lastError().text());
         return;
     }
@@ -270,7 +289,15 @@ void DbWriter::clearRoundData(int roundId)
     query.addBindValue(roundId);
 
     if (!query.exec()) {
+        m_db.rollback();
         emit errorOccurred("Failed to reset round timestamp: " + query.lastError().text());
+        return;
+    }
+
+    // 提交事务
+    if (!m_db.commit()) {
+        m_db.rollback();
+        emit errorOccurred("Failed to commit transaction: " + m_db.lastError().text());
         return;
     }
 
@@ -299,12 +326,19 @@ void DbWriter::resetToRound(int targetRound)
 
     qDebug() << "Resetting to round" << targetRound << "...";
 
+    // 开始事务
+    if (!m_db.transaction()) {
+        emit errorOccurred("Failed to start transaction: " + m_db.lastError().text());
+        return;
+    }
+
     QSqlQuery query(m_db);
 
     // 删除所有 round_id >= targetRound 的标量数据
     query.prepare("DELETE FROM scalar_samples WHERE round_id >= ?");
     query.addBindValue(targetRound);
     if (!query.exec()) {
+        m_db.rollback();
         emit errorOccurred("Failed to delete scalar samples: " + query.lastError().text());
         return;
     }
@@ -314,6 +348,7 @@ void DbWriter::resetToRound(int targetRound)
     query.prepare("DELETE FROM vibration_blocks WHERE round_id >= ?");
     query.addBindValue(targetRound);
     if (!query.exec()) {
+        m_db.rollback();
         emit errorOccurred("Failed to delete vibration blocks: " + query.lastError().text());
         return;
     }
@@ -323,15 +358,37 @@ void DbWriter::resetToRound(int targetRound)
     query.prepare("DELETE FROM time_windows WHERE round_id >= ?");
     query.addBindValue(targetRound);
     if (!query.exec()) {
+        m_db.rollback();
         emit errorOccurred("Failed to delete time windows: " + query.lastError().text());
         return;
     }
     int deletedWindows = query.numRowsAffected();
 
+    // 删除所有 round_id >= targetRound 的事件记录
+    query.prepare("DELETE FROM events WHERE round_id >= ?");
+    query.addBindValue(targetRound);
+    if (!query.exec()) {
+        m_db.rollback();
+        emit errorOccurred("Failed to delete events: " + query.lastError().text());
+        return;
+    }
+    int deletedEvents = query.numRowsAffected();
+
+    // 删除所有 round_id >= targetRound 的频率变更日志
+    query.prepare("DELETE FROM frequency_log WHERE round_id >= ?");
+    query.addBindValue(targetRound);
+    if (!query.exec()) {
+        m_db.rollback();
+        emit errorOccurred("Failed to delete frequency log: " + query.lastError().text());
+        return;
+    }
+    int deletedFreqLog = query.numRowsAffected();
+
     // 删除所有 round_id >= targetRound 的轮次记录
     query.prepare("DELETE FROM rounds WHERE round_id >= ?");
     query.addBindValue(targetRound);
     if (!query.exec()) {
+        m_db.rollback();
         emit errorOccurred("Failed to delete rounds: " + query.lastError().text());
         return;
     }
@@ -341,7 +398,15 @@ void DbWriter::resetToRound(int targetRound)
     query.prepare("UPDATE sqlite_sequence SET seq = ? WHERE name = 'rounds'");
     query.addBindValue(targetRound - 1);
     if (!query.exec()) {
+        m_db.rollback();
         emit errorOccurred("Failed to reset sequence: " + query.lastError().text());
+        return;
+    }
+
+    // 提交事务
+    if (!m_db.commit()) {
+        m_db.rollback();
+        emit errorOccurred("Failed to commit transaction: " + m_db.lastError().text());
         return;
     }
 
@@ -352,7 +417,9 @@ void DbWriter::resetToRound(int targetRound)
              << "| Deleted rounds:" << deletedRounds
              << "| Scalar samples:" << deletedScalarSamples
              << "| Vibration blocks:" << deletedVibrationBlocks
-             << "| Windows:" << deletedWindows;
+             << "| Windows:" << deletedWindows
+             << "| Events:" << deletedEvents
+             << "| Frequency log:" << deletedFreqLog;
 }
 
 void DbWriter::logFrequencyChange(int roundId, SensorType sensorType, 
