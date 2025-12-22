@@ -8,6 +8,8 @@
 #include "control/MechanismDefs.h"
 #include "control/MechanismTypes.h"
 
+struct MechanismParams;
+
 enum class UnitValueType {
     Position,
     Speed,

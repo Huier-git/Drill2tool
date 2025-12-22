@@ -990,7 +990,6 @@ QList<int> PlanVisualizerPage::parseStageCutsFromAscii(const QString& ascii)
     QStringList lines = ascii.split("\n");
     for (const QString& line : lines) {
         if (line.contains("|") && (line.contains("X") || line.contains("."))) {
-            int pos = 0;
             int cutIndex = 0;
             for (int i = 0; i < line.length(); i++) {
                 if (i > 0 && line.mid(i, 3) == " | ") {

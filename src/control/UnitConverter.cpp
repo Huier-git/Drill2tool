@@ -1,4 +1,5 @@
 #include "control/UnitConverter.h"
+#include "control/MotionConfigManager.h"
 
 #include <QFile>
 #include <QFileInfo>
