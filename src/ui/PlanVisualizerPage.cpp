@@ -116,7 +116,91 @@ QString normalizeAxisCode(const QString& code)
     return upper;
 }
 
-StepMappingMap loadStepMappings(const QString& path, QStringList* warnings)
+StepKind parseStepKind(const QString& kindText)
+{
+    const QString kind = kindText.trimmed().toLower();
+    if (kind == "index" || kind == "step_index") {
+        return StepKind::StepIndex;
+    }
+    if (kind == "spin") {
+        return StepKind::Spin;
+    }
+    if (kind == "hold") {
+        return StepKind::Hold;
+    }
+    return StepKind::Move;
+}
+
+QString jsonString(const QJsonObject& obj, const QString& key, const QString& fallback = QString())
+{
+    QJsonValue val = obj.value(key);
+    if (!val.isString() && !fallback.isEmpty()) {
+        val = obj.value(fallback);
+    }
+    return val.isString() ? val.toString() : QString();
+}
+
+StepMappingMap loadStepMappingsFromJson(const QString& path, QStringList* warnings)
+{
+    StepMappingMap map;
+    QFileInfo info(path);
+    if (!info.exists()) {
+        return map;
+    }
+
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        if (warnings) {
+            warnings->append(QString("Failed to open step map JSON: %1").arg(path));
+        }
+        return map;
+    }
+
+    QJsonParseError parseError;
+    QJsonDocument doc = QJsonDocument::fromJson(file.readAll(), &parseError);
+    if (parseError.error != QJsonParseError::NoError || !doc.isArray()) {
+        if (warnings) {
+            warnings->append(QString("Invalid step map JSON: %1 (%2)")
+                .arg(path, parseError.errorString()));
+        }
+        return map;
+    }
+
+    QJsonArray items = doc.array();
+    for (int i = 0; i < items.size(); ++i) {
+        if (!items[i].isObject()) {
+            if (warnings) {
+                warnings->append(QString("Step map JSON entry %1 is not an object").arg(i + 1));
+            }
+            continue;
+        }
+
+        QJsonObject obj = items[i].toObject();
+        QString stepKey = jsonString(obj, "step_key", "step").trimmed();
+        QString axisCode = normalizeAxisCode(jsonString(obj, "axis_code", "axis"));
+        QString startKey = jsonString(obj, "start_key", "start").trimmed().toUpper();
+        QString endKey = jsonString(obj, "end_key", "end").trimmed().toUpper();
+        QString kindText = jsonString(obj, "kind");
+
+        if (stepKey.isEmpty() || axisCode.isEmpty()) {
+            if (warnings) {
+                warnings->append(QString("Step map JSON entry %1 missing step_key/axis_code").arg(i + 1));
+            }
+            continue;
+        }
+
+        StepMapping mapping;
+        mapping.axis = axisCode;
+        mapping.start = startKey;
+        mapping.end = endKey;
+        mapping.kind = parseStepKind(kindText);
+        map[stepKey].append(mapping);
+    }
+
+    return map;
+}
+
+StepMappingMap loadStepMappingsFromCsv(const QString& path, QStringList* warnings)
 {
     StepMappingMap map;
     QFileInfo info(path);
@@ -171,7 +255,7 @@ StepMappingMap loadStepMappings(const QString& path, QStringList* warnings)
         QString axisCode = normalizeAxisCode(cols.value(axisIdx));
         QString startKey = cols.value(startIdx).trimmed().toUpper();
         QString endKey = cols.value(endIdx).trimmed().toUpper();
-        QString kindText = cols.value(kindIdx).trimmed().toLower();
+        QString kindText = cols.value(kindIdx).trimmed();
 
         if (stepKey.isEmpty() || axisCode.isEmpty()) {
             continue;
@@ -181,13 +265,7 @@ StepMappingMap loadStepMappings(const QString& path, QStringList* warnings)
         mapping.axis = axisCode;
         mapping.start = startKey;
         mapping.end = endKey;
-        if (kindText == "index" || kindText == "step_index") {
-            mapping.kind = StepKind::StepIndex;
-        } else if (kindText == "spin") {
-            mapping.kind = StepKind::Spin;
-        } else if (kindText == "hold") {
-            mapping.kind = StepKind::Hold;
-        }
+        mapping.kind = parseStepKind(kindText);
         map[stepKey].append(mapping);
     }
 
@@ -488,8 +566,15 @@ void PlanVisualizerPage::onAutoComputeDurations()
     }
 
     QStringList warnings;
-    const QString mapPath = getProjectRoot() + "/config/plan_step_map.csv";
-    const StepMappingMap stepMap = loadStepMappings(mapPath, &warnings);
+    const QString mapJsonPath = getProjectRoot() + "/config/plan_step_map.json";
+    StepMappingMap stepMap;
+    if (QFileInfo::exists(mapJsonPath)) {
+        stepMap = loadStepMappingsFromJson(mapJsonPath, &warnings);
+    }
+    if (stepMap.isEmpty()) {
+        const QString mapCsvPath = getProjectRoot() + "/config/plan_step_map.csv";
+        stepMap = loadStepMappingsFromCsv(mapCsvPath, &warnings);
+    }
     if (!warnings.isEmpty()) {
         qWarning() << "[PlanVisualizer] Step map warnings:" << warnings;
     }
@@ -564,7 +649,21 @@ void PlanVisualizerPage::onAutoComputeDurations()
     if (updated > 0) {
         m_durationsModified = true;
     }
-    ui->statusLabel->setText(QString("自动时长: 更新 %1, 跳过 %2").arg(updated).arg(skipped));
+
+    bool saved = false;
+    if (updated > 0) {
+        saved = saveDurationsToJson(getDurConfigPath(), false);
+    }
+
+    if (updated == 0) {
+        ui->statusLabel->setText(QString("自动时长: 无更新, 跳过 %1").arg(skipped));
+    } else if (saved) {
+        ui->statusLabel->setText(QString("自动时长: 更新 %1, 跳过 %2 (已保存)")
+            .arg(updated).arg(skipped));
+    } else {
+        ui->statusLabel->setText(QString("自动时长: 更新 %1, 跳过 %2 (保存失败)")
+            .arg(updated).arg(skipped));
+    }
 }
 
 QString PlanVisualizerPage::getDurConfigPath() const

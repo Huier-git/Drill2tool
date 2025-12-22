@@ -1,0 +1,690 @@
+[
+  {
+    "step_key": "A_FZ_AH",
+    "axis_code": "Fz",
+    "start_key": "A",
+    "end_key": "H",
+    "kind": "move",
+    "notes": "feed move"
+  },
+  {
+    "step_key": "A_ME_to_store",
+    "axis_code": "Me",
+    "start_key": "A",
+    "end_key": "B",
+    "kind": "move",
+    "notes": "arm to storage"
+  },
+  {
+    "step_key": "A_MG_grip",
+    "axis_code": "Mg",
+    "start_key": "A",
+    "end_key": "B",
+    "kind": "move",
+    "notes": "grip"
+  },
+  {
+    "step_key": "A_ME_back",
+    "axis_code": "Me",
+    "start_key": "B",
+    "end_key": "A",
+    "kind": "move",
+    "notes": "arm back"
+  },
+  {
+    "step_key": "A_MR_to_head",
+    "axis_code": "Mr",
+    "start_key": "A",
+    "end_key": "B",
+    "kind": "move",
+    "notes": "arm rotation to head"
+  },
+  {
+    "step_key": "A_ME_to_head",
+    "axis_code": "Me",
+    "start_key": "A",
+    "end_key": "C",
+    "kind": "move",
+    "notes": "arm to head"
+  },
+  {
+    "step_key": "A_FZ_HG",
+    "axis_code": "Fz",
+    "start_key": "H",
+    "end_key": "G",
+    "kind": "move",
+    "notes": "feed move"
+  },
+  {
+    "step_key": "A_COUPLE_GE",
+    "axis_code": "Fz",
+    "start_key": "G",
+    "end_key": "E",
+    "kind": "move",
+    "notes": "coupling"
+  },
+  {
+    "step_key": "A_COUPLE_GE",
+    "axis_code": "Pr",
+    "start_key": "",
+    "end_key": "",
+    "kind": "spin",
+    "notes": "parallel spin state B"
+  },
+  {
+    "step_key": "A_DH_lock",
+    "axis_code": "Dh",
+    "start_key": "A",
+    "end_key": "B",
+    "kind": "move",
+    "notes": "lock"
+  },
+  {
+    "step_key": "A_MG_release",
+    "axis_code": "Mg",
+    "start_key": "B",
+    "end_key": "A",
+    "kind": "move",
+    "notes": "release"
+  },
+  {
+    "step_key": "A_ME_back_from_head",
+    "axis_code": "Me",
+    "start_key": "C",
+    "end_key": "A",
+    "kind": "move",
+    "notes": "arm back"
+  },
+  {
+    "step_key": "A_MR_back_to_store",
+    "axis_code": "Mr",
+    "start_key": "B",
+    "end_key": "A",
+    "kind": "move",
+    "notes": "arm rotation back"
+  },
+  {
+    "step_key": "A_DRILL",
+    "axis_code": "Fz",
+    "start_key": "E",
+    "end_key": "A",
+    "kind": "move",
+    "notes": "drill advance"
+  },
+  {
+    "step_key": "A_DRILL",
+    "axis_code": "Pr",
+    "start_key": "",
+    "end_key": "",
+    "kind": "spin",
+    "notes": "parallel spin state D"
+  },
+  {
+    "step_key": "A_CB_clamp",
+    "axis_code": "Cb",
+    "start_key": "A",
+    "end_key": "B",
+    "kind": "move",
+    "notes": "clamp"
+  },
+  {
+    "step_key": "A_DH_unlock",
+    "axis_code": "Dh",
+    "start_key": "B",
+    "end_key": "A",
+    "kind": "move",
+    "notes": "unlock"
+  },
+  {
+    "step_key": "A_BREAK_AC",
+    "axis_code": "Fz",
+    "start_key": "A",
+    "end_key": "C",
+    "kind": "move",
+    "notes": "break"
+  },
+  {
+    "step_key": "A_BREAK_AC",
+    "axis_code": "Pr",
+    "start_key": "",
+    "end_key": "",
+    "kind": "spin",
+    "notes": "parallel spin state C"
+  },
+  {
+    "step_key": "A_FZ_CH",
+    "axis_code": "Fz",
+    "start_key": "C",
+    "end_key": "H",
+    "kind": "move",
+    "notes": "feed move"
+  },
+  {
+    "step_key": "SR_INDEX",
+    "axis_code": "Sr",
+    "start_key": "",
+    "end_key": "",
+    "kind": "step_index",
+    "notes": "storage index forward"
+  },
+  {
+    "step_key": "B_ME_to_store",
+    "axis_code": "Me",
+    "start_key": "A",
+    "end_key": "B",
+    "kind": "move",
+    "notes": "arm to storage"
+  },
+  {
+    "step_key": "B_MG_grip",
+    "axis_code": "Mg",
+    "start_key": "A",
+    "end_key": "B",
+    "kind": "move",
+    "notes": "grip"
+  },
+  {
+    "step_key": "B_ME_back",
+    "axis_code": "Me",
+    "start_key": "B",
+    "end_key": "A",
+    "kind": "move",
+    "notes": "arm back"
+  },
+  {
+    "step_key": "B_MR_to_head",
+    "axis_code": "Mr",
+    "start_key": "A",
+    "end_key": "B",
+    "kind": "move",
+    "notes": "arm rotation to head"
+  },
+  {
+    "step_key": "B_ME_to_head",
+    "axis_code": "Me",
+    "start_key": "A",
+    "end_key": "C",
+    "kind": "move",
+    "notes": "arm to head"
+  },
+  {
+    "step_key": "B_FZ_HF",
+    "axis_code": "Fz",
+    "start_key": "H",
+    "end_key": "F",
+    "kind": "move",
+    "notes": "feed move"
+  },
+  {
+    "step_key": "B_COUPLE_FD",
+    "axis_code": "Fz",
+    "start_key": "F",
+    "end_key": "D",
+    "kind": "move",
+    "notes": "coupling"
+  },
+  {
+    "step_key": "B_COUPLE_FD",
+    "axis_code": "Pr",
+    "start_key": "",
+    "end_key": "",
+    "kind": "spin",
+    "notes": "parallel spin state B"
+  },
+  {
+    "step_key": "B_DH_lock",
+    "axis_code": "Dh",
+    "start_key": "A",
+    "end_key": "B",
+    "kind": "move",
+    "notes": "lock"
+  },
+  {
+    "step_key": "B_MG_release",
+    "axis_code": "Mg",
+    "start_key": "B",
+    "end_key": "A",
+    "kind": "move",
+    "notes": "release"
+  },
+  {
+    "step_key": "B_ME_back_from_head",
+    "axis_code": "Me",
+    "start_key": "C",
+    "end_key": "A",
+    "kind": "move",
+    "notes": "arm back"
+  },
+  {
+    "step_key": "B_MR_back_to_store",
+    "axis_code": "Mr",
+    "start_key": "B",
+    "end_key": "A",
+    "kind": "move",
+    "notes": "arm rotation back"
+  },
+  {
+    "step_key": "B_FZ_DJ",
+    "axis_code": "Fz",
+    "start_key": "D",
+    "end_key": "J",
+    "kind": "move",
+    "notes": "feed move"
+  },
+  {
+    "step_key": "B_COUPLE_JI",
+    "axis_code": "Fz",
+    "start_key": "J",
+    "end_key": "I",
+    "kind": "move",
+    "notes": "coupling"
+  },
+  {
+    "step_key": "B_COUPLE_JI",
+    "axis_code": "Pr",
+    "start_key": "",
+    "end_key": "",
+    "kind": "spin",
+    "notes": "parallel spin state B"
+  },
+  {
+    "step_key": "B_CB_release",
+    "axis_code": "Cb",
+    "start_key": "B",
+    "end_key": "A",
+    "kind": "move",
+    "notes": "clamp release"
+  },
+  {
+    "step_key": "B_DRILL",
+    "axis_code": "Fz",
+    "start_key": "I",
+    "end_key": "A",
+    "kind": "move",
+    "notes": "drill advance"
+  },
+  {
+    "step_key": "B_DRILL",
+    "axis_code": "Pr",
+    "start_key": "",
+    "end_key": "",
+    "kind": "spin",
+    "notes": "parallel spin state D"
+  },
+  {
+    "step_key": "B_CB_clamp",
+    "axis_code": "Cb",
+    "start_key": "A",
+    "end_key": "B",
+    "kind": "move",
+    "notes": "clamp"
+  },
+  {
+    "step_key": "B_DH_unlock",
+    "axis_code": "Dh",
+    "start_key": "B",
+    "end_key": "A",
+    "kind": "move",
+    "notes": "unlock"
+  },
+  {
+    "step_key": "B_BREAK_AC",
+    "axis_code": "Fz",
+    "start_key": "A",
+    "end_key": "C",
+    "kind": "move",
+    "notes": "break"
+  },
+  {
+    "step_key": "B_BREAK_AC",
+    "axis_code": "Pr",
+    "start_key": "",
+    "end_key": "",
+    "kind": "spin",
+    "notes": "parallel spin state C"
+  },
+  {
+    "step_key": "B_FZ_CH",
+    "axis_code": "Fz",
+    "start_key": "C",
+    "end_key": "H",
+    "kind": "move",
+    "notes": "feed move"
+  },
+  {
+    "step_key": "C_FZ_HC",
+    "axis_code": "Fz",
+    "start_key": "H",
+    "end_key": "C",
+    "kind": "move",
+    "notes": "feed move"
+  },
+  {
+    "step_key": "C_COUPLE_CB",
+    "axis_code": "Fz",
+    "start_key": "C",
+    "end_key": "B",
+    "kind": "move",
+    "notes": "coupling"
+  },
+  {
+    "step_key": "C_COUPLE_CB",
+    "axis_code": "Pr",
+    "start_key": "",
+    "end_key": "",
+    "kind": "spin",
+    "notes": "parallel spin state B"
+  },
+  {
+    "step_key": "C_DH_lock",
+    "axis_code": "Dh",
+    "start_key": "A",
+    "end_key": "B",
+    "kind": "move",
+    "notes": "lock"
+  },
+  {
+    "step_key": "C_CB_release",
+    "axis_code": "Cb",
+    "start_key": "B",
+    "end_key": "A",
+    "kind": "move",
+    "notes": "clamp release"
+  },
+  {
+    "step_key": "C_FZ_BI",
+    "axis_code": "Fz",
+    "start_key": "B",
+    "end_key": "I",
+    "kind": "move",
+    "notes": "feed move"
+  },
+  {
+    "step_key": "C_CB_clamp",
+    "axis_code": "Cb",
+    "start_key": "A",
+    "end_key": "B",
+    "kind": "move",
+    "notes": "clamp"
+  },
+  {
+    "step_key": "C_BREAK_IJ",
+    "axis_code": "Fz",
+    "start_key": "I",
+    "end_key": "J",
+    "kind": "move",
+    "notes": "break"
+  },
+  {
+    "step_key": "C_BREAK_IJ",
+    "axis_code": "Pr",
+    "start_key": "",
+    "end_key": "",
+    "kind": "spin",
+    "notes": "parallel spin state C"
+  },
+  {
+    "step_key": "C_FZ_JD",
+    "axis_code": "Fz",
+    "start_key": "J",
+    "end_key": "D",
+    "kind": "move",
+    "notes": "feed move"
+  },
+  {
+    "step_key": "C_MR_Assist",
+    "axis_code": "Mr",
+    "start_key": "A",
+    "end_key": "B",
+    "kind": "move",
+    "notes": "assist rotation"
+  },
+  {
+    "step_key": "C_ME_Assist",
+    "axis_code": "Me",
+    "start_key": "A",
+    "end_key": "C",
+    "kind": "move",
+    "notes": "assist extension"
+  },
+  {
+    "step_key": "C_MG_Grip",
+    "axis_code": "Mg",
+    "start_key": "A",
+    "end_key": "B",
+    "kind": "move",
+    "notes": "assist grip"
+  },
+  {
+    "step_key": "C_DH_unlock",
+    "axis_code": "Dh",
+    "start_key": "B",
+    "end_key": "A",
+    "kind": "move",
+    "notes": "unlock"
+  },
+  {
+    "step_key": "C_BREAK_DF",
+    "axis_code": "Fz",
+    "start_key": "D",
+    "end_key": "F",
+    "kind": "move",
+    "notes": "break"
+  },
+  {
+    "step_key": "C_BREAK_DF",
+    "axis_code": "Pr",
+    "start_key": "",
+    "end_key": "",
+    "kind": "spin",
+    "notes": "parallel spin state C"
+  },
+  {
+    "step_key": "C_FZ_FH",
+    "axis_code": "Fz",
+    "start_key": "F",
+    "end_key": "H",
+    "kind": "move",
+    "notes": "feed move"
+  },
+  {
+    "step_key": "C_ME_Retract",
+    "axis_code": "Me",
+    "start_key": "C",
+    "end_key": "A",
+    "kind": "move",
+    "notes": "retract"
+  },
+  {
+    "step_key": "C_MR_Retract",
+    "axis_code": "Mr",
+    "start_key": "B",
+    "end_key": "A",
+    "kind": "move",
+    "notes": "retract"
+  },
+  {
+    "step_key": "C_ME_Store",
+    "axis_code": "Me",
+    "start_key": "A",
+    "end_key": "B",
+    "kind": "move",
+    "notes": "arm to storage"
+  },
+  {
+    "step_key": "C_MG_Release",
+    "axis_code": "Mg",
+    "start_key": "B",
+    "end_key": "A",
+    "kind": "move",
+    "notes": "release"
+  },
+  {
+    "step_key": "C_ME_Back",
+    "axis_code": "Me",
+    "start_key": "B",
+    "end_key": "A",
+    "kind": "move",
+    "notes": "arm back"
+  },
+  {
+    "step_key": "C_SR_Next",
+    "axis_code": "Sr",
+    "start_key": "",
+    "end_key": "",
+    "kind": "step_index",
+    "notes": "storage index back"
+  },
+  {
+    "step_key": "D_FZ_HC",
+    "axis_code": "Fz",
+    "start_key": "H",
+    "end_key": "C",
+    "kind": "move",
+    "notes": "feed move"
+  },
+  {
+    "step_key": "D_COUPLE_CB",
+    "axis_code": "Fz",
+    "start_key": "C",
+    "end_key": "B",
+    "kind": "move",
+    "notes": "coupling"
+  },
+  {
+    "step_key": "D_COUPLE_CB",
+    "axis_code": "Pr",
+    "start_key": "",
+    "end_key": "",
+    "kind": "spin",
+    "notes": "parallel spin state B"
+  },
+  {
+    "step_key": "D_DH_lock",
+    "axis_code": "Dh",
+    "start_key": "A",
+    "end_key": "B",
+    "kind": "move",
+    "notes": "lock"
+  },
+  {
+    "step_key": "D_CB_release",
+    "axis_code": "Cb",
+    "start_key": "B",
+    "end_key": "A",
+    "kind": "move",
+    "notes": "clamp release"
+  },
+  {
+    "step_key": "D_FZ_BE",
+    "axis_code": "Fz",
+    "start_key": "B",
+    "end_key": "E",
+    "kind": "move",
+    "notes": "feed move"
+  },
+  {
+    "step_key": "D_MR_Assist",
+    "axis_code": "Mr",
+    "start_key": "A",
+    "end_key": "B",
+    "kind": "move",
+    "notes": "assist rotation"
+  },
+  {
+    "step_key": "D_ME_Assist",
+    "axis_code": "Me",
+    "start_key": "A",
+    "end_key": "C",
+    "kind": "move",
+    "notes": "assist extension"
+  },
+  {
+    "step_key": "D_MG_Grip",
+    "axis_code": "Mg",
+    "start_key": "A",
+    "end_key": "B",
+    "kind": "move",
+    "notes": "assist grip"
+  },
+  {
+    "step_key": "D_DH_unlock",
+    "axis_code": "Dh",
+    "start_key": "B",
+    "end_key": "A",
+    "kind": "move",
+    "notes": "unlock"
+  },
+  {
+    "step_key": "D_BREAK_EG",
+    "axis_code": "Fz",
+    "start_key": "E",
+    "end_key": "G",
+    "kind": "move",
+    "notes": "break"
+  },
+  {
+    "step_key": "D_BREAK_EG",
+    "axis_code": "Pr",
+    "start_key": "",
+    "end_key": "",
+    "kind": "spin",
+    "notes": "parallel spin state C"
+  },
+  {
+    "step_key": "D_FZ_GH",
+    "axis_code": "Fz",
+    "start_key": "G",
+    "end_key": "H",
+    "kind": "move",
+    "notes": "feed move"
+  },
+  {
+    "step_key": "D_SR_Reset",
+    "axis_code": "Sr",
+    "start_key": "",
+    "end_key": "",
+    "kind": "step_index",
+    "notes": "storage reset"
+  },
+  {
+    "step_key": "D_ME_Retract",
+    "axis_code": "Me",
+    "start_key": "C",
+    "end_key": "A",
+    "kind": "move",
+    "notes": "retract"
+  },
+  {
+    "step_key": "D_MR_Retract",
+    "axis_code": "Mr",
+    "start_key": "B",
+    "end_key": "A",
+    "kind": "move",
+    "notes": "retract"
+  },
+  {
+    "step_key": "D_ME_Store",
+    "axis_code": "Me",
+    "start_key": "A",
+    "end_key": "B",
+    "kind": "move",
+    "notes": "arm to storage"
+  },
+  {
+    "step_key": "D_MG_Release",
+    "axis_code": "Mg",
+    "start_key": "B",
+    "end_key": "A",
+    "kind": "move",
+    "notes": "release"
+  },
+  {
+    "step_key": "D_ME_Back",
+    "axis_code": "Me",
+    "start_key": "B",
+    "end_key": "A",
+    "kind": "move",
+    "notes": "arm back"
+  }
+]
