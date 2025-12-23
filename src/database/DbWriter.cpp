@@ -436,9 +436,34 @@ void DbWriter::logFrequencyChange(int roundId, SensorType sensorType,
     query.bindValue(":new_freq", newFreq);
     query.bindValue(":timestamp", getCurrentTimestampUs());
     query.bindValue(":comment", comment);
-    
+
     if (!query.exec()) {
         emit errorOccurred("Failed to log frequency change: " + query.lastError().text());
+    }
+}
+
+void DbWriter::logEvent(int roundId, const QString &eventType, const QString &description)
+{
+    if (!m_isInitialized) {
+        qWarning() << "DbWriter not initialized, cannot log event";
+        return;
+    }
+
+    QSqlQuery query(m_db);
+    query.prepare("INSERT INTO events "
+                  "(round_id, event_type, timestamp_us, description) "
+                  "VALUES (:round_id, :event_type, :timestamp, :description)");
+
+    // round_id是NOT NULL，用0表示系统级事件（非轮次关联）
+    query.bindValue(":round_id", roundId > 0 ? roundId : 0);
+    query.bindValue(":event_type", eventType);
+    query.bindValue(":timestamp", getCurrentTimestampUs());
+    query.bindValue(":description", description);
+
+    if (!query.exec()) {
+        emit errorOccurred("Failed to log event: " + query.lastError().text());
+    } else {
+        qDebug() << "[Event]" << eventType << ":" << description;
     }
 }
 

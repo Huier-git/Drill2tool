@@ -89,7 +89,8 @@ MainWindow::~MainWindow()
 void MainWindow::setupAcquisitionManager()
 {
     m_acquisitionManager = new AcquisitionManager(this);
-    m_acquisitionManager->initialize();
+    // 使用根目录的绝对路径数据库
+    m_acquisitionManager->initialize("D:/KT_DrillControl/drill_data.db");
 }
 
 void MainWindow::setupPages()

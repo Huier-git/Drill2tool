@@ -9,8 +9,6 @@
 VibrationWorker::VibrationWorker(QObject *parent)
     : BaseWorker(parent)
     , m_cardId(0)
-    , m_port(8234)
-    , m_serverAddress("127.0.0.1")
     , m_channelCount(3)
     , m_blockSize(1000)
     , m_blockSequence(0)
@@ -18,7 +16,7 @@ VibrationWorker::VibrationWorker(QObject *parent)
     , m_isSampling(false)
 {
     m_sampleRate = 5000.0;  // 默认5000Hz
-    LOG_DEBUG("VibrationWorker", "Created. Default: 5000Hz, 3 channels, port 8234");
+    LOG_DEBUG("VibrationWorker", "Created. Default: 5000Hz, 3 channels, fixed port 8234");
 }
 
 VibrationWorker::~VibrationWorker()
@@ -32,7 +30,7 @@ bool VibrationWorker::initializeHardware()
 {
     LOG_DEBUG("VibrationWorker", "Initializing VK701 hardware...");
     LOG_DEBUG_STREAM("VibrationWorker") << "  Card ID:" << m_cardId;
-    LOG_DEBUG_STREAM("VibrationWorker") << "  Port:" << m_port;
+    LOG_DEBUG_STREAM("VibrationWorker") << "  TCP Port:" << VK701_TCP_PORT << "(fixed)";
     LOG_DEBUG_STREAM("VibrationWorker") << "  Sample Rate:" << m_sampleRate << "Hz";
     LOG_DEBUG_STREAM("VibrationWorker") << "  Channels:" << m_channelCount;
 
@@ -99,7 +97,7 @@ void VibrationWorker::runAcquisition()
 
 bool VibrationWorker::connectToCard()
 {
-    LOG_DEBUG_STREAM("VibrationWorker") << "Connecting to VK701 TCP server, port:" << m_port;
+    LOG_DEBUG_STREAM("VibrationWorker") << "Connecting to VK701 TCP server, port:" << VK701_TCP_PORT;
 
     int result;
     int curDeviceNum;
@@ -109,12 +107,12 @@ bool VibrationWorker::connectToCard()
         if (!shouldContinue()) {
             return false;
         }
-        result = Server_TCPOpen(m_port);
+        result = Server_TCPOpen(VK701_TCP_PORT);
         QThread::msleep(20);
         if (result < 0) {
             LOG_DEBUG("VibrationWorker", "Waiting for VK701 server...");
         } else {
-            LOG_DEBUG_STREAM("VibrationWorker") << "Port" << m_port << "opened!";
+            LOG_DEBUG_STREAM("VibrationWorker") << "Port" << VK701_TCP_PORT << "opened!";
         }
     } while (result < 0 && shouldContinue());
 
@@ -320,9 +318,29 @@ bool VibrationWorker::readDataBlock()
         delete[] ch2Data;
         delete[] pucRecBuf;
 
+        // 成功读取，重置失败计数器
+        if (m_consecutiveFails > 0) {
+            if (m_connectionLostReported) {
+                emit eventOccurred("VK701SensorReconnected",
+                                  QString("VK701传感器恢复连接（失败计数: %1）").arg(m_consecutiveFails));
+                LOG_DEBUG("VibrationWorker", "VK701 sensor reconnected");
+                m_connectionLostReported = false;
+            }
+            m_consecutiveFails = 0;
+        }
+
         return true;
     } else if (recv < 0) {
-        // 读取错误
+        // 读取错误 - 掉线检测
+        m_consecutiveFails++;
+        if (m_consecutiveFails == 20 && !m_connectionLostReported) {
+            // 连续20次失败（约1秒，因为采集很快），报告掉线
+            emit eventOccurred("VK701SensorDisconnected",
+                              QString("VK701传感器连续%1次读取失败，可能已掉线").arg(m_consecutiveFails));
+            m_connectionLostReported = true;
+            LOG_WARNING_STREAM("VibrationWorker") << "VK701 sensor appears disconnected (" << m_consecutiveFails << " consecutive failures)";
+        }
+
         LOG_WARNING_STREAM("VibrationWorker") << "VK70xNMC_GetFourChannel failed: error code" << recv;
         delete[] pucRecBuf;
         return false;

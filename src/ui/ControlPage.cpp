@@ -72,6 +72,9 @@ ControlPage::ControlPage(QWidget *parent)
     refreshUnitConfig();
     updateUnitsStatus();
 
+    // 自动启动基本信息定时器（连接后会自动检测并设置初始化标志）
+    m_basicInfoTimer->start();
+
     // 禁用编辑模式下的更新按钮
     ui->btn_motor_parm_update->setEnabled(true);
 }
@@ -456,22 +459,36 @@ void ControlPage::advanceInfoRefresh()
         hasHandle = (g_handle != nullptr);
     }
 
-    if (!hasHandle || !m_initFlag) {
+    if (!hasHandle) {
+        return;
+    }
+
+    // 优先填充轴号下拉框（只要有连接就可以填充）
+    // 使用MotorMap大小作为默认轴数
+    int expectedAxisCount = MAX_MOTOR_COUNT;
+    if (m_axisNum > 0) {
+        expectedAxisCount = static_cast<int>(m_axisNum);
+    }
+
+    if (ui->cb_axis_num->count() != expectedAxisCount) {
+        ui->cb_axis_num->clear();
+        for (int i = 0; i < expectedAxisCount; ++i) {
+            ui->cb_axis_num->addItem(QString::number(i));
+        }
+        // 默认选中第0轴
+        if (ui->cb_axis_num->count() > 0) {
+            ui->cb_axis_num->setCurrentIndex(0);
+        }
+    }
+
+    // 检查是否已初始化（读取过总线信息）
+    if (!m_initFlag) {
         return;
     }
 
     int selectindex = ui->cb_axis_num->currentIndex();
     if (selectindex == -1) {
-        ui->tb_cmd_window->append("错误：轴号索引无效");
         return;
-    }
-
-    // 刷新轴号下拉框
-    if (ui->cb_axis_num->count() != static_cast<int>(m_axisNum)) {
-        ui->cb_axis_num->clear();
-        for (int i = 0; i < static_cast<int>(m_axisNum); ++i) {
-            ui->cb_axis_num->addItem(QString::number(i));
-        }
     }
 
     // 读取选中轴的参数
@@ -546,12 +563,28 @@ void ControlPage::basicInfoRefresh()
         ui->le_bus_init_status->setText("初始化失败");
         ui->le_bus_init_status->setStyleSheet("border: 1px solid #ccc; padding: 5px; background-color: #ffcccc;");
         qDebug() << "[ControlPage] 无法读取总线变量";
+
+        // 即使读取失败，如果handle存在，也设置m_initFlag以允许基本操作
+        m_initFlag = true;
+
+        // 设置默认轴数为10（MotorMap大小）
+        if (m_axisNum == 0) {
+            m_axisNum = MAX_MOTOR_COUNT;
+            qDebug() << "[ControlPage] 使用默认轴数:" << m_axisNum;
+        }
         return;
     }
 
     ui->le_bus_init_status->setText("初始化完成");
     ui->le_bus_init_status->setStyleSheet("border: 1px solid #ccc; padding: 5px; background-color: #ccffcc;");
     m_initFlag = true;
+
+    // 如果读取到的轴数为0，使用默认值
+    if (m_axisNum == 0) {
+        m_axisNum = MAX_MOTOR_COUNT;
+        qDebug() << "[ControlPage] 读取到轴数为0，使用默认值:" << m_axisNum;
+    }
+
     ui->le_bus_node_num->setText(QString::number(m_nodeNum));
     ui->le_total_axis_num->setText(QString::number(static_cast<int>(m_axisNum)));
 }

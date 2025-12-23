@@ -79,11 +79,9 @@ void SensorPage::onVK701ConnectClicked()
 {
     if (!m_acquisitionManager) return;
 
-    QString address = ui->le_vk701_address->text();
-    int port = ui->spin_vk701_port->value();
     int cardId = ui->spin_vk701_cardid->value();
 
-    qDebug() << "[SensorPage] Connecting to VK701:" << address << ":" << port << "Card ID:" << cardId;
+    qDebug() << "[SensorPage] Connecting to VK701: Card ID:" << cardId << "(Port 8234 fixed)";
     ui->label_status->setText("正在连接 VK701...");
 
     auto *worker = m_acquisitionManager->vibrationWorker();
@@ -94,8 +92,6 @@ void SensorPage::onVK701ConnectClicked()
     }
 
     worker->setCardId(cardId);
-    worker->setPort(port);
-    worker->setServerAddress(address);
 
     bool connected = false;
     QMetaObject::invokeMethod(worker, "testConnection",
@@ -107,13 +103,13 @@ void SensorPage::onVK701ConnectClicked()
         updateUIState();
         ui->label_status->setText("VK701已连接");
         QMessageBox::information(this, "连接成功",
-            QString("VK701已连接\n地址: %1:%2\n卡号: %3").arg(address).arg(port).arg(cardId));
+            QString("VK701已连接\n卡号: %1\nTCP端口: 8234 (固定)").arg(cardId));
     } else {
         m_vk701Connected = false;
         updateUIState();
         ui->label_status->setText("VK701连接失败");
         QMessageBox::critical(this, "连接失败",
-            QString("无法连接到 VK701 服务器\n地址: %1:%2").arg(address).arg(port));
+            QString("无法连接到 VK701\n卡号: %1\nTCP端口: 8234").arg(cardId));
     }
 }
 
@@ -133,9 +129,26 @@ void SensorPage::onVK701DisconnectClicked()
 
 void SensorPage::onVK701FrequencyChanged()
 {
+    // 检查是否正在采集
+    if (m_acquisitionManager && m_acquisitionManager->isRunning()) {
+        QMessageBox::warning(this, "无法修改频率",
+            "VK701硬件采样率在初始化时设定，运行中无法修改。\n\n"
+            "请先停止采集，断开连接后重新设置频率再连接。");
+
+        // 恢复到当前Worker的频率值
+        if (m_acquisitionManager->vibrationWorker()) {
+            int currentFreq = static_cast<int>(m_acquisitionManager->vibrationWorker()->sampleRate());
+            ui->spin_vk701_frequency->blockSignals(true);
+            ui->spin_vk701_frequency->setValue(currentFreq);
+            ui->spin_vk701_frequency->blockSignals(false);
+        }
+        return;
+    }
+
     int freq = ui->spin_vk701_frequency->value();
     if (m_acquisitionManager && m_acquisitionManager->vibrationWorker()) {
         m_acquisitionManager->vibrationWorker()->setSampleRate(freq);
+        qDebug() << "VK701 sample rate changed to:" << freq << "Hz";
     }
 }
 
@@ -193,9 +206,26 @@ void SensorPage::onMdbDisconnectClicked()
 
 void SensorPage::onMdbFrequencyChanged()
 {
+    // 检查是否正在采集
+    if (m_acquisitionManager && m_acquisitionManager->isRunning()) {
+        QMessageBox::warning(this, "无法修改频率",
+            "Modbus TCP 采样频率由定时器控制，运行中修改可能导致数据不一致。\n\n"
+            "请先停止采集后再修改频率。");
+
+        // 恢复到当前Worker的频率值
+        if (m_acquisitionManager->mdbWorker()) {
+            int currentFreq = static_cast<int>(m_acquisitionManager->mdbWorker()->sampleRate());
+            ui->spin_mdb_frequency->blockSignals(true);
+            ui->spin_mdb_frequency->setValue(currentFreq);
+            ui->spin_mdb_frequency->blockSignals(false);
+        }
+        return;
+    }
+
     int freq = ui->spin_mdb_frequency->value();
     if (m_acquisitionManager && m_acquisitionManager->mdbWorker()) {
         m_acquisitionManager->mdbWorker()->setSampleRate(freq);
+        qDebug() << "Modbus TCP sample rate changed to:" << freq << "Hz";
     }
 }
 
@@ -259,9 +289,26 @@ void SensorPage::onMotorDisconnectClicked()
 
 void SensorPage::onMotorFrequencyChanged()
 {
+    // 检查是否正在采集
+    if (m_acquisitionManager && m_acquisitionManager->isRunning()) {
+        QMessageBox::warning(this, "无法修改频率",
+            "电机参数采样频率由定时器控制，运行中修改可能导致数据不一致。\n\n"
+            "请先停止采集后再修改频率。");
+
+        // 恢复到当前Worker的频率值
+        if (m_acquisitionManager->motorWorker()) {
+            int currentFreq = static_cast<int>(m_acquisitionManager->motorWorker()->sampleRate());
+            ui->spin_motor_frequency->blockSignals(true);
+            ui->spin_motor_frequency->setValue(currentFreq);
+            ui->spin_motor_frequency->blockSignals(false);
+        }
+        return;
+    }
+
     int freq = ui->spin_motor_frequency->value();
     if (m_acquisitionManager && m_acquisitionManager->motorWorker()) {
         m_acquisitionManager->motorWorker()->setSampleRate(freq);
+        qDebug() << "Motor parameter sample rate changed to:" << freq << "Hz";
     }
 }
 

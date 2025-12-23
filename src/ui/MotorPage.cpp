@@ -2,9 +2,14 @@
 #include "qstyle.h"
 #include "ui_MotorPage.h"
 #include "control/AcquisitionManager.h"
+#include "control/MotionConfigManager.h"
 #include "dataACQ/MotorWorker.h"
+#include "Global.h"
 #include <QDebug>
+#include <QLabel>
 #include <QMessageBox>
+#include <QTimer>
+#include <QMutexLocker>
 
 MotorPage::MotorPage(QWidget *parent)
     : QWidget(parent)
@@ -12,10 +17,18 @@ MotorPage::MotorPage(QWidget *parent)
     , m_acquisitionManager(nullptr)
     , m_worker(nullptr)
     , m_isRunning(false)
+    , m_displayPhysicalUnits(false)  // 默认显示脉冲
+    , m_connectionCheckTimer(nullptr)
 {
     ui->setupUi(this);
     setupUI();
     setupConnections();
+
+    // 创建连接状态检查定时器
+    m_connectionCheckTimer = new QTimer(this);
+    m_connectionCheckTimer->setInterval(1000);  // 每秒检查一次
+    connect(m_connectionCheckTimer, &QTimer::timeout, this, &MotorPage::checkConnectionStatus);
+    m_connectionCheckTimer->start();
 }
 
 MotorPage::~MotorPage()
@@ -59,6 +72,7 @@ void MotorPage::setupConnections()
 {
     connect(ui->btn_start, &QPushButton::clicked, this, &MotorPage::onStartClicked);
     connect(ui->btn_stop, &QPushButton::clicked, this, &MotorPage::onStopClicked);
+    connect(ui->cb_displayUnits, &QCheckBox::toggled, this, &MotorPage::onUnitToggled);
 }
 
 void MotorPage::onStartClicked()
@@ -97,8 +111,27 @@ void MotorPage::onDataBlockReceived(const DataBlock &block)
 
 void MotorPage::updateValueDisplay(int motorId, SensorType type, double value)
 {
+    // 根据传感器类型确定单位换算类型
+    UnitValueType unitType;
+    if (type == SensorType::Motor_Position) {
+        unitType = UnitValueType::Position;
+    } else if (type == SensorType::Motor_Speed) {
+        unitType = UnitValueType::Speed;
+    } else if (type == SensorType::Motor_Torque || type == SensorType::Motor_Current) {
+        // 扭矩和电流暂不换算，直接显示原始值
+        unitType = UnitValueType::Position;  // 占位，实际不使用
+    } else {
+        unitType = UnitValueType::Position;
+    }
+
+    // 进行单位换算
+    double displayValue = value;
+    if (type == SensorType::Motor_Position || type == SensorType::Motor_Speed) {
+        displayValue = convertValue(value, motorId, unitType);
+    }
+
     QLCDNumber *target = nullptr;
-    
+
     // 映射 motorId (0-7) 和传感器类型到 UI 控件
     // 注意：UI 中的 Motor #1 对应 motorId 0
     switch (motorId) {
@@ -153,7 +186,7 @@ void MotorPage::updateValueDisplay(int motorId, SensorType type, double value)
     }
 
     if (target) {
-        target->display(value);
+        target->display(displayValue);
     }
 }
 
@@ -177,4 +210,147 @@ void MotorPage::onStatisticsUpdated(qint64 samplesCollected, double sampleRate)
 {
     Q_UNUSED(samplesCollected);
     Q_UNUSED(sampleRate);
+}
+
+void MotorPage::checkConnectionStatus()
+{
+    // 如果正在采集，不覆盖采集状态
+    if (m_isRunning) {
+        return;
+    }
+
+    // 检查 ZMotion 连接状态
+    bool connected = false;
+    {
+        QMutexLocker locker(&g_mutex);
+        connected = (g_handle != nullptr);
+    }
+
+    if (connected) {
+        ui->label_status->setText("系统状态: 已连接");
+    } else {
+        ui->label_status->setText("系统状态: 未连接");
+    }
+}
+
+void MotorPage::onUnitToggled(bool checked)
+{
+    m_displayPhysicalUnits = checked;
+    qDebug() << "[MotorPage] Unit display:" << (checked ? "物理单位" : "脉冲");
+
+    // 更新所有电机的单位标签
+    updateUnitLabels();
+}
+
+void MotorPage::updateUnitLabels()
+{
+    // 为每个电机更新单位标签
+    for (int motorId = 0; motorId < 8; ++motorId) {
+        AxisUnitInfo info = getAxisUnitInfo(motorId);
+
+        // 构造单位字符串
+        QString posUnit = m_displayPhysicalUnits ? info.unitLabel : "脉冲";
+        QString speedUnit;
+        if (m_displayPhysicalUnits) {
+            speedUnit = (info.unitLabel == "deg") ? "deg/s" : "mm/s";
+        } else {
+            speedUnit = "脉冲/s";
+        }
+
+        // 更新对应的标签（根据motorId找到对应的UI控件）
+        QLabel *posLabel = nullptr;
+        QLabel *speedLabel = nullptr;
+
+        switch (motorId) {
+        case 0:
+            posLabel = ui->l_m1_p;
+            speedLabel = ui->l_m1_s;
+            break;
+        case 1:
+            posLabel = ui->l_m2_p;
+            speedLabel = ui->l_m2_s;
+            break;
+        case 2:
+            posLabel = ui->l_m3_p;
+            speedLabel = ui->l_m3_s;
+            break;
+        case 3:
+            posLabel = ui->l_m4_p;
+            speedLabel = ui->l_m4_s;
+            break;
+        case 4:
+            posLabel = ui->l_m5_p;
+            speedLabel = ui->l_m5_s;
+            break;
+        case 5:
+            posLabel = ui->l_m6_p;
+            speedLabel = ui->l_m6_s;
+            break;
+        case 6:
+            posLabel = ui->l_m7_p;
+            speedLabel = ui->l_m7_s;
+            break;
+        case 7:
+            posLabel = ui->l_m8_p;
+            speedLabel = ui->l_m8_s;
+            break;
+        }
+
+        if (posLabel) {
+            posLabel->setText(QString("位置 (%1)").arg(posUnit));
+        }
+        if (speedLabel) {
+            speedLabel->setText(QString("速度 (%1)").arg(speedUnit));
+        }
+    }
+}
+
+double MotorPage::convertValue(double driverValue, int motorId, UnitValueType type) const
+{
+    if (!m_displayPhysicalUnits) {
+        return driverValue;  // 显示脉冲，不换算
+    }
+
+    // 换算为物理单位
+    AxisUnitInfo info = getAxisUnitInfo(motorId);
+    return UnitConverter::driverToPhysical(driverValue, info, type);
+}
+
+AxisUnitInfo MotorPage::getAxisUnitInfo(int motorId) const
+{
+    // 从配置获取机构名称（通过MotorMap映射）
+    QString mechanismCode;
+    bool isRotary = false;  // 是否为旋转机构
+
+    // MotorMap: {Pr=0, Pi=1, Fz=2, Cb=3, Mg=4, Mr=5, Me=6, Sr=7}
+    switch (motorId) {
+        case 0: mechanismCode = "Pr"; isRotary = true; break;   // 旋转
+        case 1: mechanismCode = "Pi"; isRotary = false; break;  // 冲击
+        case 2: mechanismCode = "Fz"; isRotary = false; break;  // 进给
+        case 3: mechanismCode = "Cb"; isRotary = false; break;  // 夹紧（力矩控制）
+        case 4: mechanismCode = "Mg"; isRotary = false; break;  // 机械臂抓取（力矩控制）
+        case 5: mechanismCode = "Mr"; isRotary = true; break;   // 机械臂旋转
+        case 6: mechanismCode = "Me"; isRotary = false; break;  // 机械臂伸缩
+        case 7: mechanismCode = "Sr"; isRotary = true; break;   // 仓储旋转
+        default: mechanismCode = "Fz"; isRotary = false; break; // 默认
+    }
+
+    // 从配置文件获取单位信息
+    auto config = MotionConfigManager::instance();
+    MechanismParams params = config->getMechanismConfig(mechanismCode);
+
+    AxisUnitInfo info;
+    info.code = mechanismCode;
+    info.motorIndex = motorId;
+
+    // 根据机构类型选择单位
+    if (isRotary) {
+        info.unitLabel = "deg";
+        info.pulsesPerUnit = params.hasPulsesPerDegree ? params.pulsesPerDegree : 1.0;
+    } else {
+        info.unitLabel = "mm";
+        info.pulsesPerUnit = params.hasPulsesPerMm ? params.pulsesPerMm : 1.0;
+    }
+
+    return info;
 }

@@ -148,6 +148,16 @@ QLabel#label_status {
       </spacer>
      </item>
      <item>
+      <widget class="QCheckBox" name="cb_displayUnits">
+       <property name="text">
+        <string>显示物理单位</string>
+       </property>
+       <property name="toolTip">
+        <string>勾选后显示物理单位（mm、mm/s等），否则显示脉冲值</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QPushButton" name="btn_start">
        <property name="minimumSize">
         <size>

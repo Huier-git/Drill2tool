@@ -57,3 +57,4 @@ __pycache__/
 
 # 日志文件
 *.log
+drill_data.db

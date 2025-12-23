@@ -64,6 +64,11 @@ public slots:
     virtual void setSampleRate(double rate);
 
     /**
+     * @brief 获取采样频率
+     */
+    double sampleRate() const;
+
+    /**
      * @brief Set base timestamp (us) for aligned sampling.
      */
     void setTimeBase(qint64 baseTimestampUs);
@@ -93,6 +98,13 @@ signals:
      * @param currentRate 当前实际采样率
      */
     void statisticsUpdated(qint64 samplesCollected, double currentRate);
+
+    /**
+     * @brief 事件信号（用于记录到events表）
+     * @param eventType 事件类型
+     * @param description 事件描述
+     */
+    void eventOccurred(const QString &eventType, const QString &description);
 
 protected:
     /**
@@ -140,6 +152,10 @@ protected:
     qint64 m_timeBaseUs;            // Base timestamp in microseconds
     QElapsedTimer m_elapsedTimer;   // Monotonic timer since base
     bool m_hasTimeBase;             // Whether a base timestamp is set
+
+    // 掉线检测
+    int m_consecutiveFails;         // 连续失败计数器
+    bool m_connectionLostReported;  // 是否已报告掉线
 };
 
 #endif // BASEWORKER_H

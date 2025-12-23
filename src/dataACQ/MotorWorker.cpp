@@ -17,9 +17,9 @@ MotorWorker::MotorWorker(QObject *parent)
     , m_readCurrent(true)
     , m_sampleCount(0)
 {
-    m_sampleRate = 100.0;  // 默认100Hz
+    m_sampleRate = 10.0;  // 默认10Hz（电机参数刷新无需太快）
     m_motorIds = {0, 1, 2, 3, 4, 5, 6, 7};  // 默认8个电机
-    LOG_DEBUG("MotorWorker", "Created. Default: 100Hz, 8 motors (uses global g_handle)");
+    LOG_DEBUG("MotorWorker", "Created. Default: 10Hz, 8 motors (uses global g_handle)");
 }
 
 MotorWorker::~MotorWorker()
@@ -163,9 +163,12 @@ bool MotorWorker::readMotorPosition(int motorId, double &position)
     QMutexLocker locker(&g_mutex);
     if (!g_handle) return false;
 
+    // 使用MotorMap映射实际的电机轴号
+    int mappedAxis = MotorMap[motorId];
+
     float pos = 0.0f;
     // 使用反馈位置 MPOS
-    int32 ret = ZAux_Direct_GetMpos(g_handle, motorId, &pos);
+    int32 ret = ZAux_Direct_GetMpos(g_handle, mappedAxis, &pos);
     if (ret == ERR_OK) {
         position = static_cast<double>(pos);
         return true;
@@ -178,9 +181,12 @@ bool MotorWorker::readMotorSpeed(int motorId, double &speed)
     QMutexLocker locker(&g_mutex);
     if (!g_handle) return false;
 
+    // 使用MotorMap映射实际的电机轴号
+    int mappedAxis = MotorMap[motorId];
+
     float spd = 0.0f;
     // 使用反馈速度 MSPEED
-    int32 ret = ZAux_Direct_GetMspeed(g_handle, motorId, &spd);
+    int32 ret = ZAux_Direct_GetMspeed(g_handle, mappedAxis, &spd);
     if (ret == ERR_OK) {
         speed = static_cast<double>(spd);
         return true;
@@ -193,9 +199,12 @@ bool MotorWorker::readMotorTorque(int motorId, double &torque)
     QMutexLocker locker(&g_mutex);
     if (!g_handle) return false;
 
+    // 使用MotorMap映射实际的电机轴号
+    int mappedAxis = MotorMap[motorId];
+
     float trq = 0.0f;
-    // 尝试读取 "TORQUE"
-    int32 ret = ZAux_Direct_GetParam(g_handle, "TORQUE", motorId, &trq);
+    // 使用 DRIVE_TORQUE（Linux版本使用的参数名）
+    int32 ret = ZAux_Direct_GetParam(g_handle, "DRIVE_TORQUE", mappedAxis, &trq);
     if (ret == ERR_OK) {
         torque = static_cast<double>(trq);
         return true;
@@ -208,11 +217,14 @@ bool MotorWorker::readMotorCurrent(int motorId, double &current)
     QMutexLocker locker(&g_mutex);
     if (!g_handle) return false;
 
-    float cur = 0.0f;
-    // 尝试读取 "CURRENT" (或 "RL_CURRENT")
-    int32 ret = ZAux_Direct_GetParam(g_handle, "CURRENT", motorId, &cur);
+    // 使用MotorMap映射实际的电机轴号
+    int mappedAxis = MotorMap[motorId];
+
+    float dac = 0.0f;
+    // 读取 DAC 值作为电流（Linux版本的做法）
+    int32 ret = ZAux_Direct_GetDAC(g_handle, mappedAxis, &dac);
     if (ret == ERR_OK) {
-        current = static_cast<double>(cur);
+        current = static_cast<double>(dac);
         return true;
     }
     return false;

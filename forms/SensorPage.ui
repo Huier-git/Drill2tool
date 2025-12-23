@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1100</width>
-    <height>800</height>
+    <height>867</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -304,35 +304,18 @@ QLabel#label_operator, QLabel#label_note_label {
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
           </property>
+          <property name="visible">
+           <bool>false</bool>
+          </property>
          </widget>
         </item>
         <item row="0" column="1">
          <widget class="QLineEdit" name="le_vk701_address">
           <property name="text">
-           <string>192.168.1.10</string>
+           <string>127.0.0.1</string>
           </property>
-         </widget>
-        </item>
-        <item row="0" column="2">
-         <widget class="QLabel" name="label_vk701_port">
-          <property name="text">
-           <string>端口</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="3">
-         <widget class="QSpinBox" name="spin_vk701_port">
-          <property name="minimum">
-           <number>1</number>
-          </property>
-          <property name="maximum">
-           <number>65535</number>
-          </property>
-          <property name="value">
-           <number>8234</number>
+          <property name="visible">
+           <bool>false</bool>
           </property>
          </widget>
         </item>
@@ -561,7 +544,7 @@ QLabel#label_operator, QLabel#label_note_label {
         <item row="0" column="1">
          <widget class="QLineEdit" name="le_motor_address">
           <property name="text">
-           <string>192.168.1.11</string>
+           <string>192.168.1.222</string>
           </property>
          </widget>
         </item>
@@ -810,6 +793,12 @@ QLabel#label_operator, QLabel#label_note_label {
         </item>
         <item row="1" column="0">
          <widget class="QLabel" name="label_note_label">
+          <property name="maximumSize">
+           <size>
+            <width>60</width>
+            <height>16777215</height>
+           </size>
+          </property>
           <property name="text">
            <string>实验备注</string>
           </property>
@@ -851,6 +840,14 @@ QLabel#label_operator, QLabel#label_note_label {
           </item>
           <item>
            <widget class="QLabel" name="label_reset_target">
+            <property name="font">
+             <font>
+              <pointsize>10</pointsize>
+             </font>
+            </property>
+            <property name="layoutDirection">
+             <enum>Qt::RightToLeft</enum>
+            </property>
             <property name="text">
              <string>重置到轮次:</string>
             </property>

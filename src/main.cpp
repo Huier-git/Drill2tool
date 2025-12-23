@@ -6,15 +6,19 @@
 #include <QDateTime>
 #include <QTextCodec>
 #include <QFile>
+#include <QNetworkProxy>
 
 int main(int argc, char *argv[])
 {
-
+    // 解决Qt对高分辨率DPI屏幕支持
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling, true);
     QCoreApplication::setAttribute(Qt::AA_UseHighDpiPixmaps, true);
     QApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
 
     QApplication app(argc, argv);
+
+    // 全局禁用网络代理（解决Modbus TCP连接问题）
+    QNetworkProxy::setApplicationProxy(QNetworkProxy::NoProxy);
 
     // 安装统一日志系统
     Logger::install();

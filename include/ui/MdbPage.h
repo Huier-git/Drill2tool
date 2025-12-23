@@ -4,6 +4,7 @@
 #include <QWidget>
 #include <QVector>
 #include <QMap>
+#include <QTimer>
 #include "dataACQ/DataTypes.h"
 #include "qcustomplot.h"
 
@@ -39,6 +40,9 @@ private slots:
     void onStopClicked();
     void onZeroClicked();
     void onClearClicked();
+    void onDisplayModeChanged(int index);
+    void onDisplayPointsChanged(int value);
+    void onPlotRefreshTimeout();
 
     void onDataBlockReceived(const DataBlock &block);
     void onWorkerStateChanged(WorkerState state);
@@ -66,6 +70,11 @@ private:
     int m_sampleIndex;
     double m_currentSampleRate;
     bool m_isRunning;
+
+    // 显示模式控制
+    QTimer *m_plotRefreshTimer;              // 图表刷新定时器
+    bool m_slidingWindowMode;                // true=滑动窗口, false=全部显示
+    bool m_plotNeedsUpdate;                  // 标记是否有新数据需要刷新
 };
 
 #endif // MDBPAGE_H

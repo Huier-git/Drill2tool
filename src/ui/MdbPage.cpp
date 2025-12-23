@@ -20,12 +20,21 @@ MdbPage::MdbPage(QWidget *parent)
     , m_sampleIndex(0)
     , m_currentSampleRate(10.0)
     , m_isRunning(false)
+    , m_plotRefreshTimer(nullptr)
+    , m_slidingWindowMode(true)
+    , m_plotNeedsUpdate(false)
 {
     for (int i = 0; i < 4; ++i) m_plots[i] = nullptr;
     ui->setupUi(this);
     setupUI();
     setupConnections();
     initPlot();
+
+    // 图表刷新定时器：20Hz足够流畅，减少CPU占用
+    m_plotRefreshTimer = new QTimer(this);
+    m_plotRefreshTimer->setInterval(50);
+    connect(m_plotRefreshTimer, &QTimer::timeout, this, &MdbPage::onPlotRefreshTimeout);
+    m_plotRefreshTimer->start();
 }
 
 MdbPage::~MdbPage()
@@ -76,6 +85,12 @@ void MdbPage::setupConnections()
     connect(ui->btn_stop, &QPushButton::clicked, this, &MdbPage::onStopClicked);
     connect(ui->btn_zero, &QPushButton::clicked, this, &MdbPage::onZeroClicked);
     connect(ui->btn_clear, &QPushButton::clicked, this, &MdbPage::onClearClicked);
+
+    // 显示模式控件连接
+    connect(ui->combo_displayMode, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &MdbPage::onDisplayModeChanged);
+    connect(ui->spin_displayPoints, QOverload<int>::of(&QSpinBox::valueChanged),
+            this, &MdbPage::onDisplayPointsChanged);
 }
 
 void MdbPage::initPlot()
@@ -158,6 +173,7 @@ void MdbPage::onDataBlockReceived(const DataBlock &block)
 {
     int idx = sensorTypeToIndex(block.sensorType);
     if (idx < 0 || idx >= m_latestValues.size()) {
+        qDebug() << "[MdbPage] Invalid sensor type:" << static_cast<int>(block.sensorType);
         return;
     }
 
@@ -165,6 +181,14 @@ void MdbPage::onDataBlockReceived(const DataBlock &block)
     m_latestValues[idx] = value;
     appendHistory(idx, value);
     updateValueDisplay();
+
+    // 调试日志（仅前3个样本）
+    static int debugCount = 0;
+    if (debugCount < 3) {
+        qDebug() << "[MdbPage] Data received - Type:" << static_cast<int>(block.sensorType)
+                 << "Index:" << idx << "Value:" << value;
+        debugCount++;
+    }
 }
 
 void MdbPage::onWorkerStateChanged(WorkerState state)
@@ -203,7 +227,8 @@ void MdbPage::updateValueDisplay()
 
 void MdbPage::appendHistory(int channelIndex, double value)
 {
-    if (m_timeAxis.size() >= m_maxPoints) {
+    // 滑动窗口模式：移除旧数据
+    if (m_slidingWindowMode && m_timeAxis.size() >= m_maxPoints) {
         if (!m_timeAxis.isEmpty()) m_timeAxis.removeFirst();
         for (auto &vec : m_valueHistory) {
             if (!vec.isEmpty()) vec.removeFirst();
@@ -220,7 +245,8 @@ void MdbPage::appendHistory(int channelIndex, double value)
         }
     }
 
-    refreshPlot();
+    // 标记需要刷新，由定时器统一处理
+    m_plotNeedsUpdate = true;
 }
 
 void MdbPage::refreshPlot()
@@ -241,15 +267,33 @@ void MdbPage::refreshPlot()
             continue;
         }
 
-        m_plots[i]->graph(0)->setData(m_timeAxis, vals);
+        // 根据显示模式决定显示范围
+        QVector<double> displayTime;
+        QVector<double> displayVals;
+
+        if (m_slidingWindowMode) {
+            // 滑动窗口：显示最近m_maxPoints个点
+            int startIdx = qMax(0, m_timeAxis.size() - m_maxPoints);
+            displayTime = m_timeAxis.mid(startIdx);
+            displayVals = vals.mid(startIdx);
+        } else {
+            // 全部显示
+            displayTime = m_timeAxis;
+            displayVals = vals;
+        }
+
+        m_plots[i]->graph(0)->setData(displayTime, displayVals);
 
         // 计算Y轴范围
-        auto [minIt, maxIt] = std::minmax_element(vals.begin(), vals.end());
+        auto [minIt, maxIt] = std::minmax_element(displayVals.begin(), displayVals.end());
         double minY = *minIt;
         double maxY = *maxIt;
         double padding = qMax(1.0, (maxY - minY) * 0.2);
 
-        m_plots[i]->xAxis->setRange(qMax(0, m_sampleIndex - m_maxPoints), m_sampleIndex);
+        // X轴范围
+        if (!displayTime.isEmpty()) {
+            m_plots[i]->xAxis->setRange(displayTime.first(), displayTime.last());
+        }
         m_plots[i]->yAxis->setRange(minY - padding, maxY + padding);
         m_plots[i]->replot();
     }
@@ -263,5 +307,28 @@ int MdbPage::sensorTypeToIndex(SensorType type) const
         case SensorType::Torque_MDB: return 2;
         case SensorType::Position_MDB: return 3;
         default: return -1;
+    }
+}
+
+void MdbPage::onDisplayModeChanged(int index)
+{
+    m_slidingWindowMode = (index == 0);
+    ui->spin_displayPoints->setEnabled(m_slidingWindowMode);
+    m_plotNeedsUpdate = true;
+    qDebug() << "[MdbPage] Display mode:" << (m_slidingWindowMode ? "滑动窗口" : "全部显示");
+}
+
+void MdbPage::onDisplayPointsChanged(int value)
+{
+    m_maxPoints = value;
+    m_plotNeedsUpdate = true;
+    qDebug() << "[MdbPage] Display points:" << value;
+}
+
+void MdbPage::onPlotRefreshTimeout()
+{
+    if (m_plotNeedsUpdate) {
+        m_plotNeedsUpdate = false;
+        refreshPlot();
     }
 }

@@ -23,7 +23,7 @@ DatabasePage::DatabasePage(QWidget *parent)
     , m_currentRoundId(-1)
     , m_currentRoundStartUs(0)
     , m_currentRoundDurationSec(0)
-    , m_dbPath("database/drill_data.db")
+    , m_dbPath("D:/KT_DrillControl/drill_data.db")
 {
     ui->setupUi(this);
 
@@ -366,6 +366,36 @@ static QString sensorTypeToString(int sensorType)
 }
 
 // ==================================================
+// 辅助函数：传感器类型转单位
+// ==================================================
+static QString sensorTypeToUnit(int sensorType)
+{
+    switch ((SensorType)sensorType) {
+        case SensorType::Vibration_X:
+        case SensorType::Vibration_Y:
+        case SensorType::Vibration_Z:
+            return "g";  // 重力加速度
+        case SensorType::Torque_MDB:
+            return "N·m";  // 牛顿米
+        case SensorType::Force_Upper:
+        case SensorType::Force_Lower:
+            return "N";  // 牛顿
+        case SensorType::Position_MDB:
+            return "mm";  // 毫米
+        case SensorType::Motor_Position:
+            return "脉冲";  // 编码器脉冲
+        case SensorType::Motor_Speed:
+            return "脉冲/s";  // 脉冲每秒
+        case SensorType::Motor_Torque:
+            return "%";  // 扭矩百分比
+        case SensorType::Motor_Current:
+            return "A";  // 安培
+        default:
+            return "";
+    }
+}
+
+// ==================================================
 // 图表初始化
 // ==================================================
 void DatabasePage::setupPlots()
@@ -607,12 +637,23 @@ void DatabasePage::startExportAsync(const QString& filePath)
         QTextStream out(&file);
         out.setCodec("UTF-8");
 
-        // 写入头部
+        // 写入头部和传感器类型映射说明
+        out << "# ================================================\n";
+        out << "# DrillControl 数据导出文件\n";
+        out << "# ================================================\n";
         out << "# Round ID: " << roundId << "\n";
         out << "# Time Range: " << (startUs - roundStartUs) / 1e6
             << " - " << (endUs - roundStartUs) / 1e6 << " seconds\n";
-        out << "# Export Time: " << QDateTime::currentDateTime().toString() << "\n";
-        out << "timestamp_us,sensor_type,value\n";
+        out << "# Export Time: " << QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss") << "\n";
+        out << "#\n";
+        out << "# 传感器类型编码说明:\n";
+        out << "# 100=上拉力(Force_Upper), 101=下拉力(Force_Lower)\n";
+        out << "# 102=扭矩(Torque_MDB), 103=位置(Position_MDB)\n";
+        out << "# 200=振动X(Vibration_X), 201=振动Y(Vibration_Y), 202=振动Z(Vibration_Z)\n";
+        out << "# 300=电机位置(Motor_Position), 301=电机速度(Motor_Speed)\n";
+        out << "# 302=电机扭矩(Motor_Torque), 303=电机电流(Motor_Current)\n";
+        out << "# ================================================\n";
+        out << "timestamp_sec,sensor_type,sensor_name,value,unit\n";
 
         // 创建临时查询器
         DataQuerier tempQuerier(dbPath);
@@ -627,13 +668,21 @@ void DatabasePage::startExportAsync(const QString& filePath)
         for (int i = 0; i < dataList.size(); ++i) {
             const auto& window = dataList[i];
 
-            // 写入标量数据
+            // 计算相对时间（秒，保留3位小数）
+            double relativeSec = (window.windowStartUs - roundStartUs) / 1e6;
+
+            // 写入标量数据（添加传感器名称和单位）
             for (auto it = window.scalarData.begin(); it != window.scalarData.end(); ++it) {
                 int sensorType = it.key();
+                QString sensorName = sensorTypeToString(sensorType);
+                QString unit = sensorTypeToUnit(sensorType);
+
                 for (double value : it.value()) {
-                    out << window.windowStartUs << ","
+                    out << QString::number(relativeSec, 'f', 3) << ","
                         << sensorType << ","
-                        << value << "\n";
+                        << sensorName << ","
+                        << value << ","
+                        << unit << "\n";
                 }
             }
 

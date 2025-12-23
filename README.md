@@ -458,3 +458,7 @@ DrillControl.exe
 - [ ] 取样自动化流程
 - [ ] 故障检测与处理
 - [ ] 远程监控接口
+
+
+
+徽章：[![CC BY-NC-ND 4.0][cc-by-nc-nd-shield]][cc-by-nc-nd] 本作品采用[知识共享署名-非商业性使用-禁止演绎 4.0 国际许可协议][cc-by-nc-nd]进行许可。 [![CC BY-NC-ND 4.0][cc-by-nc-nd-image]][cc-by-nc-nd] [cc-by-nc-nd]: http://creativecommons.org/licenses/by-nc-nd/4.0/ [cc-by-nc-nd-image]: https://licensebuttons.net/l/by-nc-nd/4.0/88x31.png [cc-by-nc-nd-shield]: https://img.shields.io/badge/License-CC%20BY--NC--ND%204.0-lightgrey.svg

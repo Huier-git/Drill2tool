@@ -11,6 +11,8 @@ BaseWorker::BaseWorker(QObject *parent)
     , m_stopRequested(false)
     , m_timeBaseUs(0)
     , m_hasTimeBase(false)
+    , m_consecutiveFails(0)
+    , m_connectionLostReported(false)
 {
     // 注册元类型，使其可以在跨线程信号槽中使用
     qRegisterMetaType<DataBlock>("DataBlock");
@@ -29,73 +31,97 @@ BaseWorker::~BaseWorker()
 
 void BaseWorker::start()
 {
-    QMutexLocker locker(&m_mutex);
-    
-    if (m_state == WorkerState::Running) {
-        qWarning() << "Worker already running";
-        return;
+    {
+        QMutexLocker locker(&m_mutex);
+
+        if (m_state == WorkerState::Running) {
+            qWarning() << "Worker already running";
+            return;
+        }
+
+        // 直接设置状态，避免递归锁定mutex
+        m_state = WorkerState::Starting;
+        m_stopRequested = false;
+        m_samplesCollected = 0;
+        m_consecutiveFails = 0;
+        m_connectionLostReported = false;
     }
-    
-    setState(WorkerState::Starting);
-    m_stopRequested = false;
-    m_samplesCollected = 0;
-    
-    locker.unlock();
-    
+
+    // 在mutex外发射信号
+    emit stateChanged(WorkerState::Starting);
+    qDebug() << "Worker state changed to:" << workerStateToString(WorkerState::Starting);
+
     // 初始化硬件
     if (!initializeHardware()) {
         emitError("Failed to initialize hardware");
         setState(WorkerState::Error);
         return;
     }
-    
+
     setState(WorkerState::Running);
-    
+
     // 启动采集循环（子类实现）
     runAcquisition();
 }
 
 void BaseWorker::stop()
 {
-    QMutexLocker locker(&m_mutex);
-    
-    if (m_state == WorkerState::Stopped) {
-        return;
+    {
+        QMutexLocker locker(&m_mutex);
+
+        if (m_state == WorkerState::Stopped) {
+            return;
+        }
+
+        // 直接设置状态，避免递归锁定mutex
+        m_state = WorkerState::Stopping;
+        m_stopRequested = true;
+        m_consecutiveFails = 0;
+        m_connectionLostReported = false;
     }
-    
-    setState(WorkerState::Stopping);
-    m_stopRequested = true;
-    
-    locker.unlock();
-    
+
+    // 在mutex外发射信号
+    emit stateChanged(WorkerState::Stopping);
+    qDebug() << "Worker state changed to:" << workerStateToString(WorkerState::Stopping);
+
     // 关闭硬件
     shutdownHardware();
-    
+
     setState(WorkerState::Stopped);
-    
+
     qDebug() << "Worker stopped, total samples collected:" << m_samplesCollected;
 }
 
 void BaseWorker::pause()
 {
-    QMutexLocker locker(&m_mutex);
-    
-    if (m_state != WorkerState::Running) {
-        return;
+    {
+        QMutexLocker locker(&m_mutex);
+
+        if (m_state != WorkerState::Running) {
+            return;
+        }
+
+        m_state = WorkerState::Paused;
     }
-    
-    setState(WorkerState::Paused);
+
+    emit stateChanged(WorkerState::Paused);
+    qDebug() << "Worker state changed to:" << workerStateToString(WorkerState::Paused);
 }
 
 void BaseWorker::resume()
 {
-    QMutexLocker locker(&m_mutex);
-    
-    if (m_state != WorkerState::Paused) {
-        return;
+    {
+        QMutexLocker locker(&m_mutex);
+
+        if (m_state != WorkerState::Paused) {
+            return;
+        }
+
+        m_state = WorkerState::Running;
     }
-    
-    setState(WorkerState::Running);
+
+    emit stateChanged(WorkerState::Running);
+    qDebug() << "Worker state changed to:" << workerStateToString(WorkerState::Running);
 }
 
 void BaseWorker::setRoundId(int roundId)
@@ -110,6 +136,12 @@ void BaseWorker::setSampleRate(double rate)
     QMutexLocker locker(&m_mutex);
     m_sampleRate = rate;
     qDebug() << "Worker sample rate set to:" << rate << "Hz";
+}
+
+double BaseWorker::sampleRate() const
+{
+    QMutexLocker locker(&m_mutex);
+    return m_sampleRate;
 }
 
 void BaseWorker::setTimeBase(qint64 baseTimestampUs)

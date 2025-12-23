@@ -94,6 +94,14 @@ public slots:
                            const QString &comment = QString());
 
     /**
+     * @brief 记录系统事件到events表
+     * @param roundId 轮次ID（可选，传0表示非轮次事件）
+     * @param eventType 事件类型（如"SensorDisconnected"、"ConnectionFailed"等）
+     * @param description 事件描述
+     */
+    void logEvent(int roundId, const QString &eventType, const QString &description);
+
+    /**
      * @brief 获取或创建时间窗口
      * @param roundId 轮次ID
      * @param timestampUs 时间戳（微秒）

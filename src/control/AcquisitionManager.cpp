@@ -148,6 +148,32 @@ void AcquisitionManager::connectSignals()
                 emit errorOccurred("MotorWorker", error);
             });
 
+    // 连接Worker的事件信号到DbWriter
+    connect(m_vibrationWorker, &BaseWorker::eventOccurred, this,
+            [this](const QString &eventType, const QString &description) {
+                QMetaObject::invokeMethod(m_dbWriter, "logEvent",
+                    Qt::QueuedConnection,
+                    Q_ARG(int, m_currentRoundId),
+                    Q_ARG(QString, eventType),
+                    Q_ARG(QString, QString("[VibrationWorker] ") + description));
+            });
+    connect(m_mdbWorker, &BaseWorker::eventOccurred, this,
+            [this](const QString &eventType, const QString &description) {
+                QMetaObject::invokeMethod(m_dbWriter, "logEvent",
+                    Qt::QueuedConnection,
+                    Q_ARG(int, m_currentRoundId),
+                    Q_ARG(QString, eventType),
+                    Q_ARG(QString, QString("[MdbWorker] ") + description));
+            });
+    connect(m_motorWorker, &BaseWorker::eventOccurred, this,
+            [this](const QString &eventType, const QString &description) {
+                QMetaObject::invokeMethod(m_dbWriter, "logEvent",
+                    Qt::QueuedConnection,
+                    Q_ARG(int, m_currentRoundId),
+                    Q_ARG(QString, eventType),
+                    Q_ARG(QString, QString("[MotorWorker] ") + description));
+            });
+
     // 连接DbWriter的错误信号
     connect(m_dbWriter, &DbWriter::errorOccurred, this,
             [this](const QString &error) {
@@ -274,6 +300,9 @@ void AcquisitionManager::stopAll()
     QMetaObject::invokeMethod(m_mdbWorker, "stop", Qt::QueuedConnection);
     QMetaObject::invokeMethod(m_motorWorker, "stop", Qt::QueuedConnection);
 
+    // 等待队列完全处理，确保所有数据都写入数据库
+    QMetaObject::invokeMethod(m_dbWriter, "flushQueue", Qt::BlockingQueuedConnection);
+
     m_isRunning = false;
     emit acquisitionStateChanged(false);
 
@@ -374,8 +403,11 @@ void AcquisitionManager::endCurrentRound()
 
     LOG_DEBUG_STREAM("AcquisitionManager") << "Ending round" << m_currentRoundId;
 
-    // 在DbWriter线程中结束轮次
-    QMetaObject::invokeMethod(m_dbWriter, "endCurrentRound", Qt::QueuedConnection);
+    // 先flush确保所有数据都写入数据库
+    QMetaObject::invokeMethod(m_dbWriter, "flushQueue", Qt::BlockingQueuedConnection);
+
+    // 在DbWriter线程中结束轮次（改为阻塞等待完成）
+    QMetaObject::invokeMethod(m_dbWriter, "endCurrentRound", Qt::BlockingQueuedConnection);
 
     int oldRoundId = m_currentRoundId;
     m_currentRoundId = 0;
