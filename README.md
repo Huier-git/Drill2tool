@@ -1,8 +1,39 @@
 ﻿# DrillControl 钻机采集控制系统 v2.0
 
+## Recent Updates (2025-12-24)
+
+### 坐标系统统一与自动任务优化 ⭐
+**FeedController坐标系修改**:
+- ✅ 统一采用简单线性坐标系（底部A=0mm, 顶部H=1001mm）
+  - 旧系统：`mm = maxDepthMm - (pulses / pulsesPerMm)` (反向)
+  - 新系统：`mm = pulses / pulsesPerMm` (正向线性)
+  - 与UnitConverter保持一致，避免混淆
+
+**AutoTaskPage UI改进**:
+- ✅ 步骤表格新增"钻深"列（显示距土面深度 = 917mm - 当前位置）
+- ✅ 实时信息面板改为2×2网格布局（当前深度、目标深度、距土面深度、已用时间）
+- ✅ 列索引调整：# | 类型 | 目标 | **钻深** | 预设 | 状态
+
+**任务配置改进**:
+- ✅ 修复DrillParameterPreset验证bug（允许rpm=0的空载移动预设）
+  - P_IDLE预设（空载移动）现在可以正确加载
+  - 移除了不合理的rpm>0要求
+- ✅ 创建1/6测试任务文件（task_test_short_drilling.json）
+  - H=167mm, K=153mm（原版1/6距离）
+  - 测试时间从24分钟缩短到4分钟
+  - 保持A=0不变
+
+**ControlPage日志优化**:
+- ✅ 添加轴数警告抑制标志，防止日志刷屏
+  - 未连接电机时仅打印一次警告，不再每500ms重复
+
+**技术文档**:
+- ✅ 新增：`docs/FEED_COORDINATE_SYSTEM_MIGRATION.md` - FeedController坐标系迁移详解
+- ✅ 新增：`docs/CONTROLPAGE_COORDINATE_SYSTEM.md` - ControlPage坐标系统与运动命令详解（⚠️ 安全关键文档）
+
 ## Recent Updates (2025-12-22)
 
-### Latest Session (Today)
+### Latest Session (轮次管理与UI优化)
 **轮次管理与UI优化**:
 - ✅ 添加可指定目标轮次的重置功能 (commit c9f636c)
   - UI增加输入框选择重置到哪个轮次号

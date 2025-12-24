@@ -1,0 +1,274 @@
+{
+  "task_name": "标准钻进流程（4阶段）",
+  "description": "从顶部定位到土壤表面，执行4阶段钻进至底部，完成后返回顶部",
+  "version": "2.0",
+  "author": "DrillControl开发团队",
+
+  "positions": {
+    "H": 1001.0,
+    "K": 917.0,
+    "A": 0.0,
+    "STAGE1_END": 687.0,
+    "STAGE2_END": 458.0,
+    "STAGE3_END": 229.0
+  },
+
+  "presets": {
+    "P_IDLE": {
+      "id": "P_IDLE",
+      "description": "空载移动参数（无回转无冲击）",
+      "vp_mm_per_min": 100.0,
+      "rpm": 0.0,
+      "fi_hz": 0.0,
+      "torque_limit_nm": 5.0,
+      "pressure_limit_n": 500.0,
+      "drill_string_weight_n": 380.0,
+      "stall_velocity_mm_per_min": 10.0,
+      "stall_window_ms": 2000,
+
+      "upper_force_limit": 400.0,
+      "lower_force_limit": 0.0,
+      "emergency_force_limit": 500.0,
+      "max_feed_speed_mm_per_min": 300.0,
+      "velocity_change_limit_mm_per_sec": 50.0,
+      "position_deviation_limit_mm": 20.0,
+      "dead_zone_width_n": 100.0,
+      "dead_zone_hysteresis_n": 10.0
+    },
+
+    "P_DRILL_STAGE1": {
+      "id": "P_DRILL_STAGE1",
+      "description": "钻进第1阶段（浅层软地层，低速钻进）",
+      "vp_mm_per_min": 30.0,
+      "rpm": 30.0,
+      "fi_hz": 0.0,
+      "torque_limit_nm": 10.0,
+      "pressure_limit_n": 600.0,
+      "drill_string_weight_n": 380.0,
+      "stall_velocity_mm_per_min": 5.0,
+      "stall_window_ms": 1000,
+
+      "upper_force_limit": 500.0,
+      "lower_force_limit": 50.0,
+      "emergency_force_limit": 600.0,
+      "max_feed_speed_mm_per_min": 150.0,
+      "velocity_change_limit_mm_per_sec": 25.0,
+      "position_deviation_limit_mm": 10.0,
+      "dead_zone_width_n": 100.0,
+      "dead_zone_hysteresis_n": 10.0
+    },
+
+    "P_DRILL_STAGE2": {
+      "id": "P_DRILL_STAGE2",
+      "description": "钻进第2阶段（中浅层地层，中低速钻进）",
+      "vp_mm_per_min": 40.0,
+      "rpm": 45.0,
+      "fi_hz": 0.0,
+      "torque_limit_nm": 12.0,
+      "pressure_limit_n": 700.0,
+      "drill_string_weight_n": 380.0,
+      "stall_velocity_mm_per_min": 5.0,
+      "stall_window_ms": 1000,
+
+      "upper_force_limit": 600.0,
+      "lower_force_limit": 50.0,
+      "emergency_force_limit": 700.0,
+      "max_feed_speed_mm_per_min": 160.0,
+      "velocity_change_limit_mm_per_sec": 28.0,
+      "position_deviation_limit_mm": 10.0,
+      "dead_zone_width_n": 100.0,
+      "dead_zone_hysteresis_n": 10.0
+    },
+
+    "P_DRILL_STAGE3": {
+      "id": "P_DRILL_STAGE3",
+      "description": "钻进第3阶段（中深层地层，中速钻进）",
+      "vp_mm_per_min": 50.0,
+      "rpm": 60.0,
+      "fi_hz": 0.0,
+      "torque_limit_nm": 14.0,
+      "pressure_limit_n": 800.0,
+      "drill_string_weight_n": 380.0,
+      "stall_velocity_mm_per_min": 5.0,
+      "stall_window_ms": 1000,
+
+      "upper_force_limit": 700.0,
+      "lower_force_limit": 50.0,
+      "emergency_force_limit": 800.0,
+      "max_feed_speed_mm_per_min": 180.0,
+      "velocity_change_limit_mm_per_sec": 30.0,
+      "position_deviation_limit_mm": 10.0,
+      "dead_zone_width_n": 100.0,
+      "dead_zone_hysteresis_n": 10.0
+    },
+
+    "P_DRILL_STAGE4": {
+      "id": "P_DRILL_STAGE4",
+      "description": "钻进第4阶段（深层硬地层，高速钻进）",
+      "vp_mm_per_min": 70.0,
+      "rpm": 90.0,
+      "fi_hz": 0.0,
+      "torque_limit_nm": 16.0,
+      "pressure_limit_n": 900.0,
+      "drill_string_weight_n": 380.0,
+      "stall_velocity_mm_per_min": 5.0,
+      "stall_window_ms": 1000,
+
+      "upper_force_limit": 800.0,
+      "lower_force_limit": 50.0,
+      "emergency_force_limit": 900.0,
+      "max_feed_speed_mm_per_min": 200.0,
+      "velocity_change_limit_mm_per_sec": 35.0,
+      "position_deviation_limit_mm": 10.0,
+      "dead_zone_width_n": 100.0,
+      "dead_zone_hysteresis_n": 10.0
+    }
+  },
+
+  "steps": [
+    {
+      "type": "positioning",
+      "target_depth": "@H",
+      "param_id": "P_IDLE",
+      "timeout": 60,
+      "description": "步骤1: 空载移动到H位置（顶部1001mm）"
+    },
+    {
+      "type": "hold",
+      "requires_user_confirmation": true,
+      "description": "步骤2: 等待安装钻管 - 请点击「继续」按钮"
+    },
+    {
+      "type": "positioning",
+      "target_depth": "@K",
+      "param_id": "P_IDLE",
+      "timeout": 30,
+      "description": "步骤3: 空载移动到K位置（土壤表面917mm）"
+    },
+    {
+      "type": "drilling",
+      "target_depth": "@STAGE1_END",
+      "param_id": "P_DRILL_STAGE1",
+      "timeout": 600,
+      "description": "步骤4: 第1阶段钻进（917mm→687mm，30rpm低速）",
+      "conditions": {
+        "stop_if": [
+          { "sensor": "force_upper", "op": ">", "value": 500 },
+          { "sensor": "force_lower", "op": ">", "value": 500 },
+          { "sensor": "torque", "op": ">", "value": 10 },
+          { "sensor": "feed_velocity", "op": ">", "value": 150 }
+        ],
+        "logic": "OR",
+        "abort_on_stop": true
+      }
+    },
+    {
+      "type": "drilling",
+      "target_depth": "@STAGE2_END",
+      "param_id": "P_DRILL_STAGE2",
+      "timeout": 600,
+      "description": "步骤5: 第2阶段钻进（687mm→458mm，45rpm中低速）",
+      "conditions": {
+        "stop_if": [
+          { "sensor": "force_upper", "op": ">", "value": 600 },
+          { "sensor": "force_lower", "op": ">", "value": 600 },
+          { "sensor": "torque", "op": ">", "value": 12 },
+          { "sensor": "feed_velocity", "op": ">", "value": 160 }
+        ],
+        "logic": "OR",
+        "abort_on_stop": true
+      }
+    },
+    {
+      "type": "drilling",
+      "target_depth": "@STAGE3_END",
+      "param_id": "P_DRILL_STAGE3",
+      "timeout": 600,
+      "description": "步骤6: 第3阶段钻进（458mm→229mm，60rpm中速）",
+      "conditions": {
+        "stop_if": [
+          { "sensor": "force_upper", "op": ">", "value": 700 },
+          { "sensor": "force_lower", "op": ">", "value": 700 },
+          { "sensor": "torque", "op": ">", "value": 14 },
+          { "sensor": "feed_velocity", "op": ">", "value": 180 }
+        ],
+        "logic": "OR",
+        "abort_on_stop": true
+      }
+    },
+    {
+      "type": "drilling",
+      "target_depth": "@A",
+      "param_id": "P_DRILL_STAGE4",
+      "timeout": 600,
+      "description": "步骤7: 第4阶段钻进（229mm→0mm，90rpm高速）",
+      "conditions": {
+        "stop_if": [
+          { "sensor": "force_upper", "op": ">", "value": 800 },
+          { "sensor": "force_lower", "op": ">", "value": 800 },
+          { "sensor": "torque", "op": ">", "value": 16 },
+          { "sensor": "feed_velocity", "op": ">", "value": 200 }
+        ],
+        "logic": "OR",
+        "abort_on_stop": true
+      }
+    },
+    {
+      "type": "hold",
+      "requires_user_confirmation": true,
+      "description": "步骤8: 钻进完成 - 确认后返回顶部"
+    },
+    {
+      "type": "positioning",
+      "target_depth": "@H",
+      "param_id": "P_IDLE",
+      "timeout": 120,
+      "description": "步骤9: 空载返回H位置（顶部1001mm）"
+    }
+  ],
+
+  "notes": [
+    "=== 任务说明 ===",
+    "此任务文件用于标准4阶段钻进流程",
+    "控制进给(Fz)和回转(Pr)机构",
+    "",
+    "=== 位置定义（5层结构）===",
+    "  @H (1001mm): 进给机构顶部（安全位）",
+    "  @K (917mm): 土壤表面（钻进起始点）",
+    "  @STAGE1_END (687mm): 第1阶段终点",
+    "  @STAGE2_END (458mm): 第2阶段终点",
+    "  @STAGE3_END (229mm): 第3阶段终点",
+    "  @A (0mm): 进给机构底部（钻进终点）",
+    "",
+    "=== 钻进阶段划分（均匀分4段，共917mm）===",
+    "  第1阶段: K→687mm (230mm @ 30rpm, 30mm/min) - 浅层软地层",
+    "  第2阶段: 687→458mm (229mm @ 45rpm, 40mm/min) - 中浅层地层",
+    "  第3阶段: 458→229mm (229mm @ 60rpm, 50mm/min) - 中深层地层",
+    "  第4阶段: 229→A (229mm @ 90rpm, 70mm/min) - 深层硬地层",
+    "",
+    "=== 安全监测 ===",
+    "  - SafetyWatchdog: 实时监测力/扭矩/速度，超限立即停机",
+    "  - 传感器掉线检测: 2秒无数据自动安全停机",
+    "  - 每阶段独立过载条件，任一触发立即中止",
+    "",
+    "=== 各阶段安全参数对比（机器最大扭矩约18Nm）===",
+    "  阶段 | 上力限(N) | 紧急限(N) | 扭矩限(Nm) | 钻压限(N)",
+    "  -----+----------+-----------+-----------+----------",
+    "  1    | 500      | 600       | 10        | 600",
+    "  2    | 600      | 700       | 12        | 700",
+    "  3    | 700      | 800       | 14        | 800",
+    "  4    | 800      | 900       | 16        | 900",
+    "",
+    "=== 堵转检测参数 ===",
+    "  - 堵转速度阈值: 5 mm/min",
+    "  - 堵转检测窗口: 1000 ms",
+    "  - 触发后立即停机并报警",
+    "",
+    "=== 使用建议 ===",
+    "  1. 首次测试建议降低速度参数（rpm减半，vp减半）",
+    "  2. 确保传感器指示灯全绿再启动",
+    "  3. 执行前检查 Modbus 和电机连接状态",
+    "  4. 钻进过程中注意观察力传感器和扭矩数据",
+    "  5. 遇到异常立即点击「停止」或「急停」按钮"
+  ]
+}

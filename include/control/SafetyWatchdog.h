@@ -39,7 +39,9 @@ public slots:
     void onTelemetryUpdate(double positionMm,
                            double velocityMmPerMin,
                            double torqueNm,
-                           double pressureN);
+                           double pressureN,
+                           double forceUpperN,
+                           double forceLowerN);
 
 signals:
     void faultOccurred(const QString& code, const QString& detail);
@@ -52,7 +54,13 @@ private:
         qint64 timestampMs = 0;
     };
 
+    struct VelocitySample {
+        double velocityMmPerMin = 0.0;
+        qint64 timestampMs = 0;
+    };
+
     void evaluateStallCondition(double velocityMmPerMin, qint64 nowMs);
+    void evaluateVelocityChangeRate(double velocityMmPerMin, qint64 nowMs);
     void raiseFault(const QString& code, const QString& detail);
     void pruneHistory(qint64 nowMs);
     void resetState();
@@ -63,8 +71,10 @@ private:
     QString m_lastFaultCode;
     QString m_lastFaultDetail;
     QQueue<PositionSample> m_positionHistory;
+    QQueue<VelocitySample> m_velocityHistory;
 
     static constexpr double kPositionStabilityToleranceMm = 0.05;
+    static constexpr qint64 kVelocityWindowMs = 500;  // 500ms window for velocity change detection
 };
 
 #endif // SAFETYWATCHDOG_H

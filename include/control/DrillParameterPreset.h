@@ -25,6 +25,16 @@ struct DrillParameterPreset
     double stallVelocityMmPerMin = 5.0;
     int stallWindowMs = 1000;
 
+    // Extended safety thresholds (migrated from old system)
+    double upperForceLimit = 800.0;          // Upper force limit (N)
+    double lowerForceLimit = 50.0;           // Lower force limit (N)
+    double emergencyForceLimit = 900.0;      // Emergency stop force limit (N)
+    double maxFeedSpeedMmPerMin = 200.0;     // Maximum allowed feed speed (mm/min)
+    double velocityChangeLimitMmPerSec = 30.0; // Velocity change limit (mm/s²)
+    double positionDeviationLimitMm = 10.0;  // Position deviation limit (mm)
+    double deadZoneWidthN = 100.0;           // Dead zone width for force control (N)
+    double deadZoneHysteresisN = 10.0;       // Dead zone hysteresis (N)
+
     bool isValid() const;
     static DrillParameterPreset fromJson(const QJsonObject& json);
     QJsonObject toJson() const;

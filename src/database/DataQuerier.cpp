@@ -149,9 +149,9 @@ DataQuerier::WindowData DataQuerier::getWindowData(int roundId, qint64 windowSta
         }
     }
 
-    // 3. 查询标量数据
+    // 3. 查询标量数据（包含channel_id用于区分不同电机）
     QSqlQuery queryScalar(m_db);
-    queryScalar.prepare("SELECT sensor_type, value "
+    queryScalar.prepare("SELECT sensor_type, channel_id, value "
                         "FROM scalar_samples "
                         "WHERE window_id = ? "
                         "ORDER BY timestamp_us");
@@ -160,9 +160,18 @@ DataQuerier::WindowData DataQuerier::getWindowData(int roundId, qint64 windowSta
     if (queryScalar.exec()) {
         while (queryScalar.next()) {
             int sensorType = queryScalar.value(0).toInt();
-            double value = queryScalar.value(1).toDouble();
+            int channelId = queryScalar.value(1).toInt();
+            double value = queryScalar.value(2).toDouble();
 
-            data.scalarData[sensorType].append(value);
+            // 对于电机数据(300-303)，使用组合键区分不同电机
+            // 组合键 = sensorType * 100 + channelId
+            // 例如：电机2的位置(300) = 30002
+            int key = sensorType;
+            if (sensorType >= 300 && sensorType < 400) {
+                key = sensorType * 100 + channelId;
+            }
+
+            data.scalarData[key].append(value);
         }
     }
 
@@ -242,4 +251,30 @@ QList<DataQuerier::VibrationStats> DataQuerier::getVibrationStats(int roundId,
     }
 
     return statsList;
+}
+
+qint64 DataQuerier::getRoundActualDuration(int roundId)
+{
+    if (!m_isInitialized) {
+        return 0;
+    }
+
+    // 从time_windows表查询实际的数据时间范围
+    QSqlQuery query(m_db);
+    query.prepare("SELECT MIN(window_start_us), MAX(window_end_us) "
+                  "FROM time_windows WHERE round_id = ?");
+    query.addBindValue(roundId);
+
+    if (!query.exec() || !query.next()) {
+        return 0;
+    }
+
+    qint64 minTime = query.value(0).toLongLong();
+    qint64 maxTime = query.value(1).toLongLong();
+
+    if (minTime == 0 || maxTime == 0) {
+        return 0;
+    }
+
+    return (maxTime - minTime) / 1000000;  // 转换为秒
 }

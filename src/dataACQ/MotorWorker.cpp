@@ -13,13 +13,13 @@ MotorWorker::MotorWorker(QObject *parent)
     , m_readTimer(nullptr)
     , m_readPosition(true)
     , m_readSpeed(true)
-    , m_readTorque(true)
+    , m_readTorque(false)    // 扭矩=电流，不重复采集
     , m_readCurrent(true)
     , m_sampleCount(0)
 {
     m_sampleRate = 10.0;  // 默认10Hz（电机参数刷新无需太快）
     m_motorIds = {0, 1, 2, 3, 4, 5, 6, 7};  // 默认8个电机
-    LOG_DEBUG("MotorWorker", "Created. Default: 10Hz, 8 motors (uses global g_handle)");
+    LOG_DEBUG("MotorWorker", "Created. Default: 10Hz, 8 motors, 3 params (pos/speed/current)");
 }
 
 MotorWorker::~MotorWorker()

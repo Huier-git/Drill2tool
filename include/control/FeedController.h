@@ -116,6 +116,13 @@ public:
     double getKeyPosition(const QString& key) const;
 
     /**
+     * @brief 获取关键位置的深度值(mm)
+     * @param key 位置代号 (A-J)
+     * @return 深度(mm)，不存在返回-1
+     */
+    double getKeyPositionMm(const QString& key) const;
+
+    /**
      * @brief 移动到关键位置
      * @param key 位置代号 (A-J)
      * @return 成功返回true

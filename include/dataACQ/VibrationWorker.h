@@ -3,6 +3,7 @@
 
 #include "dataACQ/BaseWorker.h"
 #include <QThread>
+#include <QLibrary>
 
 /**
  * @brief VK701振动传感器采集Worker
@@ -21,6 +22,8 @@
  * 连接参数：
  * - cardId: 卡号（0-7）
  * - port: 固定为8234（无需配置）
+ *
+ * 注意：使用QLibrary动态加载VK70xNMC_DAQ2.dll，与官方例程一致
  */
 class VibrationWorker : public BaseWorker
 {
@@ -47,9 +50,11 @@ protected:
     void runAcquisition() override;
 
 private:
-    bool connectToCard();
+    bool loadDll();
+    void unloadDll();
+    bool connectToCard(bool isTestMode = false);
     void disconnectFromCard();
-    bool configureChannels();
+    bool configureChannels(bool isTestMode = false);
     bool startSampling();
     void stopSampling();
     bool readDataBlock();
@@ -65,6 +70,28 @@ private:
 
     bool m_isCardConnected;     // 是否已连接采集卡
     bool m_isSampling;          // 是否正在采样
+    bool m_isDllLoaded;         // DLL是否已加载
+
+    // QLibrary动态加载
+    QLibrary m_vkLib;
+
+    // 函数指针类型（与官方例程一致，使用__stdcall）
+    typedef int (__stdcall *FnServerTCPOpen)(int);
+    typedef int (__stdcall *FnServerTCPClose)(int);
+    typedef int (__stdcall *FnServerGetConnectedClientNumbers)(int*);
+    typedef int (__stdcall *FnVK70xNMCInitialize)(int, double, int, int, int, int, int, int);
+    typedef int (__stdcall *FnVK70xNMCStartSampling)(int);
+    typedef int (__stdcall *FnVK70xNMCStopSampling)(int);
+    typedef int (__stdcall *FnVK70xNMCGetFourChannel)(int, double*, int);
+
+    // 函数指针
+    FnServerTCPOpen m_fnTCPOpen;
+    FnServerTCPClose m_fnTCPClose;
+    FnServerGetConnectedClientNumbers m_fnGetConnectedClientNumbers;
+    FnVK70xNMCInitialize m_fnInitialize;
+    FnVK70xNMCStartSampling m_fnStartSampling;
+    FnVK70xNMCStopSampling m_fnStopSampling;
+    FnVK70xNMCGetFourChannel m_fnGetFourChannel;
 };
 
 #endif // VIBRATIONWORKER_H

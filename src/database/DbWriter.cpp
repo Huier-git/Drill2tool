@@ -33,23 +33,26 @@ DbWriter::~DbWriter()
 bool DbWriter::initialize()
 {
     qDebug() << "DbWriter initializing...";
-    
+
     if (m_isInitialized) {
         qWarning() << "DbWriter already initialized";
         return true;
     }
-    
+
     // 初始化数据库连接
     if (!initializeDatabase()) {
         return false;
     }
-    
+
+    // 检查并标记异常中断的轮次
+    markAbnormalRounds();
+
     // 创建批量写入定时器
     m_batchTimer = new QTimer(this);
     m_batchTimer->setInterval(m_batchIntervalMs);
     connect(m_batchTimer, &QTimer::timeout, this, &DbWriter::processBatch);
     m_batchTimer->start();
-    
+
     m_isInitialized = true;
     qDebug() << "DbWriter initialized successfully";
     return true;
@@ -217,18 +220,18 @@ void DbWriter::endCurrentRound()
         qWarning() << "No active round to end";
         return;
     }
-    
+
     QSqlQuery query(m_db);
-    query.prepare("UPDATE rounds SET end_ts_us = :end_ts WHERE round_id = :round_id");
+    query.prepare("UPDATE rounds SET end_ts_us = :end_ts, status = 'completed' WHERE round_id = :round_id");
     query.bindValue(":end_ts", getCurrentTimestampUs());
     query.bindValue(":round_id", m_currentRoundId);
-    
+
     if (!query.exec()) {
         emit errorOccurred("Failed to end round: " + query.lastError().text());
         return;
     }
-    
-    qDebug() << "Round ended, ID:" << m_currentRoundId;
+
+    qDebug() << "Round ended and marked as completed, ID:" << m_currentRoundId;
     m_currentRoundId = 0;
 }
 
@@ -844,4 +847,38 @@ void DbWriter::updateWindowStatus(int windowId, const QString &dataType)
 void DbWriter::clearWindowCache()
 {
     m_windowCache.clear();
+}
+
+void DbWriter::markAbnormalRounds()
+{
+    // 查找所有状态为 'running' 的轮次（即未正常结束的轮次）
+    QSqlQuery selectQuery(m_db);
+    if (!selectQuery.exec("SELECT round_id FROM rounds WHERE status = 'running'")) {
+        qWarning() << "Failed to query running rounds:" << selectQuery.lastError().text();
+        return;
+    }
+
+    QList<int> runningRounds;
+    while (selectQuery.next()) {
+        runningRounds.append(selectQuery.value(0).toInt());
+    }
+
+    if (runningRounds.isEmpty()) {
+        qDebug() << "No abnormal rounds detected";
+        return;
+    }
+
+    // 将所有未正常结束的轮次标记为 'abnormal'
+    QSqlQuery updateQuery(m_db);
+    updateQuery.prepare("UPDATE rounds SET status = 'abnormal', end_ts_us = :end_ts WHERE status = 'running'");
+    updateQuery.bindValue(":end_ts", getCurrentTimestampUs());
+
+    if (!updateQuery.exec()) {
+        qWarning() << "Failed to mark abnormal rounds:" << updateQuery.lastError().text();
+        return;
+    }
+
+    int affectedRows = updateQuery.numRowsAffected();
+    qWarning() << "Detected" << affectedRows << "abnormal rounds (program was not closed properly):" << runningRounds;
+    qWarning() << "These rounds have been marked as 'abnormal' status";
 }

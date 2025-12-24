@@ -31,6 +31,7 @@ ControlPage::ControlPage(QWidget *parent)
     , m_axisNum(0)
     , m_initStatus(0)
     , m_nodeNum(0)
+    , m_axisNumWarningShown(false)
     , m_oldRow(-1)
     , m_oldCol(-1)
     , m_displayPhysicalUnits(false)
@@ -358,16 +359,22 @@ void ControlPage::initMotorTable()
     ui->tb_motor->setColumnWidth(2, 100);  // Pos
     ui->tb_motor->setColumnWidth(3, 100);  // MVel
     ui->tb_motor->setColumnWidth(4, 100);  // Vel
-    ui->tb_motor->setColumnWidth(5, 50);   // DAC
-    ui->tb_motor->setColumnWidth(6, 50);   // Atype
-    ui->tb_motor->setColumnWidth(7, 50);   // Unit
-    ui->tb_motor->setColumnWidth(8, 100);  // Acc
-    ui->tb_motor->setColumnWidth(9, 100);  // Dec
+    ui->tb_motor->setColumnWidth(5, 50);   // DAC (电流)
+    ui->tb_motor->setColumnWidth(6, 80);   // Torque (扭矩, 从DAC计算得出)
+    ui->tb_motor->setColumnWidth(7, 50);   // Atype
+    ui->tb_motor->setColumnWidth(8, 50);   // Unit
+    ui->tb_motor->setColumnWidth(9, 100);  // Acc
+    ui->tb_motor->setColumnWidth(10, 100); // Dec
 
     // 初始化每个单元格
     for (int i = 0; i < n; ++i) {
-        for (int j = 0; j < 10; ++j) {
+        for (int j = 0; j < 11; ++j) {  // 从10列改为11列
             QTableWidgetItem *item = new QTableWidgetItem("");
+            // Torque列设为只读（从DAC计算得出）
+            if (j == 6) {
+                item->setFlags(item->flags() & ~Qt::ItemIsEditable);
+                item->setBackground(QColor(240, 240, 240));  // 浅灰色背景表示只读
+            }
             ui->tb_motor->setItem(i, j, item);
         }
     }
@@ -441,10 +448,15 @@ void ControlPage::refreshTableContent()
         ui->tb_motor->item(i, 3)->setText(QString::number(mVel, 'f', 2));
         ui->tb_motor->item(i, 4)->setText(QString::number(dVel, 'f', 2));
         ui->tb_motor->item(i, 5)->setText(QString::number(fDAC, 'f', 2));
-        ui->tb_motor->item(i, 6)->setText(QString::number(iAType));
-        ui->tb_motor->item(i, 7)->setText(QString::number(fUnit, 'f', 0));
-        ui->tb_motor->item(i, 8)->setText(QString::number(acc, 'f', 2));
-        ui->tb_motor->item(i, 9)->setText(QString::number(dec, 'f', 2));
+
+        // 计算并显示扭矩（从DAC电流转换）
+        double calculatedTorque = fDAC * MOTOR_CURRENT_TO_TORQUE_COEFFICIENTS[i];
+        ui->tb_motor->item(i, 6)->setText(QString::number(calculatedTorque, 'f', 3));
+
+        ui->tb_motor->item(i, 7)->setText(QString::number(iAType));
+        ui->tb_motor->item(i, 8)->setText(QString::number(fUnit, 'f', 0));
+        ui->tb_motor->item(i, 9)->setText(QString::number(acc, 'f', 2));
+        ui->tb_motor->item(i, 10)->setText(QString::number(dec, 'f', 2));
     }
 
     m_tableSyncing = false;
@@ -562,7 +574,12 @@ void ControlPage::basicInfoRefresh()
     if (ret != ERR_OK) {
         ui->le_bus_init_status->setText("初始化失败");
         ui->le_bus_init_status->setStyleSheet("border: 1px solid #ccc; padding: 5px; background-color: #ffcccc;");
-        qDebug() << "[ControlPage] 无法读取总线变量";
+
+        // 只在第一次打印警告
+        if (!m_axisNumWarningShown) {
+            qDebug() << "[ControlPage] 无法读取总线变量（未连接电机或未初始化）";
+            m_axisNumWarningShown = true;
+        }
 
         // 即使读取失败，如果handle存在，也设置m_initFlag以允许基本操作
         m_initFlag = true;
@@ -570,7 +587,6 @@ void ControlPage::basicInfoRefresh()
         // 设置默认轴数为10（MotorMap大小）
         if (m_axisNum == 0) {
             m_axisNum = MAX_MOTOR_COUNT;
-            qDebug() << "[ControlPage] 使用默认轴数:" << m_axisNum;
         }
         return;
     }
@@ -582,7 +598,11 @@ void ControlPage::basicInfoRefresh()
     // 如果读取到的轴数为0，使用默认值
     if (m_axisNum == 0) {
         m_axisNum = MAX_MOTOR_COUNT;
-        qDebug() << "[ControlPage] 读取到轴数为0，使用默认值:" << m_axisNum;
+        // 只在第一次打印警告
+        if (!m_axisNumWarningShown) {
+            qDebug() << "[ControlPage] 读取到轴数为0，使用默认值:" << m_axisNum;
+            m_axisNumWarningShown = true;
+        }
     }
 
     ui->le_bus_node_num->setText(QString::number(m_nodeNum));
@@ -765,8 +785,8 @@ void ControlPage::modifyMotorTable(QTableWidgetItem *item)
     int row = item->row();
     int col = item->column();
 
-    // 忽略MPos(列1)和MVel(列3)的编辑 - 这些是只读反馈值
-    if (col == 1 || col == 3) {
+    // 忽略MPos(列1)、MVel(列3)、Torque(列6)的编辑 - 这些是只读反馈值
+    if (col == 1 || col == 3 || col == 6) {
         qDebug() << "[ControlPage] 列" << col << "是只读列，忽略编辑";
         return;
     }
@@ -794,7 +814,7 @@ void ControlPage::modifyMotorTable(QTableWidgetItem *item)
             driverValue = driverValueFromDisplay(displayValue, motorID, UnitValueType::Position);
         } else if (col == 4) {
             driverValue = driverValueFromDisplay(displayValue, motorID, UnitValueType::Speed);
-        } else if (col == 8 || col == 9) {
+        } else if (col == 9 || col == 10) {  // Acc和Dec列索引调整
             driverValue = driverValueFromDisplay(displayValue, motorID, UnitValueType::Acceleration);
         }
     }
@@ -881,7 +901,7 @@ void ControlPage::modifyMotorTable(QTableWidgetItem *item)
             break;
         }
 
-        case 6: {  // Atype - 轴类型
+        case 7: {  // Atype - 轴类型（从第6列调整到第7列）
             QMutexLocker locker(&g_mutex);
             if (!g_handle) {
                 ret = 1;
@@ -891,7 +911,7 @@ void ControlPage::modifyMotorTable(QTableWidgetItem *item)
             break;
         }
 
-        case 7: {  // Unit - 脉冲当量
+        case 8: {  // Unit - 脉冲当量（从第7列调整到第8列）
             QMutexLocker locker(&g_mutex);
             if (!g_handle) {
                 ret = 1;
@@ -901,7 +921,7 @@ void ControlPage::modifyMotorTable(QTableWidgetItem *item)
             break;
         }
 
-        case 8: {  // Acc - 加速度
+        case 9: {  // Acc - 加速度（从第8列调整到第9列）
             QMutexLocker locker(&g_mutex);
             if (!g_handle) {
                 ret = 1;
@@ -911,7 +931,7 @@ void ControlPage::modifyMotorTable(QTableWidgetItem *item)
             break;
         }
 
-        case 9: {  // Dec - 减速度
+        case 10: {  // Dec - 减速度（从第9列调整到第10列）
             QMutexLocker locker(&g_mutex);
             if (!g_handle) {
                 ret = 1;

@@ -99,6 +99,19 @@ QPushButton#btn_query:pressed, QPushButton#btn_exec_sql:pressed, QPushButton#btn
     background-color: #3a8ee6;
 }
 
+QPushButton#btn_delete_round {
+    background-color: #f56c6c;
+    color: white;
+    border: none;
+    font-weight: bold;
+}
+QPushButton#btn_delete_round:hover {
+    background-color: #f78989;
+}
+QPushButton#btn_delete_round:pressed {
+    background-color: #dd6161;
+}
+
 /* --- 输入控件 --- */
 QSpinBox, QComboBox, QTextEdit, QLineEdit {
     border: 1px solid #dcdfe6;
@@ -309,6 +322,22 @@ QLabel#label_result_info {
               </property>
              </widget>
             </item>
+            <item>
+             <widget class="QPushButton" name="btn_delete_round">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>32</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>删除轮次</string>
+              </property>
+              <property name="icon">
+               <iconset theme="edit-delete"/>
+              </property>
+             </widget>
+            </item>
            </layout>
           </item>
           <item>
@@ -402,35 +431,6 @@ QLabel#label_result_info {
             </property>
             <property name="alignment">
              <set>Qt::AlignCenter</set>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QLabel" name="label_time_preview">
-            <property name="text">
-             <string>时间范围预览:</string>
-            </property>
-            <property name="styleSheet">
-             <string>font-size: 9pt; color: #909399;</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QCustomPlot" name="plot_time_preview" native="true">
-            <property name="minimumSize">
-             <size>
-              <width>0</width>
-              <height>80</height>
-             </size>
-            </property>
-            <property name="maximumSize">
-             <size>
-              <width>16777215</width>
-              <height>80</height>
-             </size>
-            </property>
-            <property name="toolTip">
-             <string>拖动选择时间范围</string>
             </property>
            </widget>
           </item>
@@ -728,20 +728,7 @@ QLabel#label_result_info {
               </size>
              </property>
              <property name="toolTip">
-              <string>标量数据 (MDB传感器 + 电机参数)</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QCustomPlot" name="plot_vibration" native="true">
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>200</height>
-              </size>
-             </property>
-             <property name="toolTip">
-              <string>振动RMS包络 (X/Y/Z三轴)</string>
+              <string>标量数据 (MDB传感器 + 电机参数 + 振动)</string>
              </property>
             </widget>
            </item>

@@ -2,9 +2,12 @@
 
 bool DrillParameterPreset::isValid() const
 {
+    // 有效预设条件：
+    // 1. ID不为空
+    // 2. 进给速度 > 0（空载和钻进都需要进给）
+    // 注：允许rpm=0和fi=0的情况（空载移动预设）
     return !id.trimmed().isEmpty()
-        && feedSpeedMmPerMin > 0.0
-        && rotationRpm > 0.0;
+        && feedSpeedMmPerMin > 0.0;
 }
 
 DrillParameterPreset DrillParameterPreset::fromJson(const QJsonObject& json)
@@ -41,6 +44,16 @@ DrillParameterPreset DrillParameterPreset::fromJson(const QJsonObject& json)
     preset.stallVelocityMmPerMin = json.value("stall_velocity_mm_per_min").toDouble(5.0);
     preset.stallWindowMs = json.value("stall_window_ms").toInt(1000);
 
+    // Extended safety thresholds
+    preset.upperForceLimit = json.value("upper_force_limit").toDouble(800.0);
+    preset.lowerForceLimit = json.value("lower_force_limit").toDouble(50.0);
+    preset.emergencyForceLimit = json.value("emergency_force_limit").toDouble(900.0);
+    preset.maxFeedSpeedMmPerMin = json.value("max_feed_speed_mm_per_min").toDouble(200.0);
+    preset.velocityChangeLimitMmPerSec = json.value("velocity_change_limit_mm_per_sec").toDouble(30.0);
+    preset.positionDeviationLimitMm = json.value("position_deviation_limit_mm").toDouble(10.0);
+    preset.deadZoneWidthN = json.value("dead_zone_width_n").toDouble(100.0);
+    preset.deadZoneHysteresisN = json.value("dead_zone_hysteresis_n").toDouble(10.0);
+
     return preset;
 }
 
@@ -58,6 +71,16 @@ QJsonObject DrillParameterPreset::toJson() const
     json["drill_string_weight_n"] = drillStringWeightN;
     json["stall_velocity_mm_per_min"] = stallVelocityMmPerMin;
     json["stall_window_ms"] = stallWindowMs;
+
+    // Extended safety thresholds
+    json["upper_force_limit"] = upperForceLimit;
+    json["lower_force_limit"] = lowerForceLimit;
+    json["emergency_force_limit"] = emergencyForceLimit;
+    json["max_feed_speed_mm_per_min"] = maxFeedSpeedMmPerMin;
+    json["velocity_change_limit_mm_per_sec"] = velocityChangeLimitMmPerSec;
+    json["position_deviation_limit_mm"] = positionDeviationLimitMm;
+    json["dead_zone_width_n"] = deadZoneWidthN;
+    json["dead_zone_hysteresis_n"] = deadZoneHysteresisN;
 
     return json;
 }

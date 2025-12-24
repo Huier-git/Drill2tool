@@ -1,0 +1,226 @@
+{
+  "task_name": "短程测试任务（1/6距离）",
+  "description": "用于快速测试自动任务逻辑，所有移动距离缩短至原来的1/6",
+  "version": "1.0",
+  "author": "DrillControl开发团队",
+
+  "positions": {
+    "H": 167.0,
+    "K": 153.0,
+    "A": 0.0,
+    "STAGE1_END": 115.0,
+    "STAGE2_END": 76.0,
+    "STAGE3_END": 38.0
+  },
+
+  "presets": {
+    "P_IDLE": {
+      "id": "P_IDLE",
+      "description": "空载移动参数（无回转无冲击）",
+      "vp_mm_per_min": 100.0,
+      "rpm": 0.0,
+      "fi_hz": 0.0,
+      "torque_limit_nm": 5.0,
+      "pressure_limit_n": 500.0,
+      "drill_string_weight_n": 380.0,
+      "stall_velocity_mm_per_min": 10.0,
+      "stall_window_ms": 2000,
+
+      "upper_force_limit": 400.0,
+      "lower_force_limit": 0.0,
+      "emergency_force_limit": 500.0,
+      "max_feed_speed_mm_per_min": 300.0,
+      "velocity_change_limit_mm_per_sec": 50.0,
+      "position_deviation_limit_mm": 20.0,
+      "dead_zone_width_n": 100.0,
+      "dead_zone_hysteresis_n": 10.0
+    },
+
+    "P_DRILL_STAGE1": {
+      "id": "P_DRILL_STAGE1",
+      "description": "钻进第1阶段（测试用低速）",
+      "vp_mm_per_min": 30.0,
+      "rpm": 30.0,
+      "fi_hz": 0.0,
+      "torque_limit_nm": 10.0,
+      "pressure_limit_n": 600.0,
+      "drill_string_weight_n": 380.0,
+      "stall_velocity_mm_per_min": 5.0,
+      "stall_window_ms": 1000,
+
+      "upper_force_limit": 500.0,
+      "lower_force_limit": 50.0,
+      "emergency_force_limit": 600.0,
+      "max_feed_speed_mm_per_min": 150.0,
+      "velocity_change_limit_mm_per_sec": 25.0,
+      "position_deviation_limit_mm": 10.0,
+      "dead_zone_width_n": 100.0,
+      "dead_zone_hysteresis_n": 10.0
+    },
+
+    "P_DRILL_STAGE2": {
+      "id": "P_DRILL_STAGE2",
+      "description": "钻进第2阶段（测试用中速）",
+      "vp_mm_per_min": 40.0,
+      "rpm": 45.0,
+      "fi_hz": 0.0,
+      "torque_limit_nm": 12.0,
+      "pressure_limit_n": 700.0,
+      "drill_string_weight_n": 380.0,
+      "stall_velocity_mm_per_min": 5.0,
+      "stall_window_ms": 1000,
+
+      "upper_force_limit": 600.0,
+      "lower_force_limit": 50.0,
+      "emergency_force_limit": 700.0,
+      "max_feed_speed_mm_per_min": 160.0,
+      "velocity_change_limit_mm_per_sec": 28.0,
+      "position_deviation_limit_mm": 10.0,
+      "dead_zone_width_n": 100.0,
+      "dead_zone_hysteresis_n": 10.0
+    },
+
+    "P_DRILL_STAGE3": {
+      "id": "P_DRILL_STAGE3",
+      "description": "钻进第3阶段（测试用高速）",
+      "vp_mm_per_min": 50.0,
+      "rpm": 60.0,
+      "fi_hz": 0.0,
+      "torque_limit_nm": 14.0,
+      "pressure_limit_n": 800.0,
+      "drill_string_weight_n": 380.0,
+      "stall_velocity_mm_per_min": 5.0,
+      "stall_window_ms": 1000,
+
+      "upper_force_limit": 700.0,
+      "lower_force_limit": 50.0,
+      "emergency_force_limit": 800.0,
+      "max_feed_speed_mm_per_min": 180.0,
+      "velocity_change_limit_mm_per_sec": 30.0,
+      "position_deviation_limit_mm": 10.0,
+      "dead_zone_width_n": 100.0,
+      "dead_zone_hysteresis_n": 10.0
+    }
+  },
+
+  "steps": [
+    {
+      "type": "positioning",
+      "target_depth": "@H",
+      "param_id": "P_IDLE",
+      "timeout": 60,
+      "description": "步骤1: 空载移动到H位置（顶部167mm）"
+    },
+    {
+      "type": "hold",
+      "requires_user_confirmation": true,
+      "description": "步骤2: 等待确认 - 请点击「继续」按钮"
+    },
+    {
+      "type": "positioning",
+      "target_depth": "@K",
+      "param_id": "P_IDLE",
+      "timeout": 30,
+      "description": "步骤3: 空载移动到K位置（测试表面153mm）"
+    },
+    {
+      "type": "drilling",
+      "target_depth": "@STAGE1_END",
+      "param_id": "P_DRILL_STAGE1",
+      "timeout": 300,
+      "description": "步骤4: 第1阶段钻进（153mm→115mm，30rpm）",
+      "conditions": {
+        "stop_if": [
+          { "sensor": "force_upper", "op": ">", "value": 500 },
+          { "sensor": "torque", "op": ">", "value": 10 }
+        ],
+        "logic": "OR",
+        "abort_on_stop": true
+      }
+    },
+    {
+      "type": "drilling",
+      "target_depth": "@STAGE2_END",
+      "param_id": "P_DRILL_STAGE2",
+      "timeout": 300,
+      "description": "步骤5: 第2阶段钻进（115mm→76mm，45rpm）",
+      "conditions": {
+        "stop_if": [
+          { "sensor": "force_upper", "op": ">", "value": 600 },
+          { "sensor": "torque", "op": ">", "value": 12 }
+        ],
+        "logic": "OR",
+        "abort_on_stop": true
+      }
+    },
+    {
+      "type": "drilling",
+      "target_depth": "@STAGE3_END",
+      "param_id": "P_DRILL_STAGE3",
+      "timeout": 300,
+      "description": "步骤6: 第3阶段钻进（76mm→38mm，60rpm）",
+      "conditions": {
+        "stop_if": [
+          { "sensor": "force_upper", "op": ">", "value": 700 },
+          { "sensor": "torque", "op": ">", "value": 14 }
+        ],
+        "logic": "OR",
+        "abort_on_stop": true
+      }
+    },
+    {
+      "type": "drilling",
+      "target_depth": "@A",
+      "param_id": "P_DRILL_STAGE3",
+      "timeout": 300,
+      "description": "步骤7: 最终钻进（38mm→0mm，60rpm）"
+    },
+    {
+      "type": "hold",
+      "requires_user_confirmation": true,
+      "description": "步骤8: 钻进完成 - 确认后返回顶部"
+    },
+    {
+      "type": "positioning",
+      "target_depth": "@H",
+      "param_id": "P_IDLE",
+      "timeout": 60,
+      "description": "步骤9: 空载返回H位置（顶部167mm）"
+    }
+  ],
+
+  "notes": [
+    "=== 测试任务说明 ===",
+    "此任务用于快速测试自动钻进逻辑",
+    "所有位置都是标准任务的1/6",
+    "总移动距离：167mm（原版1001mm）",
+    "",
+    "=== 位置定义（1/6缩放）===",
+    "  @H (167mm): 测试顶部位置（原1001mm）",
+    "  @K (153mm): 测试表面位置（原917mm）",
+    "  @STAGE1_END (115mm): 第1阶段终点（原687mm）",
+    "  @STAGE2_END (76mm): 第2阶段终点（原458mm）",
+    "  @STAGE3_END (38mm): 第3阶段终点（原229mm）",
+    "  @A (0mm): 底部位置（不变）",
+    "",
+    "=== 测试阶段（每段约38mm）===",
+    "  第1阶段: K→115mm (38mm @ 30rpm, 30mm/min) - 约76秒",
+    "  第2阶段: 115→76mm (39mm @ 45rpm, 40mm/min) - 约59秒",
+    "  第3阶段: 76→38mm (38mm @ 60rpm, 50mm/min) - 约46秒",
+    "  第4阶段: 38→A (38mm @ 60rpm, 50mm/min) - 约46秒",
+    "",
+    "预计总时长：约4分钟（vs. 标准版24分钟）",
+    "",
+    "=== 安全参数 ===",
+    "使用与标准任务相同的安全阈值",
+    "适合室内桌面测试，无需实际土壤",
+    "",
+    "=== 使用方法 ===",
+    "1. 确保进给轴初始化完成",
+    "2. 确认传感器连接正常（绿色指示）",
+    "3. 加载此任务文件",
+    "4. 点击「开始」执行测试",
+    "5. 观察每个阶段的执行情况",
+    "6. 验证位置、速度、状态显示正确"
+  ]
+}

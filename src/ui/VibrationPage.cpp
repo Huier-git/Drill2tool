@@ -85,6 +85,7 @@ void VibrationPage::setupConnections()
 {
     // 连接控制按钮
     connect(ui->btn_start, &QPushButton::clicked, this, &VibrationPage::onStartClicked);
+    connect(ui->btn_stop, &QPushButton::clicked, this, &VibrationPage::onStopClicked);
     connect(ui->btn_pause, &QPushButton::clicked, this, &VibrationPage::onPauseClicked);
 }
 
@@ -161,6 +162,32 @@ void VibrationPage::onStartClicked()
     m_totalSamples = 0;
 
     qDebug() << "[VibrationPage] Acquisition start command sent";
+}
+
+void VibrationPage::onStopClicked()
+{
+    qDebug() << "[VibrationPage] Stop button clicked";
+
+    if (!m_acquisitionManager || !m_vibrationWorker) {
+        return;
+    }
+
+    // 停止采集
+    m_acquisitionManager->stopVibration();
+
+    // 清空图表
+    clearAllPlots();
+
+    // 重置状态
+    ui->btn_start->setEnabled(true);
+    ui->btn_pause->setEnabled(false);
+    ui->btn_pause->setText("暂停");
+    ui->label_status->setText("状态: 已停止");
+    m_isAcquiring = false;
+    m_totalSamples = 0;
+    ui->label_statistics->setText("采样数: 0 | 采样率: 0 Hz");
+
+    qDebug() << "[VibrationPage] Stop command sent, plots cleared";
 }
 
 void VibrationPage::onPauseClicked()

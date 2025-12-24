@@ -732,6 +732,79 @@ QLabel#label_operator, QLabel#label_note_label {
          </spacer>
         </item>
         <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_indicators">
+          <property name="spacing">
+           <number>8</number>
+          </property>
+          <item>
+           <widget class="QLabel" name="lbl_vk701_indicator">
+            <property name="minimumSize">
+             <size>
+              <width>80</width>
+              <height>24</height>
+             </size>
+            </property>
+            <property name="styleSheet">
+             <string>background-color: #909399; color: white; padding: 2px 6px; border-radius: 3px; font-weight: bold;</string>
+            </property>
+            <property name="text">
+             <string>VK701</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+            <property name="toolTip">
+             <string>VK701振动传感器连接状态</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="lbl_mdb_indicator">
+            <property name="minimumSize">
+             <size>
+              <width>80</width>
+              <height>24</height>
+             </size>
+            </property>
+            <property name="styleSheet">
+             <string>background-color: #909399; color: white; padding: 2px 6px; border-radius: 3px; font-weight: bold;</string>
+            </property>
+            <property name="text">
+             <string>Modbus</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+            <property name="toolTip">
+             <string>Modbus传感器连接状态</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="lbl_motor_indicator">
+            <property name="minimumSize">
+             <size>
+              <width>80</width>
+              <height>24</height>
+             </size>
+            </property>
+            <property name="styleSheet">
+             <string>background-color: #909399; color: white; padding: 2px 6px; border-radius: 3px; font-weight: bold;</string>
+            </property>
+            <property name="text">
+             <string>ZMotion</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+            <property name="toolTip">
+             <string>ZMotion控制器连接状态</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
          <widget class="QLabel" name="label_statistics">
           <property name="styleSheet">
            <string>font-family: &quot;Consolas&quot;, monospace; color: #5c6370; font-size: 10pt; background: #282c34; padding: 4px; border-radius: 4px;</string>

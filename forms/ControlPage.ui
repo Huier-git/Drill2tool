@@ -403,6 +403,11 @@ QCheckBox, QComboBox {
             </column>
             <column>
              <property name="text">
+              <string>扭矩 (N·m)</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
               <string>轴类型</string>
              </property>
             </column>

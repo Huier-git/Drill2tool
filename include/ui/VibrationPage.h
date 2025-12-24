@@ -45,6 +45,7 @@ public:
 private slots:
     // UI控制按钮槽函数
     void onStartClicked();
+    void onStopClicked();
     void onPauseClicked();
 
     // 数据处理槽函数

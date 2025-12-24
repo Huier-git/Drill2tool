@@ -10,6 +10,7 @@
 #include <QProgressDialog>
 #include <QTextStream>
 #include <QtConcurrent>
+#include <cmath>
 #include "dataACQ/DataTypes.h"
 
 DatabasePage::DatabasePage(QWidget *parent)
@@ -17,8 +18,6 @@ DatabasePage::DatabasePage(QWidget *parent)
     , ui(new Ui::DatabasePage)
     , m_querier(nullptr)
     , m_scalarPlot(nullptr)
-    , m_vibrationPlot(nullptr)
-    , m_timePreviewPlot(nullptr)
     , m_cursorLine(nullptr)
     , m_currentRoundId(-1)
     , m_currentRoundStartUs(0)
@@ -34,14 +33,11 @@ DatabasePage::DatabasePage(QWidget *parent)
 
     // 初始化图表
     setupPlots();
-    setupTimePreviewPlot();
-
-    // X轴联动
-    linkChartsXAxis();
 
     // 连接信号
     connect(ui->btn_refresh_rounds, &QPushButton::clicked, this, &DatabasePage::onRefreshRounds);
     connect(ui->btn_select_round, &QPushButton::clicked, this, &DatabasePage::onRoundSelected);
+    connect(ui->btn_delete_round, &QPushButton::clicked, this, &DatabasePage::onDeleteRound);
     connect(ui->table_rounds, &QTableWidget::itemDoubleClicked, this, &DatabasePage::onRoundSelected);
     connect(ui->btn_query, &QPushButton::clicked, this, &DatabasePage::onQuery);
     connect(ui->btn_exec_sql, &QPushButton::clicked, this, &DatabasePage::onExecSql);
@@ -64,6 +60,14 @@ DatabasePage::DatabasePage(QWidget *parent)
             this, &DatabasePage::onStartSecChanged);
     connect(ui->spin_end_sec, QOverload<int>::of(&QSpinBox::valueChanged),
             this, &DatabasePage::onEndSecChanged);
+
+    // 数据类型筛选变化 - 重新绘制图表
+    connect(ui->combo_data_type, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, [this](int) {
+        if (!m_currentQueryData.isEmpty()) {
+            updateScalarPlot(m_currentQueryData);
+        }
+    });
 
     // 图表交互
     connect(ui->table_result, &QTableWidget::currentCellChanged,
@@ -132,12 +136,13 @@ void DatabasePage::loadRoundsList()
         QDateTime startDt = QDateTime::fromMSecsSinceEpoch(round.startTimeUs / 1000);
         ui->table_rounds->setItem(row, 1, new QTableWidgetItem(startDt.toString("MM-dd HH:mm:ss")));
 
-        // 计算时长
-        qint64 durationSec = (round.endTimeUs - round.startTimeUs) / 1000000;
-        if (durationSec < 0) durationSec = 0;
+        // 计算实际时长（从time_windows表）
+        qint64 durationSec = m_querier->getRoundActualDuration(round.roundId);
 
         QString durationStr;
-        if (durationSec < 60) {
+        if (durationSec <= 0) {
+            durationStr = "无数据";
+        } else if (durationSec < 60) {
             durationStr = QString("%1秒").arg(durationSec);
         } else if (durationSec < 3600) {
             durationStr = QString("%1分%2秒").arg(durationSec / 60).arg(durationSec % 60);
@@ -164,10 +169,161 @@ void DatabasePage::onRoundSelected()
     }
 
     m_currentRoundId = ui->table_rounds->item(row, 0)->text().toInt();
-    m_currentRoundStartUs = ui->table_rounds->item(row, 0)->data(Qt::UserRole).toLongLong();
     m_currentRoundDurationSec = ui->table_rounds->item(row, 0)->data(Qt::UserRole + 1).toLongLong();
 
+    // 获取第一个时间窗口的起始时间（用于查询计算）
+    QList<qint64> windows = m_querier->getWindowTimestamps(m_currentRoundId);
+    if (!windows.isEmpty()) {
+        m_currentRoundStartUs = windows.first();
+    } else {
+        m_currentRoundStartUs = ui->table_rounds->item(row, 0)->data(Qt::UserRole).toLongLong();
+    }
+
     updateRoundInfo(m_currentRoundId, m_currentRoundDurationSec);
+}
+
+void DatabasePage::onDeleteRound()
+{
+    // 检查是否选中了轮次
+    int row = ui->table_rounds->currentRow();
+    if (row < 0) {
+        QMessageBox::warning(this, "警告", "请先在表格中选择要删除的轮次");
+        return;
+    }
+
+    // 获取选中轮次的信息
+    int roundId = ui->table_rounds->item(row, 0)->text().toInt();
+    QString startTime = ui->table_rounds->item(row, 1)->text();
+    QString duration = ui->table_rounds->item(row, 2)->text();
+    QString status = ui->table_rounds->item(row, 3)->text();
+
+    // 显示确认对话框（警告风格）
+    QMessageBox confirmBox(this);
+    confirmBox.setIcon(QMessageBox::Warning);
+    confirmBox.setWindowTitle("⚠️ 危险操作");
+    confirmBox.setText(QString("确认要删除轮次 %1 吗？").arg(roundId));
+    confirmBox.setInformativeText(QString(
+        "轮次信息：\n"
+        "• 开始时间：%1\n"
+        "• 持续时间：%2\n"
+        "• 状态：%3\n\n"
+        "⚠️ 警告：此操作将永久删除该轮次的所有数据，包括：\n"
+        "  - 所有传感器采集数据\n"
+        "  - 振动数据记录\n"
+        "  - 时间窗口信息\n"
+        "  - 事件日志\n\n"
+        "此操作不可恢复！"
+    ).arg(startTime).arg(duration).arg(status));
+
+    confirmBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+    confirmBox.setDefaultButton(QMessageBox::No);
+    confirmBox.button(QMessageBox::Yes)->setText("确认删除");
+    confirmBox.button(QMessageBox::No)->setText("取消");
+
+    if (confirmBox.exec() != QMessageBox::Yes) {
+        return;
+    }
+
+    // 执行删除操作
+    QSqlDatabase db = m_querier->database();
+    if (!db.isOpen()) {
+        QMessageBox::critical(this, "错误", "数据库未打开");
+        return;
+    }
+
+    // 开始事务
+    if (!db.transaction()) {
+        QMessageBox::critical(this, "错误", "无法开始事务：" + db.lastError().text());
+        return;
+    }
+
+    QSqlQuery query(db);
+
+    // 删除标量数据
+    query.prepare("DELETE FROM scalar_samples WHERE round_id = ?");
+    query.addBindValue(roundId);
+    if (!query.exec()) {
+        db.rollback();
+        QMessageBox::critical(this, "错误", "删除标量数据失败：" + query.lastError().text());
+        return;
+    }
+    int deletedScalar = query.numRowsAffected();
+
+    // 删除振动数据
+    query.prepare("DELETE FROM vibration_blocks WHERE round_id = ?");
+    query.addBindValue(roundId);
+    if (!query.exec()) {
+        db.rollback();
+        QMessageBox::critical(this, "错误", "删除振动数据失败：" + query.lastError().text());
+        return;
+    }
+    int deletedVibration = query.numRowsAffected();
+
+    // 删除时间窗口
+    query.prepare("DELETE FROM time_windows WHERE round_id = ?");
+    query.addBindValue(roundId);
+    if (!query.exec()) {
+        db.rollback();
+        QMessageBox::critical(this, "错误", "删除时间窗口失败：" + query.lastError().text());
+        return;
+    }
+    int deletedWindows = query.numRowsAffected();
+
+    // 删除事件记录
+    query.prepare("DELETE FROM events WHERE round_id = ?");
+    query.addBindValue(roundId);
+    if (!query.exec()) {
+        db.rollback();
+        QMessageBox::critical(this, "错误", "删除事件记录失败：" + query.lastError().text());
+        return;
+    }
+    int deletedEvents = query.numRowsAffected();
+
+    // 删除频率日志
+    query.prepare("DELETE FROM frequency_log WHERE round_id = ?");
+    query.addBindValue(roundId);
+    if (!query.exec()) {
+        db.rollback();
+        QMessageBox::critical(this, "错误", "删除频率日志失败：" + query.lastError().text());
+        return;
+    }
+
+    // 删除轮次记录
+    query.prepare("DELETE FROM rounds WHERE round_id = ?");
+    query.addBindValue(roundId);
+    if (!query.exec()) {
+        db.rollback();
+        QMessageBox::critical(this, "错误", "删除轮次记录失败：" + query.lastError().text());
+        return;
+    }
+
+    // 提交事务
+    if (!db.commit()) {
+        db.rollback();
+        QMessageBox::critical(this, "错误", "提交事务失败：" + db.lastError().text());
+        return;
+    }
+
+    // 显示成功消息
+    QString successMsg = QString(
+        "轮次 %1 删除成功！\n\n"
+        "已删除数据：\n"
+        "• 标量样本：%2 条\n"
+        "• 振动数据块：%3 条\n"
+        "• 时间窗口：%4 个\n"
+        "• 事件记录：%5 条"
+    ).arg(roundId).arg(deletedScalar).arg(deletedVibration).arg(deletedWindows).arg(deletedEvents);
+
+    QMessageBox::information(this, "成功", successMsg);
+
+    // 刷新轮次列表
+    loadRoundsList();
+
+    // 如果删除的是当前选中的轮次，清空当前轮次信息
+    if (roundId == m_currentRoundId) {
+        m_currentRoundId = -1;
+        ui->label_round_info->setText("请选择一个轮次");
+    }
 }
 
 void DatabasePage::updateRoundInfo(int roundId, qint64 durationSec)
@@ -181,9 +337,6 @@ void DatabasePage::updateRoundInfo(int roundId, qint64 durationSec)
     ui->spin_end_sec->setMaximum(durationSec);
     ui->spin_start_sec->setValue(0);
     ui->spin_end_sec->setValue(durationSec);
-
-    // 更新迷你趋势图
-    updateTimePreviewPlot();
 }
 
 void DatabasePage::onStartSecChanged(int value)
@@ -349,6 +502,22 @@ void DatabasePage::onExecSql()
 // ==================================================
 static QString sensorTypeToString(int sensorType)
 {
+    // 处理电机数据的组合键 (sensorType * 100 + motorId)
+    // 例如：30002 = Motor_Position for motor 2
+    if (sensorType >= 30000 && sensorType < 40000) {
+        int baseSensorType = sensorType / 100;  // 300, 301, 302, 303
+        int motorId = sensorType % 100;         // 0-7
+        QString typeName;
+        switch (baseSensorType) {
+            case 300: typeName = "位置"; break;
+            case 301: typeName = "速度"; break;
+            case 302: typeName = "扭矩"; break;
+            case 303: typeName = "电流"; break;
+            default: typeName = "未知"; break;
+        }
+        return QString("电机%1%2").arg(motorId).arg(typeName);
+    }
+
     switch ((SensorType)sensorType) {
         case SensorType::Vibration_X: return "振动X";
         case SensorType::Vibration_Y: return "振动Y";
@@ -370,6 +539,18 @@ static QString sensorTypeToString(int sensorType)
 // ==================================================
 static QString sensorTypeToUnit(int sensorType)
 {
+    // 处理电机数据的组合键
+    if (sensorType >= 30000 && sensorType < 40000) {
+        int baseSensorType = sensorType / 100;
+        switch (baseSensorType) {
+            case 300: return "脉冲";    // Motor_Position
+            case 301: return "脉冲/s";  // Motor_Speed
+            case 302: return "%";       // Motor_Torque
+            case 303: return "A";       // Motor_Current
+            default: return "";
+        }
+    }
+
     switch ((SensorType)sensorType) {
         case SensorType::Vibration_X:
         case SensorType::Vibration_Y:
@@ -414,26 +595,8 @@ void DatabasePage::setupPlots()
         // 图表点击事件
         connect(m_scalarPlot, &QCustomPlot::mousePress,
                 this, &DatabasePage::onScalarPlotClicked);
-    }
 
-    // 振动数据图表
-    m_vibrationPlot = ui->plot_vibration;
-    if (m_vibrationPlot) {
-        configureChartDarkTheme(m_vibrationPlot);
-        m_vibrationPlot->xAxis->setLabel("时间 (秒)");
-        m_vibrationPlot->yAxis->setLabel("RMS值");
-        m_vibrationPlot->legend->setVisible(true);
-        m_vibrationPlot->legend->setFont(QFont("Microsoft YaHei", 9));
-        m_vibrationPlot->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom);
-        m_vibrationPlot->axisRect()->setupFullAxesBox();
-
-        // 图表点击事件
-        connect(m_vibrationPlot, &QCustomPlot::mousePress,
-                this, &DatabasePage::onVibrationPlotClicked);
-    }
-
-    // 创建游标线（用于图表-表格同步）
-    if (m_scalarPlot) {
+        // 创建游标线（用于图表-表格同步）
         m_cursorLine = new QCPItemLine(m_scalarPlot);
         m_cursorLine->setVisible(false);
         QPen cursorPen(QColor(255, 170, 0), 2, Qt::DashLine);  // 橙色虚线
@@ -459,13 +622,12 @@ void DatabasePage::onQueryFinished()
         return;
     }
 
-    // 获取结果
-    QList<DataQuerier::WindowData> dataList = m_queryWatcher.result();
+    // 获取结果并保存
+    m_currentQueryData = m_queryWatcher.result();
 
     // 更新显示
-    displayQueryResult(dataList);
-    updateScalarPlot(dataList);
-    updateVibrationPlot(dataList);
+    displayQueryResult(m_currentQueryData);
+    updateScalarPlot(m_currentQueryData);
 }
 
 // ==================================================
@@ -482,6 +644,28 @@ void DatabasePage::updateScalarPlot(const QList<DataQuerier::WindowData> &dataLi
         return;
     }
 
+    // 获取当前筛选类型
+    int filterType = ui->combo_data_type->currentIndex();
+    // 0=全部, 1=振动(VK701), 2=MDB(100-103), 3=电机(300-303)
+
+    // 根据筛选类型设置Y轴标签
+    QString yAxisLabel;
+    switch (filterType) {
+        case 1:  // 振动
+            yAxisLabel = "振动加速度 RMS (g)";
+            break;
+        case 2:  // MDB
+            yAxisLabel = "数值 (N / N·m / mm)";
+            break;
+        case 3:  // 电机（三环：位置/速度/电流）
+            yAxisLabel = "数值 (脉冲 / 脉冲/s / A)";
+            break;
+        default:  // 全部
+            yAxisLabel = "数值 (混合单位)";
+            break;
+    }
+    m_scalarPlot->yAxis->setLabel(yAxisLabel);
+
     // 按传感器类型分组数据
     QMap<int, QVector<double>> xData;
     QMap<int, QVector<double>> yData;
@@ -489,11 +673,54 @@ void DatabasePage::updateScalarPlot(const QList<DataQuerier::WindowData> &dataLi
     for (const auto &window : dataList) {
         double winStartSec = (window.windowStartUs - m_currentRoundStartUs) / 1000000.0;
 
+        // 处理振动数据（仅在选择"全部"或"振动"时显示）
+        if (filterType == 0 || filterType == 1) {
+            for (auto it = window.vibrationData.begin(); it != window.vibrationData.end(); ++it) {
+                int channelId = it.key();
+                const QVector<float>& values = it.value();
+
+                if (values.isEmpty()) continue;
+
+                // 计算RMS值作为该窗口的统计指标
+                double sumSq = 0.0;
+                for (float v : values) {
+                    sumSq += v * v;
+                }
+                double rms = std::sqrt(sumSq / values.size());
+
+                // 使用200+channelId作为sensorType
+                int sensorType = 200 + channelId;
+                xData[sensorType].append(winStartSec + 0.5);  // 窗口中心点
+                yData[sensorType].append(rms);
+            }
+        }
+
+        // 处理标量数据（MDB和电机）
         for (auto it = window.scalarData.begin(); it != window.scalarData.end(); ++it) {
             int sensorType = it.key();
             const QVector<double>& values = it.value();
 
             if (values.isEmpty()) continue;
+
+            // 根据筛选类型过滤
+            bool include = false;
+            switch (filterType) {
+                case 0:  // 全部数据
+                    include = true;
+                    break;
+                case 1:  // 振动数据 - 标量数据中不包含振动
+                    include = false;
+                    break;
+                case 2:  // MDB传感器 (100-103)
+                    include = (sensorType >= 100 && sensorType <= 103);
+                    break;
+                case 3:  // 电机参数 (组合键30000-30399 或 原始300-303)
+                    include = (sensorType >= 30000 && sensorType < 40000) ||
+                              (sensorType >= 300 && sensorType <= 303);
+                    break;
+            }
+
+            if (!include) continue;
 
             // 为这个窗口内的每个样本生成时间点
             double step = 1.0 / values.size();
@@ -516,59 +743,20 @@ void DatabasePage::updateScalarPlot(const QList<DataQuerier::WindowData> &dataLi
         int type = it.key();
         m_scalarPlot->addGraph();
         m_scalarPlot->graph()->setData(it.value(), yData[type]);
-        m_scalarPlot->graph()->setName(sensorTypeToString(type));
+
+        // 图例显示名称+单位
+        QString unit = sensorTypeToUnit(type);
+        QString legendName = sensorTypeToString(type);
+        if (!unit.isEmpty()) {
+            legendName += QString(" (%1)").arg(unit);
+        }
+        m_scalarPlot->graph()->setName(legendName);
         m_scalarPlot->graph()->setPen(QPen(colors[colorIndex % colors.size()], 1.5));
         colorIndex++;
     }
 
     m_scalarPlot->rescaleAxes();
     m_scalarPlot->replot();
-}
-
-// ==================================================
-// 更新振动数据图表
-// ==================================================
-void DatabasePage::updateVibrationPlot(const QList<DataQuerier::WindowData> &dataList)
-{
-    if (!m_vibrationPlot) return;
-
-    m_vibrationPlot->clearGraphs();
-
-    if (dataList.isEmpty() || m_currentRoundId < 0) {
-        m_vibrationPlot->replot();
-        return;
-    }
-
-    int startSec = ui->spin_start_sec->value();
-    int endSec = ui->spin_end_sec->value();
-    qint64 startUs = m_currentRoundStartUs + (qint64)startSec * 1000000;
-    qint64 endUs = m_currentRoundStartUs + (qint64)endSec * 1000000;
-
-    // 为3个通道创建图表
-    QVector<QColor> colors = {Qt::red, Qt::darkGreen, Qt::blue};
-    QStringList names = {"X轴 RMS", "Y轴 RMS", "Z轴 RMS"};
-
-    for (int channel = 0; channel < 3; ++channel) {
-        QList<DataQuerier::VibrationStats> stats = m_querier->getVibrationStats(
-            m_currentRoundId, channel, startUs, endUs
-        );
-
-        QVector<double> x, y;
-        for (const auto &s : stats) {
-            x.append((s.timestampUs - m_currentRoundStartUs) / 1000000.0);
-            y.append(s.rmsValue);
-        }
-
-        if (!x.isEmpty()) {
-            m_vibrationPlot->addGraph();
-            m_vibrationPlot->graph()->setData(x, y);
-            m_vibrationPlot->graph()->setName(names[channel]);
-            m_vibrationPlot->graph()->setPen(QPen(colors[channel], 1.5));
-        }
-    }
-
-    m_vibrationPlot->rescaleAxes();
-    m_vibrationPlot->replot();
 }
 
 // ==================================================
@@ -739,73 +927,6 @@ void DatabasePage::configureChartDarkTheme(QCustomPlot* plot)
 }
 
 // ==================================================
-// 迷你趋势图初始化
-// ==================================================
-void DatabasePage::setupTimePreviewPlot()
-{
-    m_timePreviewPlot = ui->plot_time_preview;
-    if (!m_timePreviewPlot) return;
-
-    // 基础配置
-    m_timePreviewPlot->setInteractions(QCP::iRangeDrag | QCP::iSelectPlottables);
-    m_timePreviewPlot->xAxis->setLabel("");
-    m_timePreviewPlot->yAxis->setLabel("");
-    m_timePreviewPlot->axisRect()->setupFullAxesBox(false);
-
-    // 简化样式
-    m_timePreviewPlot->xAxis->setTickLabels(true);
-    m_timePreviewPlot->yAxis->setTickLabels(false);
-    m_timePreviewPlot->xAxis->grid()->setVisible(false);
-    m_timePreviewPlot->yAxis->grid()->setVisible(false);
-
-    // 点击事件
-    connect(m_timePreviewPlot, &QCustomPlot::mousePress,
-            this, &DatabasePage::onTimePreviewClicked);
-}
-
-// ==================================================
-// 更新迷你趋势图（显示整个轮次的缩略曲线）
-// ==================================================
-void DatabasePage::updateTimePreviewPlot()
-{
-    if (!m_timePreviewPlot || !m_querier || m_currentRoundId < 0) return;
-
-    m_timePreviewPlot->clearGraphs();
-
-    // 为了性能，只查询采样点（每隔10秒一个点）
-    int sampleStep = qMax(1, (int)(m_currentRoundDurationSec / 100));  // 最多100个点
-
-    QVector<double> times, values;
-    for (int sec = 0; sec <= m_currentRoundDurationSec; sec += sampleStep) {
-        times.append(sec);
-        values.append(sec * 0.1);  // 占位数据，实际应查询数据库
-    }
-
-    if (!times.isEmpty()) {
-        m_timePreviewPlot->addGraph();
-        m_timePreviewPlot->graph(0)->setData(times, values);
-        m_timePreviewPlot->graph(0)->setPen(QPen(QColor("#409eff"), 2));
-        m_timePreviewPlot->graph(0)->setBrush(QBrush(QColor(64, 158, 255, 50)));
-        m_timePreviewPlot->rescaleAxes();
-        m_timePreviewPlot->replot();
-    }
-}
-
-// ==================================================
-// X轴联动
-// ==================================================
-void DatabasePage::linkChartsXAxis()
-{
-    if (!m_scalarPlot || !m_vibrationPlot) return;
-
-    // 连接两个图表的X轴
-    connect(m_scalarPlot->xAxis, SIGNAL(rangeChanged(QCPRange)),
-            m_vibrationPlot->xAxis, SLOT(setRange(QCPRange)));
-    connect(m_vibrationPlot->xAxis, SIGNAL(rangeChanged(QCPRange)),
-            m_scalarPlot->xAxis, SLOT(setRange(QCPRange)));
-}
-
-// ==================================================
 // 图表点击事件处理
 // ==================================================
 void DatabasePage::onScalarPlotClicked(QMouseEvent* event)
@@ -814,27 +935,6 @@ void DatabasePage::onScalarPlotClicked(QMouseEvent* event)
 
     double x = m_scalarPlot->xAxis->pixelToCoord(event->pos().x());
     syncTableToChart(x);
-}
-
-void DatabasePage::onVibrationPlotClicked(QMouseEvent* event)
-{
-    if (!m_vibrationPlot) return;
-
-    double x = m_vibrationPlot->xAxis->pixelToCoord(event->pos().x());
-    syncTableToChart(x);
-}
-
-void DatabasePage::onTimePreviewClicked(QMouseEvent* event)
-{
-    if (!m_timePreviewPlot) return;
-
-    double x = m_timePreviewPlot->xAxis->pixelToCoord(event->pos().x());
-
-    // 更新SpinBox
-    int startSec = qMax(0, (int)x - 5);
-    int endSec = qMin((int)m_currentRoundDurationSec, (int)x + 5);
-    ui->spin_start_sec->setValue(startSec);
-    ui->spin_end_sec->setValue(endSec);
 }
 
 // ==================================================

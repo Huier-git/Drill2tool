@@ -7,6 +7,7 @@
 #include "control/AcquisitionManager.h"
 #include "dataACQ/MdbWorker.h"
 #include "dataACQ/MotorWorker.h"
+#include "dataACQ/VibrationWorker.h"
 
 #include <QFileDialog>
 #include <QDir>
@@ -18,6 +19,7 @@
 #include <QJsonDocument>
 #include <QJsonParseError>
 #include <QJsonObject>
+#include <QLabel>
 
 AutoTaskPage::AutoTaskPage(QWidget *parent)
     : QWidget(parent)
@@ -28,6 +30,7 @@ AutoTaskPage::AutoTaskPage(QWidget *parent)
     , m_acquisitionManager(nullptr)
     , m_drillManager(nullptr)
     , m_elapsedTimer(new QTimer(this))
+    , m_sensorIndicatorTimer(new QTimer(this))
     , m_tasksDirectory("config/auto_tasks")
 {
     ui->setupUi(this);
@@ -37,6 +40,12 @@ AutoTaskPage::AutoTaskPage(QWidget *parent)
     m_elapsedTimer->setInterval(1000);
     connect(m_elapsedTimer, &QTimer::timeout,
             this, &AutoTaskPage::onElapsedTimerTick);
+
+    // Setup sensor indicator timer (update every 500ms)
+    m_sensorIndicatorTimer->setInterval(500);
+    connect(m_sensorIndicatorTimer, &QTimer::timeout,
+            this, &AutoTaskPage::updateSensorIndicators);
+    m_sensorIndicatorTimer->start();  // Always running
 
     // Setup steps table
     ui->table_steps->setColumnWidth(0, 40);   // #
@@ -425,6 +434,13 @@ void AutoTaskPage::onStepCompleted(int index)
 void AutoTaskPage::onProgressUpdated(double depthMm, double percent)
 {
     ui->lbl_depth->setText(tr("%1 mm").arg(depthMm, 0, 'f', 1));
+
+    // 计算距土面深度 (K位置 = 917mm)
+    // 正值：钻入土壤深度  负值：在土面上方高度
+    constexpr double SURFACE_POSITION_MM = 917.0;
+    double depthFromSurface = SURFACE_POSITION_MM - depthMm;
+    ui->lbl_depth_from_surface->setText(tr("%1 mm").arg(depthFromSurface, 0, 'f', 1));
+
     ui->progress_step->setValue(static_cast<int>(percent));
     ui->progress_total->setValue(static_cast<int>(percent));
 }
@@ -504,15 +520,25 @@ void AutoTaskPage::updateStepsTable()
         item2->setTextAlignment(Qt::AlignCenter);
         ui->table_steps->setItem(i, 2, item2);
 
-        // Column 3: Preset
-        QTableWidgetItem* item3 = new QTableWidgetItem(step.presetId);
+        // Column 3: Depth from surface (钻深)
+        constexpr double SURFACE_POSITION_MM = 917.0;
+        double depthFromSurface = SURFACE_POSITION_MM - step.targetDepthMm;
+        QString depthText = step.requiresMotion()
+            ? QString::number(depthFromSurface, 'f', 1) + " mm"
+            : "--";
+        QTableWidgetItem* item3 = new QTableWidgetItem(depthText);
         item3->setTextAlignment(Qt::AlignCenter);
         ui->table_steps->setItem(i, 3, item3);
 
-        // Column 4: Status
-        QTableWidgetItem* item4 = new QTableWidgetItem("...");
+        // Column 4: Preset
+        QTableWidgetItem* item4 = new QTableWidgetItem(step.presetId);
         item4->setTextAlignment(Qt::AlignCenter);
         ui->table_steps->setItem(i, 4, item4);
+
+        // Column 5: Status
+        QTableWidgetItem* item5 = new QTableWidgetItem("...");
+        item5->setTextAlignment(Qt::AlignCenter);
+        ui->table_steps->setItem(i, 5, item5);
     }
 }
 
@@ -581,7 +607,7 @@ void AutoTaskPage::updateStepStatus(int stepIndex, const QString& status)
         return;
     }
 
-    QTableWidgetItem* item = ui->table_steps->item(stepIndex, 4);
+    QTableWidgetItem* item = ui->table_steps->item(stepIndex, 5);  // Column 5: Status (原来是4)
     if (item) {
         item->setText(status);
 
@@ -772,5 +798,47 @@ void AutoTaskPage::logAcquisitionEvent(bool running)
         appendLog(tr("[数据采集] 已启动"));
     } else {
         appendLog(tr("[数据采集] 已停止"));
+    }
+}
+
+void AutoTaskPage::updateSensorIndicators()
+{
+    if (!m_acquisitionManager) {
+        setStatusLabel(ui->lbl_mdb_status, "Modbus", "#909399");
+        setStatusLabel(ui->lbl_motor_status, "电机", "#909399");
+        setStatusLabel(ui->lbl_vk701_status, "振动", "#909399");
+        return;
+    }
+
+    MdbWorker* mdbWorker = m_acquisitionManager->mdbWorker();
+    if (mdbWorker && mdbWorker->isConnected()) {
+        setStatusLabel(ui->lbl_mdb_status, "● Modbus", "#67c23a");  // Green
+    } else {
+        setStatusLabel(ui->lbl_mdb_status, "Modbus", "#909399");    // Gray
+    }
+
+    MotorWorker* motorWorker = m_acquisitionManager->motorWorker();
+    if (motorWorker && motorWorker->isConnected()) {
+        setStatusLabel(ui->lbl_motor_status, "● 电机", "#67c23a");
+    } else {
+        setStatusLabel(ui->lbl_motor_status, "电机", "#909399");
+    }
+
+    VibrationWorker* vibrationWorker = m_acquisitionManager->vibrationWorker();
+    if (vibrationWorker && vibrationWorker->isConnected()) {
+        setStatusLabel(ui->lbl_vk701_status, "● 振动", "#67c23a");
+    } else {
+        setStatusLabel(ui->lbl_vk701_status, "振动", "#909399");
+    }
+}
+
+void AutoTaskPage::setStatusLabel(QLabel* label, const QString& text, const QString& color)
+{
+    if (label) {
+        label->setText(text);
+        label->setStyleSheet(QString(
+            "background-color: %1; color: white; padding: 2px 6px; "
+            "border-radius: 3px; font-weight: bold;"
+        ).arg(color));
     }
 }

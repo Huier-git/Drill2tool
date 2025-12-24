@@ -104,6 +104,13 @@ public:
                                             qint64 startTimeUs, qint64 endTimeUs);
 
     /**
+     * @brief 获取轮次的实际数据时长（从实际数据时间戳计算）
+     * @param roundId 轮次ID
+     * @return 时长（秒），如果无数据返回0
+     */
+    qint64 getRoundActualDuration(int roundId);
+
+    /**
      * @brief 获取数据库连接，供自定义SQL查询使用
      */
     QSqlDatabase database() const { return m_db; }

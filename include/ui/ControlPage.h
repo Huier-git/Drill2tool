@@ -88,9 +88,26 @@ private:
     bool m_initFlag;
     float m_axisNum;
 
+    // 电机电流到扭矩转换系数（N·m/A）
+    // TODO: 这些是临时假定的系数值，需要用实际值替换
+    // 数组大小为10，对应MotorMap中的10个电机
+    static constexpr double MOTOR_CURRENT_TO_TORQUE_COEFFICIENTS[10] = {
+        0.1,  // 回转 (Pr)
+        0.1,  // 冲击 (Pi)
+        0.1,  // 进给 (Fz)
+        0.1,  // 下夹紧 (Cb)
+        0.1,  // 机械手夹紧 (Mg)
+        0.1,  // 机械手回转 (Mr)
+        0.1,  // 机械手伸缩 (Me)
+        0.1,  // 存储机构 (Sr)
+        0.1,  // M8
+        0.1   // M9
+    };
+
     // 总线信息
     float m_initStatus;
     int m_nodeNum;
+    bool m_axisNumWarningShown;  // 是否已显示轴数为0的警告
 
     // 表格编辑
     QString m_oldCellValue;  // 保存旧值用于恢复

@@ -30,9 +30,9 @@ MdbPage::MdbPage(QWidget *parent)
     setupConnections();
     initPlot();
 
-    // 图表刷新定时器：20Hz足够流畅，减少CPU占用
+    // 图表刷新定时器：10Hz与采样频率一致
     m_plotRefreshTimer = new QTimer(this);
-    m_plotRefreshTimer->setInterval(50);
+    m_plotRefreshTimer->setInterval(100);
     connect(m_plotRefreshTimer, &QTimer::timeout, this, &MdbPage::onPlotRefreshTimeout);
     m_plotRefreshTimer->start();
 }

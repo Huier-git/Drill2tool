@@ -78,6 +78,9 @@ private:
     int64_t concatenateShortsToLong(int16_t lower, int16_t upper);
     long shortsToLong(int16_t short1, int16_t short2);
 
+    // 单个传感器状态更新
+    void updateSensorStatus(int sensorIndex, bool success);
+
 private:
     QString m_serverAddress;    // Modbus TCP基础地址 (192.168.1.200)
     int m_serverPort;           // 服务器端口
@@ -99,6 +102,11 @@ private:
 
     bool m_isConnected;
     qint64 m_sampleCount;       // 样本计数
+
+    // 单个传感器掉线检测
+    int m_sensorFailCount[4];       // 每个传感器的连续失败次数
+    bool m_sensorDisconnected[4];   // 每个传感器是否已报告掉线
+    static const int SENSOR_DISCONNECT_THRESHOLD = 30;  // 连续30次失败（3秒@10Hz）认为掉线
 };
 
 #endif // MDBWORKER_H

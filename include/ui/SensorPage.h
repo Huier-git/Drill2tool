@@ -3,6 +3,8 @@
 
 #include <QWidget>
 #include <QMetaObject>
+#include <QTimer>
+#include <QLabel>
 #include "control/AcquisitionManager.h"
 #include "control/zmotion.h"
 
@@ -59,9 +61,13 @@ private slots:
     void onErrorOccurred(const QString &workerName, const QString &error);
     void onStatisticsUpdated(const QString &info);
 
+    // 传感器指示灯更新
+    void updateSensorIndicators();
+
 private:
     void setupConnections();
     void updateUIState();
+    void setIndicatorStyle(QLabel* label, const QString& text, bool connected);
 
 private:
     Ui::SensorPage *ui;
@@ -74,6 +80,8 @@ private:
     QMetaObject::Connection m_resetConnection;
     int m_lastRoundId;  // 跟踪上一次的轮次ID，用于判断操作类型
     int m_resetTargetRound;  // 重置的目标轮次号
+
+    QTimer* m_indicatorTimer;  // 传感器指示灯更新定时器
 };
 
 #endif // SENSORPAGE_H

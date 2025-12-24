@@ -145,6 +145,7 @@ private:
     qint64 getCurrentTimestampUs();
     void updateWindowStatus(int windowId, const QString &dataType);
     void clearWindowCache();
+    void markAbnormalRounds();  // 标记异常中断的轮次
 
 private:
     QString m_dbPath;                   // 数据库路径

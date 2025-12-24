@@ -46,6 +46,8 @@ struct TaskStep
     int timeoutSec = 0;
     int holdTimeSec = 0;
     QJsonObject conditions;
+    bool requiresUserConfirmation = false;
+    QString targetDepthRaw;  // 原始位置字符串（"@H" 或 "1001.0"），用于错误提示和日志
 
     bool isValid() const;
     bool requiresMotion() const { return type != Type::Hold; }
@@ -107,6 +109,7 @@ private slots:
     void onWatchdogFault(const QString& code, const QString& detail);
     void onStepTimeout();
     void onHoldTimeout();
+    void onSensorWatchdogTimeout();  // 传感器掉线检测
 
 private:
     enum class StepExecutionState {
@@ -131,10 +134,13 @@ private:
 
     bool loadPresets(const QJsonObject& root);
     bool loadSteps(const QJsonArray& array);
+    bool resolvePosition(const QString& positionRef, double& outDepthMm, QString& errorMsg);
+    double getKeyPositionFromFeed(const QString& key) const;
 
     AutoTaskState m_state;
     QVector<TaskStep> m_steps;
     QMap<QString, DrillParameterPreset> m_presets;
+    QMap<QString, double> m_positions;  // 任务特定的位置字典 (位置名 -> mm值)
     int m_currentStepIndex;
     StepExecutionState m_stepExecutionState;
     QString m_stateMessage;
@@ -154,6 +160,7 @@ private:
 
     QTimer* m_stepTimeoutTimer;
     QTimer* m_holdTimer;
+    QTimer* m_sensorWatchdogTimer;  // 传感器掉线检测定时器
     QElapsedTimer m_stepElapsed;
     double m_lastDepthMm;
     double m_lastVelocityMmPerMin;

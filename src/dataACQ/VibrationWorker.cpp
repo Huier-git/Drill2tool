@@ -1,5 +1,4 @@
 #include "dataACQ/VibrationWorker.h"
-#include "VK70xNMC_DAQ2.h"  // VK701硬件库头文件
 #include "Logger.h"
 #include <QDebug>
 #include <QCoreApplication>
@@ -14,6 +13,14 @@ VibrationWorker::VibrationWorker(QObject *parent)
     , m_blockSequence(0)
     , m_isCardConnected(false)
     , m_isSampling(false)
+    , m_isDllLoaded(false)
+    , m_fnTCPOpen(nullptr)
+    , m_fnTCPClose(nullptr)
+    , m_fnGetConnectedClientNumbers(nullptr)
+    , m_fnInitialize(nullptr)
+    , m_fnStartSampling(nullptr)
+    , m_fnStopSampling(nullptr)
+    , m_fnGetFourChannel(nullptr)
 {
     m_sampleRate = 5000.0;  // 默认5000Hz
     LOG_DEBUG("VibrationWorker", "Created. Default: 5000Hz, 3 channels, fixed port 8234");
@@ -24,6 +31,62 @@ VibrationWorker::~VibrationWorker()
     if (m_isSampling) {
         stopSampling();
     }
+    unloadDll();
+}
+
+bool VibrationWorker::loadDll()
+{
+    if (m_isDllLoaded) {
+        return true;
+    }
+
+    LOG_DEBUG("VibrationWorker", "Loading VK70xNMC_DAQ2.dll...");
+
+    m_vkLib.setFileName("VK70xNMC_DAQ2.dll");
+    if (!m_vkLib.load()) {
+        emitError(QString("Failed to load VK70xNMC_DAQ2.dll: %1").arg(m_vkLib.errorString()));
+        return false;
+    }
+
+    // Resolve all function pointers
+    m_fnTCPOpen = (FnServerTCPOpen)m_vkLib.resolve("Server_TCPOpen");
+    m_fnTCPClose = (FnServerTCPClose)m_vkLib.resolve("Server_TCPClose");
+    m_fnGetConnectedClientNumbers = (FnServerGetConnectedClientNumbers)m_vkLib.resolve("Server_Get_ConnectedClientNumbers");
+    m_fnInitialize = (FnVK70xNMCInitialize)m_vkLib.resolve("VK70xNMC_Initialize");
+    m_fnStartSampling = (FnVK70xNMCStartSampling)m_vkLib.resolve("VK70xNMC_StartSampling");
+    m_fnStopSampling = (FnVK70xNMCStopSampling)m_vkLib.resolve("VK70xNMC_StopSampling");
+    m_fnGetFourChannel = (FnVK70xNMCGetFourChannel)m_vkLib.resolve("VK70xNMC_GetFourChannel");
+
+    // Check all functions resolved
+    if (!m_fnTCPOpen || !m_fnTCPClose || !m_fnGetConnectedClientNumbers ||
+        !m_fnInitialize || !m_fnStartSampling || !m_fnStopSampling || !m_fnGetFourChannel) {
+        emitError("Failed to resolve VK70xNMC_DAQ2.dll functions");
+        m_vkLib.unload();
+        return false;
+    }
+
+    m_isDllLoaded = true;
+    LOG_DEBUG("VibrationWorker", "VK70xNMC_DAQ2.dll loaded successfully");
+    return true;
+}
+
+void VibrationWorker::unloadDll()
+{
+    if (!m_isDllLoaded) {
+        return;
+    }
+
+    m_fnTCPOpen = nullptr;
+    m_fnTCPClose = nullptr;
+    m_fnGetConnectedClientNumbers = nullptr;
+    m_fnInitialize = nullptr;
+    m_fnStartSampling = nullptr;
+    m_fnStopSampling = nullptr;
+    m_fnGetFourChannel = nullptr;
+
+    m_vkLib.unload();
+    m_isDllLoaded = false;
+    LOG_DEBUG("VibrationWorker", "VK70xNMC_DAQ2.dll unloaded");
 }
 
 bool VibrationWorker::initializeHardware()
@@ -34,13 +97,18 @@ bool VibrationWorker::initializeHardware()
     LOG_DEBUG_STREAM("VibrationWorker") << "  Sample Rate:" << m_sampleRate << "Hz";
     LOG_DEBUG_STREAM("VibrationWorker") << "  Channels:" << m_channelCount;
 
-    // 连接采集卡
-    if (!connectToCard()) {
+    // Load DLL first
+    if (!loadDll()) {
         return false;
     }
 
-    // 配置通道
-    if (!configureChannels()) {
+    // 连接采集卡（正常模式：无限重试）
+    if (!connectToCard(false)) {  // isTestMode = false
+        return false;
+    }
+
+    // 配置通道（正常模式：无限重试）
+    if (!configureChannels(false)) {  // isTestMode = false
         return false;
     }
 
@@ -59,16 +127,13 @@ void VibrationWorker::shutdownHardware()
 {
     LOG_DEBUG("VibrationWorker", "Shutting down VK701...");
 
-    // 停止采样
+    // 只停止采样，保持TCP连接（下次启动更快）
     stopSampling();
 
-    // 断开连接
-    disconnectFromCard();
+    // 注意：不断开连接，保持 m_isCardConnected = true
+    // 这样下次 initializeHardware() 时会跳过连接步骤
 
-    m_isCardConnected = false;
-    m_isSampling = false;
-
-    LOG_DEBUG("VibrationWorker", "VK701 shutdown complete");
+    LOG_DEBUG("VibrationWorker", "VK701 shutdown complete (connection kept)");
 }
 
 void VibrationWorker::runAcquisition()
@@ -88,6 +153,9 @@ void VibrationWorker::runAcquisition()
             emit statisticsUpdated(m_samplesCollected, m_sampleRate);
         }
 
+        // 每次读取后延时（与Linux版本一致，减少CPU占用，让UI有时间处理）
+        QThread::msleep(10);
+
         // Allow queued stop/pause to be processed in this worker thread.
         QCoreApplication::processEvents(QEventLoop::AllEvents, 1);
     }
@@ -95,53 +163,70 @@ void VibrationWorker::runAcquisition()
     LOG_DEBUG("VibrationWorker", "Acquisition loop ended");
 }
 
-bool VibrationWorker::connectToCard()
+bool VibrationWorker::connectToCard(bool isTestMode)
 {
+    if (!m_isDllLoaded) {
+        emitError("DLL not loaded");
+        return false;
+    }
+
+    // 如果已经连接，跳过连接步骤
+    if (m_isCardConnected) {
+        LOG_DEBUG("VibrationWorker", "Already connected to VK701, skipping connection");
+        return true;
+    }
+
     LOG_DEBUG_STREAM("VibrationWorker") << "Connecting to VK701 TCP server, port:" << VK701_TCP_PORT;
 
     int result;
     int curDeviceNum;
+    int retryCount = 0;
+    const int maxRetries = 100;  // 测试模式最多重试100次
 
-    // 1. 创建TCP连接
+    // 1. 创建TCP连接（与例程一致：无限重试直到成功）
     do {
-        if (!shouldContinue()) {
-            return false;
-        }
-        result = Server_TCPOpen(VK701_TCP_PORT);
+        result = m_fnTCPOpen(VK701_TCP_PORT);
         QThread::msleep(20);
         if (result < 0) {
             LOG_DEBUG("VibrationWorker", "Waiting for VK701 server...");
+            retryCount++;
+            if (isTestMode && retryCount >= maxRetries) {
+                emitError(QString("Failed to open VK701 TCP server port after %1 attempts").arg(maxRetries));
+                return false;
+            }
         } else {
             LOG_DEBUG_STREAM("VibrationWorker") << "Port" << VK701_TCP_PORT << "opened!";
         }
-    } while (result < 0 && shouldContinue());
+    } while (result < 0);
 
-    if (result < 0) {
-        emitError("Failed to open VK701 TCP server port");
-        return false;
-    }
+    QThread::msleep(500);  // 等待TCP服务器完全就绪（参考例程）
 
-    QThread::msleep(100);
-
-    // 2. 获取已连接设备数量
+    // 2. 获取已连接设备数量（与例程一致：无限重试直到成功）
     LOG_DEBUG("VibrationWorker", "Getting connected device count...");
-    int retryCount = 0;
+    retryCount = 0;
     do {
-        if (!shouldContinue()) {
-            return false;
-        }
-        result = Server_Get_ConnectedClientNumbers(&curDeviceNum);
+        result = m_fnGetConnectedClientNumbers(&curDeviceNum);
         QThread::msleep(20);
-        retryCount++;
-    } while (result < 0 && retryCount < 50 && shouldContinue());
-
-    if (result < 0) {
-        emitError("Failed to get VK701 device count");
-        return false;
-    }
+        if (result < 0) {
+            LOG_DEBUG("VibrationWorker", "Waiting for device enumeration...");
+            retryCount++;
+            if (isTestMode && retryCount >= maxRetries) {
+                emitError(QString("Failed to get device count after %1 attempts").arg(maxRetries));
+                return false;
+            }
+        }
+    } while (result < 0);
 
     LOG_DEBUG_STREAM("VibrationWorker") << "DAQ device count:" << curDeviceNum;
-    QThread::msleep(100);
+
+    // 检查是否有设备连接
+    if (curDeviceNum <= 0) {
+        emitError("No VK701 device connected to server");
+        LOG_WARNING("VibrationWorker", "Server opened but no device connected");
+        return false;
+    }
+
+    QThread::msleep(500);  // 等待设备枚举完全完成（参考例程）
 
     m_isCardConnected = true;
     LOG_DEBUG("VibrationWorker", "Successfully connected to VK701 server");
@@ -159,8 +244,7 @@ void VibrationWorker::disconnectFromCard()
     // 停止采样
     stopSampling();
 
-    // VK701不需要显式关闭TCP连接，由SDK管理
-    // 如果需要关闭服务器,调用 Server_TCPClose(m_port)
+    // 注意：不关闭TCP连接，多个连接可以共享同一个服务器
 
     m_isCardConnected = false;
     LOG_DEBUG("VibrationWorker", "Disconnected");
@@ -170,8 +254,13 @@ bool VibrationWorker::testConnection()
 {
     LOG_DEBUG("VibrationWorker", "Testing connection to VK701...");
 
-    // 尝试连接
-    if (!connectToCard()) {
+    // Load DLL first
+    if (!loadDll()) {
+        return false;
+    }
+
+    // 尝试连接（测试模式：有限重试）
+    if (!connectToCard(true)) {  // isTestMode = true
         return false;
     }
 
@@ -184,13 +273,18 @@ void VibrationWorker::disconnect()
     disconnectFromCard();
 }
 
-bool VibrationWorker::configureChannels()
+bool VibrationWorker::configureChannels(bool isTestMode)
 {
+    if (!m_isDllLoaded) {
+        emitError("DLL not loaded");
+        return false;
+    }
+
     LOG_DEBUG("VibrationWorker", "Configuring VK701 channels...");
 
     int result;
     int retryCount = 0;
-    const int maxRetries = 2000;  // 最多重试次数
+    const int maxRetries = 100;  // 测试模式最多重试100次
 
     // VK701初始化参数（参考vk701nsd）
     double refVol = 1.0;           // 参考电压
@@ -203,12 +297,9 @@ bool VibrationWorker::configureChannels()
     LOG_DEBUG_STREAM("VibrationWorker") << "  Ref Voltage:" << refVol << "V";
     LOG_DEBUG_STREAM("VibrationWorker") << "  Bit Mode:" << bitMode;
 
+    // 初始化设备（与例程一致：无限重试直到成功）
     do {
-        if (!shouldContinue()) {
-            return false;
-        }
-
-        result = VK70xNMC_Initialize(
+        result = m_fnInitialize(
             m_cardId,
             refVol,
             bitMode,
@@ -218,34 +309,36 @@ bool VibrationWorker::configureChannels()
 
         QThread::msleep(20);
 
-        if (retryCount < maxRetries) {
-            if (result == -11) {
-                LOG_DEBUG("VibrationWorker", "Server not open.");
-            } else if (result == -12 || result == -13) {
-                LOG_DEBUG_STREAM("VibrationWorker") << "DAQ not connected or does not exist. Try" << retryCount;
-            } else if (result < 0) {
-                LOG_DEBUG_STREAM("VibrationWorker") << "Initialization error. Try" << retryCount;
-            }
+        if (result == -11) {
+            LOG_DEBUG("VibrationWorker", "Server not open.");
+        } else if (result == -12 || result == -13) {
+            LOG_DEBUG("VibrationWorker", "DAQ not connected or does not exist.");
+        } else if (result < 0) {
+            LOG_DEBUG("VibrationWorker", "Initialization error.");
         }
+
         retryCount++;
-    } while (result < 0 && retryCount < maxRetries && shouldContinue());
+        if (isTestMode && retryCount >= maxRetries) {
+            emitError(QString("VK70xNMC_Initialize failed after %1 attempts: error code %2").arg(maxRetries).arg(result));
+            return false;
+        }
+    } while (result < 0);
 
-    if (result < 0) {
-        emitError(QString("VK70xNMC_Initialize failed after %1 attempts: error code %2")
-                      .arg(maxRetries).arg(result));
-        return false;
-    }
-
-    QThread::msleep(100);
+    QThread::msleep(500);  // 等待设备初始化完全完成（参考例程）
     LOG_DEBUG("VibrationWorker", "VK701 device initialized successfully");
     return true;
 }
 
 bool VibrationWorker::startSampling()
 {
+    if (!m_isDllLoaded) {
+        emitError("DLL not loaded");
+        return false;
+    }
+
     LOG_DEBUG("VibrationWorker", "Starting VK701 sampling...");
 
-    int result = VK70xNMC_StartSampling(m_cardId);
+    int result = m_fnStartSampling(m_cardId);
     if (result < 0) {
         emitError(QString("VK70xNMC_StartSampling failed: error code %1").arg(result));
         LOG_DEBUG("VibrationWorker", "DAQ ERROR: Failed to start sampling");
@@ -259,13 +352,13 @@ bool VibrationWorker::startSampling()
 
 void VibrationWorker::stopSampling()
 {
-    if (!m_isSampling) {
+    if (!m_isSampling || !m_isDllLoaded) {
         return;
     }
 
     LOG_DEBUG("VibrationWorker", "Stopping VK701 sampling...");
 
-    int result = VK70xNMC_StopSampling(m_cardId);
+    int result = m_fnStopSampling(m_cardId);
     if (result < 0) {
         LOG_WARNING_STREAM("VibrationWorker") << "VK70xNMC_StopSampling failed: error code" << result;
     }
@@ -276,12 +369,19 @@ void VibrationWorker::stopSampling()
 
 bool VibrationWorker::readDataBlock()
 {
+    if (!m_isDllLoaded) {
+        return false;
+    }
+
+    // 使用采样频率作为读取点数（与例程和Linux版本一致）
+    int readSize = static_cast<int>(m_sampleRate);
+
     // 分配缓冲区用于接收4通道数据（VK701硬件限制）
-    double *pucRecBuf = new double[4 * m_blockSize];
+    double *pucRecBuf = new double[4 * readSize];
 
     // Start sampling if needed to avoid restarting every read.
     if (!m_isSampling) {
-        int result = VK70xNMC_StartSampling(m_cardId);
+        int result = m_fnStartSampling(m_cardId);
         if (result < 0) {
             LOG_WARNING_STREAM("VibrationWorker") << "VK70xNMC_StartSampling failed before read: error code" << result;
             delete[] pucRecBuf;
@@ -290,8 +390,8 @@ bool VibrationWorker::readDataBlock()
         m_isSampling = true;
     }
 
-    // 读取4通道数据
-    int recv = VK70xNMC_GetFourChannel(m_cardId, pucRecBuf, m_blockSize);
+    // 读取4通道数据（第三个参数使用采样频率，与例程一致）
+    int recv = m_fnGetFourChannel(m_cardId, pucRecBuf, readSize);
 
     if (recv > 0) {
         // 成功读取数据
@@ -345,9 +445,9 @@ bool VibrationWorker::readDataBlock()
         delete[] pucRecBuf;
         return false;
     } else {
-        // recv == 0，没有数据可读
+        // recv == 0，没有数据可读（与例程不同：例程中会在循环中等待）
         delete[] pucRecBuf;
-        QThread::msleep(10);  // 短暂延迟后重试
+        QThread::msleep(1);  // 短暂延迟后重试（参考例程：1ms）
         return true;
     }
 }
@@ -358,6 +458,11 @@ void VibrationWorker::processAndSendData(float *ch0Data, float *ch1Data, float *
     if (!ch0Data || !ch1Data || !ch2Data || numSamples <= 0) {
         return;
     }
+
+    // 单位换算：传感器灵敏度 100mV/g = 0.1V/g
+    // VK701返回电压值(V)，需要转换为加速度(g)
+    // g = V / 0.1 = V * 10
+    const float sensitivity = 0.1f;  // 100mV/g = 0.1V/g
 
     // 计算当前块的起始时间戳
     qint64 blockTimestamp = currentTimestampUs();
@@ -380,10 +485,18 @@ void VibrationWorker::processAndSendData(float *ch0Data, float *ch1Data, float *
             block.sensorType = SensorType::Vibration_Z;
         }
 
-        // 将float数组转换为BLOB
+        // 选择对应通道数据并换算单位
         float *channelData = (ch == 0) ? ch0Data : (ch == 1) ? ch1Data : ch2Data;
+
+        // 创建换算后的数据缓冲区
+        QVector<float> convertedData(numSamples);
+        for (int i = 0; i < numSamples; ++i) {
+            convertedData[i] = channelData[i] / sensitivity;  // V → g
+        }
+
+        // 将换算后的float数组转换为BLOB
         block.blobData = QByteArray(
-            reinterpret_cast<const char*>(channelData),
+            reinterpret_cast<const char*>(convertedData.constData()),
             numSamples * sizeof(float)
         );
 
@@ -395,10 +508,11 @@ void VibrationWorker::processAndSendData(float *ch0Data, float *ch1Data, float *
     m_samplesCollected += numSamples * m_channelCount;
     m_blockSequence++;
 
-    // 调试信息（每10秒输出一次）
-    if (m_blockSequence % (int)(10 * m_sampleRate / m_blockSize) == 0) {
+    // 调试信息（每10个块输出一次，约10秒）
+    if (m_blockSequence % 10 == 0) {
         LOG_DEBUG_STREAM("VibrationWorker")
             << "Block #" << m_blockSequence
+            << ", Samples this block:" << numSamples
             << ", Total samples:" << m_samplesCollected
             << ", Rate:" << m_sampleRate << "Hz";
     }

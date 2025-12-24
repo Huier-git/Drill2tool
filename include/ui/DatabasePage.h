@@ -23,6 +23,7 @@ public:
 private slots:
     void onRefreshRounds();
     void onRoundSelected();
+    void onDeleteRound();  // 删除选中的轮次
     void onQuery();
     void onExecSql();
 
@@ -41,9 +42,7 @@ private slots:
 
     // 图表交互
     void onScalarPlotClicked(QMouseEvent* event);
-    void onVibrationPlotClicked(QMouseEvent* event);
     void onTableRowSelected();
-    void onTimePreviewClicked(QMouseEvent* event);
 
 private:
     void loadRoundsList();
@@ -52,14 +51,10 @@ private:
 
     // 图表相关
     void setupPlots();
-    void setupTimePreviewPlot();
     void updateScalarPlot(const QList<DataQuerier::WindowData>& data);
-    void updateVibrationPlot(const QList<DataQuerier::WindowData>& data);
-    void updateTimePreviewPlot();
     void configureChartDarkTheme(QCustomPlot* plot);
 
     // 图表同步交互
-    void linkChartsXAxis();
     void syncTableToChart(double timeInSeconds);
     void syncChartToTable(int row);
     void updateChartCursor(double timeInSeconds);
@@ -73,8 +68,6 @@ private:
 
     // 图表控件
     QCustomPlot* m_scalarPlot;
-    QCustomPlot* m_vibrationPlot;
-    QCustomPlot* m_timePreviewPlot;  // 迷你趋势图（时间选择器）
 
     // 图表辅助元素
     QCPItemLine* m_cursorLine;  // 游标线（用于同步交互）
@@ -84,9 +77,12 @@ private:
 
     // 当前选中轮次信息
     int m_currentRoundId;
-    qint64 m_currentRoundStartUs;
+    qint64 m_currentRoundStartUs;    // 轮次内第一个窗口的起始时间
     qint64 m_currentRoundDurationSec;
     QString m_dbPath;
+
+    // 当前查询的数据（用于筛选）
+    QList<DataQuerier::WindowData> m_currentQueryData;
 };
 
 #endif // DATABASEPAGE_H

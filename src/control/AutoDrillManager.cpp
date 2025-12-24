@@ -22,7 +22,8 @@
 bool TaskStep::isValid() const
 {
     if (type == Type::Hold) {
-        return holdTimeSec > 0;
+        // Hold step is valid if either has holdTimeSec > 0 OR requires user confirmation
+        return holdTimeSec > 0 || requiresUserConfirmation;
     }
 
     return std::isfinite(targetDepthMm) && !presetId.trimmed().isEmpty();
@@ -56,10 +57,22 @@ TaskStep TaskStep::fromJson(const QJsonObject& json)
 {
     TaskStep step;
     step.type = typeFromString(json.value("type").toString("positioning"));
-    step.targetDepthMm = json.value("target_depth").toDouble(0.0);
+
+    // 支持 target_depth 为字符串（位置引用）或数值
+    QJsonValue depthValue = json.value("target_depth");
+    if (depthValue.isString()) {
+        step.targetDepthRaw = depthValue.toString();
+        step.targetDepthMm = 0.0;  // 稍后在 loadSteps 中解析
+    } else {
+        double depthMm = depthValue.toDouble(0.0);
+        step.targetDepthMm = depthMm;
+        step.targetDepthRaw = QString::number(depthMm);
+    }
+
     step.presetId = json.value("param_id").toString();
     step.timeoutSec = json.value("timeout").toInt(0);
     step.holdTimeSec = json.value("hold_time").toInt(0);
+    step.requiresUserConfirmation = json.value("requires_user_confirmation").toBool(false);
 
     if (json.contains("conditions") && json.value("conditions").isObject()) {
         step.conditions = json.value("conditions").toObject();
@@ -76,6 +89,10 @@ QJsonObject TaskStep::toJson() const
     json["param_id"] = presetId;
     json["timeout"] = timeoutSec;
     json["hold_time"] = holdTimeSec;
+
+    if (requiresUserConfirmation) {
+        json["requires_user_confirmation"] = true;
+    }
 
     if (!conditions.isEmpty()) {
         json["conditions"] = conditions;
@@ -104,6 +121,7 @@ AutoDrillManager::AutoDrillManager(FeedController* feed,
     , m_motorWorker(nullptr)
     , m_stepTimeoutTimer(new QTimer(this))
     , m_holdTimer(new QTimer(this))
+    , m_sensorWatchdogTimer(new QTimer(this))
     , m_lastDepthMm(0.0)
     , m_lastVelocityMmPerMin(0.0)
     , m_lastTorqueNm(0.0)
@@ -124,6 +142,10 @@ AutoDrillManager::AutoDrillManager(FeedController* feed,
             this, &AutoDrillManager::onHoldTimeout);
     connect(m_watchdog, &SafetyWatchdog::faultOccurred,
             this, &AutoDrillManager::onWatchdogFault);
+
+    // 传感器掉线检测定时器 - 每500ms检测一次
+    connect(m_sensorWatchdogTimer, &QTimer::timeout,
+            this, &AutoDrillManager::onSensorWatchdogTimeout);
 
     if (m_feed) {
         connect(m_feed, &FeedController::targetReached,
@@ -170,6 +192,24 @@ bool AutoDrillManager::loadTaskFile(const QString& filePath)
     QJsonObject root = document.object();
     loadPresets(root);
 
+    // 加载任务特定的位置字典
+    if (root.contains("positions") && root.value("positions").isObject()) {
+        QJsonObject positionsObj = root.value("positions").toObject();
+        m_positions.clear();
+        for (auto it = positionsObj.begin(); it != positionsObj.end(); ++it) {
+            QString key = it.key();
+            double value = it.value().toDouble(-1.0);
+            if (value < 0.0) {
+                QString error = tr("位置 '%1' 的值无效: %2").arg(key).arg(it.value().toString());
+                emit logMessage(error);
+                emit taskFailed(error);
+                return false;
+            }
+            m_positions.insert(key, value);
+            emit logMessage(tr("加载任务位置: %1 = %2 mm").arg(key).arg(value));
+        }
+    }
+
     QJsonArray stepsArray = root.value("steps").toArray();
     if (!loadSteps(stepsArray)) {
         QString error = tr("任务文件不包含有效步骤");
@@ -199,6 +239,7 @@ void AutoDrillManager::clearTask()
 
     m_steps.clear();
     m_presets.clear();
+    m_positions.clear();  // 清理位置字典
     m_currentStepIndex = -1;
     m_stepExecutionState = StepExecutionState::Pending;
     m_stateMessage.clear();
@@ -301,6 +342,16 @@ bool AutoDrillManager::resume()
 
     m_pauseRequested = false;
 
+    // Check if current step is a confirmation hold
+    const TaskStep& currentStep = m_steps[m_currentStepIndex];
+    if (currentStep.type == TaskStep::Type::Hold &&
+        currentStep.requiresUserConfirmation) {
+        emit logMessage(tr("用户已确认，继续执行"));
+        completeCurrentStep();  // Complete and advance to next step
+        return true;
+    }
+
+    // Original resume logic for motion steps
     if (m_watchdog && m_hasActivePreset) {
         m_watchdog->arm(m_activePreset);
     }
@@ -446,7 +497,8 @@ void AutoDrillManager::onDataBlockReceived(const DataBlock& block)
     // 转发给安全看门狗
     if (m_watchdog) {
         m_watchdog->onTelemetryUpdate(m_lastDepthMm, m_lastVelocityMmPerMin,
-                                      m_lastTorqueNm, m_lastPressureN);
+                                      m_lastTorqueNm, m_lastPressureN,
+                                      m_lastForceUpperN, m_lastForceLowerN);
     }
 
     // 更新进度（仅在运动时）
@@ -521,6 +573,39 @@ void AutoDrillManager::onHoldTimeout()
     if (m_stepExecutionState == StepExecutionState::InProgress) {
         emit logMessage(tr("保持时间结束"));
         completeCurrentStep();
+    }
+}
+
+void AutoDrillManager::onSensorWatchdogTimeout()
+{
+    // 仅在运动状态下检测传感器掉线
+    if (m_state != AutoTaskState::Moving && m_state != AutoTaskState::Drilling) {
+        return;
+    }
+
+    const qint64 nowMs = QDateTime::currentMSecsSinceEpoch();
+    const qint64 staleMs = 2000;  // 2秒无数据视为掉线
+
+    // 检查传感器数据是否过时
+    if (m_lastSensorDataMs > 0 && (nowMs - m_lastSensorDataMs) > staleMs) {
+        QString error = tr("⚠️ 传感器数据中断！上次接收: %1ms前")
+            .arg(nowMs - m_lastSensorDataMs);
+        emit logMessage(error);
+        failTask(tr("传感器掉线 - 安全停机"));
+        return;
+    }
+
+    // 检查 Worker 连接状态
+    if (m_mdbWorker && !m_mdbWorker->isConnected()) {
+        emit logMessage(tr("⚠️ Modbus传感器连接断开！"));
+        failTask(tr("Modbus传感器掉线 - 安全停机"));
+        return;
+    }
+
+    if (m_motorWorker && !m_motorWorker->isConnected()) {
+        emit logMessage(tr("⚠️ 电机传感器连接断开！"));
+        failTask(tr("电机传感器掉线 - 安全停机"));
+        return;
     }
 }
 
@@ -601,12 +686,6 @@ void AutoDrillManager::executeStep(const TaskStep& step)
     m_stepExecutionState = StepExecutionState::InProgress;
     m_stepElapsed.restart();
 
-    if (step.timeoutSec > 0 && m_stepTimeoutTimer) {
-        m_stepTimeoutTimer->start(step.timeoutSec * 1000);
-    } else if (m_stepTimeoutTimer) {
-        m_stepTimeoutTimer->stop();
-    }
-
     if (step.type == TaskStep::Type::Hold) {
         if (m_watchdog) {
             m_watchdog->disarm();
@@ -615,14 +694,46 @@ void AutoDrillManager::executeStep(const TaskStep& step)
         m_hasActivePreset = false;
         m_activePreset = DrillParameterPreset();
 
+        // Handle user confirmation mode
+        if (step.requiresUserConfirmation) {
+            // Stop all controllers for safety during confirmation wait
+            stopAllControllers();
+
+            // Stop timeout timer - confirmation holds wait indefinitely
+            if (m_stepTimeoutTimer) {
+                m_stepTimeoutTimer->stop();
+            }
+
+            setState(AutoTaskState::Paused,
+                     tr("等待用户确认 - 请点击「继续」按钮"));
+            emit logMessage(tr("[暂停] 等待用户确认"));
+            m_pauseRequested = true;
+            return;  // Do NOT start holdTimer - wait indefinitely
+        }
+
+        // Original timer-based hold logic
         int holdSeconds = qMax(1, step.holdTimeSec);
         if (m_holdTimer) {
             m_holdTimer->start(holdSeconds * 1000);
         }
 
+        // Start step timeout timer for normal holds
+        if (step.timeoutSec > 0 && m_stepTimeoutTimer) {
+            m_stepTimeoutTimer->start(step.timeoutSec * 1000);
+        } else if (m_stepTimeoutTimer) {
+            m_stepTimeoutTimer->stop();
+        }
+
         setState(AutoTaskState::Moving,
                  tr("保持位置 %1 秒").arg(holdSeconds));
         return;
+    }
+
+    // Start step timeout timer for motion steps
+    if (step.timeoutSec > 0 && m_stepTimeoutTimer) {
+        m_stepTimeoutTimer->start(step.timeoutSec * 1000);
+    } else if (m_stepTimeoutTimer) {
+        m_stepTimeoutTimer->stop();
     }
 
     DrillParameterPreset preset = m_presets.value(step.presetId);
@@ -646,6 +757,11 @@ void AutoDrillManager::executeStep(const TaskStep& step)
         ? tr("钻进至 %1 mm (预设 %2)").arg(step.targetDepthMm).arg(preset.id)
         : tr("定位至 %1 mm (预设 %2)").arg(step.targetDepthMm).arg(preset.id);
 
+    // 启动传感器掉线检测定时器（运动时每500ms检测一次）
+    if (m_sensorWatchdogTimer && !m_sensorWatchdogTimer->isActive()) {
+        m_sensorWatchdogTimer->start(500);
+    }
+
     setState(step.type == TaskStep::Type::Drilling ? AutoTaskState::Drilling
                                                    : AutoTaskState::Moving,
              message);
@@ -665,6 +781,9 @@ void AutoDrillManager::completeCurrentStep()
     }
     if (m_holdTimer) {
         m_holdTimer->stop();
+    }
+    if (m_sensorWatchdogTimer) {
+        m_sensorWatchdogTimer->stop();
     }
 
     if (m_watchdog) {
@@ -693,6 +812,9 @@ void AutoDrillManager::failTask(const QString& reason)
     }
     if (m_holdTimer) {
         m_holdTimer->stop();
+    }
+    if (m_sensorWatchdogTimer) {
+        m_sensorWatchdogTimer->stop();
     }
 
     if (m_watchdog) {
@@ -810,6 +932,14 @@ bool AutoDrillManager::evaluateSingleCondition(const QJsonObject& condition) con
         currentValue = m_lastTorqueNm;
     } else if (sensor == "pressure") {
         currentValue = m_lastPressureN;
+    } else if (sensor == "force_upper") {
+        currentValue = m_lastForceUpperN;
+    } else if (sensor == "force_lower") {
+        currentValue = m_lastForceLowerN;
+    } else if (sensor == "feed_velocity") {
+        currentValue = std::abs(m_lastVelocityMmPerMin);  // Use absolute value for velocity
+    } else if (sensor == "feed_depth") {
+        currentValue = m_lastDepthMm;
     } else if (sensor == "stall") {
         return m_lastStallDetected == (value > 0.5);
     } else {
@@ -847,6 +977,7 @@ bool AutoDrillManager::loadPresets(const QJsonObject& root)
 
     QJsonValue presetsValue = root.value("presets");
 
+    // Support array format (original)
     if (presetsValue.isArray()) {
         QJsonArray presetArray = presetsValue.toArray();
         for (const QJsonValue& value : presetArray) {
@@ -854,6 +985,19 @@ bool AutoDrillManager::loadPresets(const QJsonObject& root)
                 continue;
             }
             DrillParameterPreset preset = DrillParameterPreset::fromJson(value.toObject());
+            if (preset.isValid()) {
+                m_presets.insert(preset.id, preset);
+            }
+        }
+    }
+    // Support object format (new, more convenient)
+    else if (presetsValue.isObject()) {
+        QJsonObject presetsObject = presetsValue.toObject();
+        for (auto it = presetsObject.begin(); it != presetsObject.end(); ++it) {
+            if (!it.value().isObject()) {
+                continue;
+            }
+            DrillParameterPreset preset = DrillParameterPreset::fromJson(it.value().toObject());
             if (preset.isValid()) {
                 m_presets.insert(preset.id, preset);
             }
@@ -868,22 +1012,102 @@ bool AutoDrillManager::loadSteps(const QJsonArray& array)
     m_steps.clear();
     m_totalTargetDepth = 0.0;
 
-    for (const QJsonValue& value : array) {
+    for (int i = 0; i < array.size(); ++i) {
+        const QJsonValue& value = array[i];
         if (!value.isObject()) {
             continue;
         }
 
         TaskStep step = TaskStep::fromJson(value.toObject());
+
+        // 如果 targetDepthRaw 是位置引用或需要解析，立即解析并验证
+        if (step.type != TaskStep::Type::Hold) {
+            if (step.targetDepthRaw.startsWith("@") ||
+                (step.targetDepthMm == 0.0 && !step.targetDepthRaw.isEmpty())) {
+
+                QString errorMsg;
+                if (!resolvePosition(step.targetDepthRaw, step.targetDepthMm, errorMsg)) {
+                    QString error = tr("步骤 %1 位置解析失败: %2").arg(i + 1).arg(errorMsg);
+                    emit logMessage(error);
+                    emit taskFailed(error);
+                    return false;
+                }
+
+                emit logMessage(tr("步骤 %1: %2 解析为 %3 mm")
+                    .arg(i + 1).arg(step.targetDepthRaw).arg(step.targetDepthMm));
+            }
+        }
+
         if (!step.isValid()) {
-            qWarning() << "[AutoDrillManager] Invalid step ignored";
+            qWarning() << "[AutoDrillManager] Invalid step" << (i + 1) << "ignored";
             continue;
         }
 
         m_steps.append(step);
-        if (step.targetDepthMm > m_totalTargetDepth) {
+
+        // 更新最大目标深度
+        if (step.requiresMotion() && step.targetDepthMm > m_totalTargetDepth) {
             m_totalTargetDepth = step.targetDepthMm;
         }
     }
 
-    return !m_steps.isEmpty();
+    if (m_steps.isEmpty()) {
+        QString error = tr("任务文件中没有有效的步骤");
+        emit logMessage(error);
+        emit taskFailed(error);
+        return false;
+    }
+
+    return true;
+}
+
+bool AutoDrillManager::resolvePosition(const QString& positionRef,
+                                       double& outDepthMm,
+                                       QString& errorMsg)
+{
+    // 1. 检查是否是位置引用（以 @ 开头）
+    if (!positionRef.startsWith("@")) {
+        // 尝试解析为数值
+        bool ok = false;
+        outDepthMm = positionRef.toDouble(&ok);
+        if (!ok) {
+            errorMsg = tr("无效的深度值: '%1'").arg(positionRef);
+            return false;
+        }
+        return true;
+    }
+
+    // 2. 提取位置键（去掉 @ 前缀）
+    QString key = positionRef.mid(1).trimmed();
+    if (key.isEmpty()) {
+        errorMsg = tr("位置引用不能为空: '%1'").arg(positionRef);
+        return false;
+    }
+
+    // 3. 优先查找任务文件的 positions 字典
+    if (m_positions.contains(key)) {
+        outDepthMm = m_positions.value(key);
+        return true;
+    }
+
+    // 4. 查找 mechanisms.json 的 key_positions (通过 FeedController)
+    double mmValue = getKeyPositionFromFeed(key);
+    if (mmValue >= 0.0) {
+        outDepthMm = mmValue;
+        return true;
+    }
+
+    // 5. 找不到位置键
+    errorMsg = tr("未找到位置 '%1'，既不在任务文件的 positions 中，也不在 mechanisms.json 的 key_positions 中").arg(key);
+    return false;
+}
+
+double AutoDrillManager::getKeyPositionFromFeed(const QString& key) const
+{
+    if (!m_feed) {
+        return -1.0;
+    }
+
+    // FeedController::getKeyPositionMm() 返回 mm 值
+    return m_feed->getKeyPositionMm(key);
 }

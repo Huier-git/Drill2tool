@@ -315,16 +315,18 @@ bool FeedController::setSpeed(double speed)
 
 double FeedController::mmToPulses(double mm) const
 {
-    // 深度转换：顶部为最大深度，底部为最小深度
+    // 简单线性转换：局部绝对坐标系
+    // 0mm (A位置底部) = 0脉冲
+    // 1001mm (H位置顶部) = 13100000脉冲
     double adjustedMm = mm - m_zeroOffsetMm;
-    double pulses = (m_config.depthLimits.maxDepthMm - adjustedMm) * m_config.pulsesPerMm;
+    double pulses = adjustedMm * m_config.pulsesPerMm;
     return pulses;
 }
 
 double FeedController::pulsesToMm(double pulses) const
 {
-    // 反向转换
-    double mm = m_config.depthLimits.maxDepthMm - (pulses / m_config.pulsesPerMm);
+    // 简单线性转换：局部绝对坐标系
+    double mm = pulses / m_config.pulsesPerMm;
     return mm + m_zeroOffsetMm;
 }
 
@@ -344,6 +346,15 @@ double FeedController::getKeyPosition(const QString& key) const
         return m_config.keyPositions.value(key);
     }
     return -1.0;
+}
+
+double FeedController::getKeyPositionMm(const QString& key) const
+{
+    double pulses = getKeyPosition(key);
+    if (pulses < 0.0) {
+        return -1.0;
+    }
+    return pulsesToMm(pulses);
 }
 
 bool FeedController::moveToKeyPosition(const QString& key)

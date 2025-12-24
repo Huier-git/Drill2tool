@@ -17,6 +17,7 @@ class RotationController;
 class PercussionController;
 class AcquisitionManager;
 class QTimer;
+class QLabel;
 
 class AutoTaskPage : public QWidget
 {
@@ -58,6 +59,7 @@ private slots:
 
     // Timer slots
     void onElapsedTimerTick();
+    void updateSensorIndicators();
 
 private:
     void setupConnections();
@@ -69,6 +71,7 @@ private:
     void updateStepStatus(int stepIndex, const QString& status);
     void highlightCurrentStep(int stepIndex);
     void appendLog(const QString& message);
+    void setStatusLabel(QLabel* label, const QString& text, const QString& color);
 
     QString formatStepType(TaskStep::Type type) const;
     QString formatStepTarget(const TaskStep& step) const;
@@ -88,6 +91,7 @@ private:
 
     AutoDrillManager* m_drillManager;
     QTimer* m_elapsedTimer;
+    QTimer* m_sensorIndicatorTimer;
     QElapsedTimer m_taskElapsed;
 
     QString m_tasksDirectory;

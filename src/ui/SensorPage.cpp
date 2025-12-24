@@ -9,6 +9,7 @@
 #include <QMessageBox>
 #include <QDebug>
 #include <QMutexLocker>
+#include <QLabel>
 
 SensorPage::SensorPage(QWidget *parent)
     : QWidget(parent)
@@ -20,10 +21,20 @@ SensorPage::SensorPage(QWidget *parent)
     , m_resetPending(false)
     , m_lastRoundId(0)
     , m_resetTargetRound(0)
+    , m_indicatorTimer(nullptr)
 {
     ui->setupUi(this);
     setupConnections();
     updateUIState();
+
+    // 初始化传感器指示灯更新定时器（500ms间隔）
+    m_indicatorTimer = new QTimer(this);
+    m_indicatorTimer->setInterval(500);
+    connect(m_indicatorTimer, &QTimer::timeout, this, &SensorPage::updateSensorIndicators);
+    m_indicatorTimer->start();
+
+    // 初始状态更新
+    updateSensorIndicators();
 }
 
 SensorPage::~SensorPage()
@@ -479,4 +490,45 @@ void SensorPage::updateUIState()
     bool anyConnected = m_vk701Connected || m_mdbConnected || m_motorConnected;
     ui->btn_start_all->setEnabled(anyConnected && !isRunning);
     ui->btn_stop_all->setEnabled(isRunning);
+}
+
+void SensorPage::updateSensorIndicators()
+{
+    // VK701指示灯
+    bool vk701Online = m_vk701Connected;
+    if (m_acquisitionManager && m_acquisitionManager->vibrationWorker()) {
+        vk701Online = m_acquisitionManager->vibrationWorker()->isConnected();
+    }
+    setIndicatorStyle(ui->lbl_vk701_indicator, vk701Online ? "● VK701" : "VK701", vk701Online);
+
+    // Modbus指示灯
+    bool mdbOnline = m_mdbConnected;
+    if (m_acquisitionManager && m_acquisitionManager->mdbWorker()) {
+        mdbOnline = m_acquisitionManager->mdbWorker()->isConnected();
+    }
+    setIndicatorStyle(ui->lbl_mdb_indicator, mdbOnline ? "● Modbus" : "Modbus", mdbOnline);
+
+    // ZMotion指示灯
+    bool motorOnline = m_motorConnected;
+    {
+        QMutexLocker locker(&g_mutex);
+        motorOnline = (g_handle != nullptr);
+    }
+    setIndicatorStyle(ui->lbl_motor_indicator, motorOnline ? "● ZMotion" : "ZMotion", motorOnline);
+
+    // 同步本地连接状态
+    m_vk701Connected = vk701Online;
+    m_mdbConnected = mdbOnline;
+    m_motorConnected = motorOnline;
+}
+
+void SensorPage::setIndicatorStyle(QLabel* label, const QString& text, bool connected)
+{
+    if (!label) return;
+    label->setText(text);
+    QString color = connected ? "#67c23a" : "#909399";  // 绿色=已连接, 灰色=离线
+    label->setStyleSheet(QString(
+        "background-color: %1; color: white; padding: 2px 6px; "
+        "border-radius: 3px; font-weight: bold;"
+    ).arg(color));
 }

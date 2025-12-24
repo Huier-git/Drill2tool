@@ -35,6 +35,8 @@ MdbWorker::MdbWorker(QObject *parent)
     // 初始化4个Modbus设备为nullptr
     for (int i = 0; i < 4; i++) {
         m_modbusDevices[i] = nullptr;
+        m_sensorFailCount[i] = 0;
+        m_sensorDisconnected[i] = false;
     }
 
     m_sampleRate = 10.0;  // 默认10Hz
@@ -107,56 +109,55 @@ void MdbWorker::readSensors()
         return;
     }
 
-    // 根据Linux版本的设备映射读取传感器数据
-    int successCount = 0;
     QVector<quint16> values;
+    int successCount = 0;
 
-    // 1. 读取上压力传感器 - 设备4 (index 3), 寄存器450, ID=1, 读取2个寄存器
+    // 1. 读取上压力传感器 - 设备4 (index 3), 寄存器450, ID=1
     if (readFromDevice(3, 1, 450, 2, values) && values.size() >= 2) {
-        // 使用补码转换 - 注意字节顺序：(values[1], values[0])
         int64_t rawValue = concatenateShortsToLong(values[1], values[0]);
-        // 单位换算：原始值 * 0.00981 = N (牛顿)
         double forceUpper = static_cast<double>(rawValue) * 0.00981;
         m_lastForceUpper = forceUpper - m_forceUpperZero;
         sendDataBlock(SensorType::Force_Upper, m_lastForceUpper);
         successCount++;
+        updateSensorStatus(0, true);
 
-        // 调试日志（仅第一次采样）
         if (m_sampleCount == 0) {
             LOG_DEBUG_STREAM("MdbWorker") << "First sample - Force Upper raw:" << rawValue << "converted:" << m_lastForceUpper << "N";
         }
+    } else {
+        updateSensorStatus(0, false);
     }
 
-    // 2. 读取下压力传感器 - 设备4 (index 3), 寄存器452, ID=1, 读取2个寄存器
+    // 2. 读取下压力传感器 - 设备4 (index 3), 寄存器452, ID=1
     if (readFromDevice(3, 1, 452, 2, values) && values.size() >= 2) {
-        // 使用补码转换 - 注意字节顺序：(values[1], values[0])
         int64_t rawValue = concatenateShortsToLong(values[1], values[0]);
-        // 单位换算：原始值 * 0.00981 = N (牛顿)
         double forceLower = static_cast<double>(rawValue) * 0.00981;
         m_lastForceLower = forceLower - m_forceLowerZero;
         sendDataBlock(SensorType::Force_Lower, m_lastForceLower);
         successCount++;
+        updateSensorStatus(1, true);
+    } else {
+        updateSensorStatus(1, false);
     }
 
-    // 3. 读取扭矩传感器 - 设备3 (index 2), 寄存器0x00, ID=1, 读取2个寄存器
+    // 3. 读取扭矩传感器 - 设备3 (index 2), 寄存器0x00, ID=1
     if (readFromDevice(2, 1, 0x00, 2, values) && values.size() >= 2) {
-        // 使用长字节拼接 - 注意字节顺序：(values[1], values[0])
         long rawValue = shortsToLong(values[1], values[0]);
-        // 单位换算：原始值 * 0.01 = N·m
         double torque = static_cast<double>(rawValue) * 0.01;
         m_lastTorque = torque - m_torqueZero;
         sendDataBlock(SensorType::Torque_MDB, m_lastTorque);
         successCount++;
+        updateSensorStatus(2, true);
+    } else {
+        updateSensorStatus(2, false);
     }
 
-    // 4. 读取位置传感器 - 设备2 (index 1), 寄存器0x00, ID=2, 读取2个寄存器
+    // 4. 读取位置传感器 - 设备2 (index 1), 寄存器0x00, ID=2
     if (readFromDevice(1, 2, 0x00, 2, values) && values.size() >= 2) {
-        // 使用长字节拼接 - 注意字节顺序：(values[1], values[0])
         long rawValue = shortsToLong(values[1], values[0]);
-        // 单位换算：负数修正后 * 150 / 4096 = mm
         double positionRaw;
         if (rawValue < 0) {
-            positionRaw = 2 * 32767 + rawValue;  // 修正负数
+            positionRaw = 2 * 32767 + rawValue;
         } else {
             positionRaw = static_cast<double>(rawValue);
         }
@@ -164,38 +165,43 @@ void MdbWorker::readSensors()
         m_lastPosition = position - m_positionZero;
         sendDataBlock(SensorType::Position_MDB, m_lastPosition);
         successCount++;
-    }
-
-    // 掉线检测：如果4个传感器全部读取失败
-    if (successCount == 0) {
-        m_consecutiveFails++;
-        if (m_consecutiveFails == 10 && !m_connectionLostReported) {
-            // 连续10次全部失败，报告掉线
-            emit eventOccurred("MdbSensorDisconnected",
-                              "Modbus传感器连续10次读取失败，可能已掉线");
-            m_connectionLostReported = true;
-            LOG_WARNING("MdbWorker", "Modbus sensors appear disconnected (10 consecutive failures)");
-        }
+        updateSensorStatus(3, true);
     } else {
-        // 有成功读取，重置计数器
-        if (m_consecutiveFails > 0) {
-            if (m_connectionLostReported) {
-                // 恢复连接
-                emit eventOccurred("MdbSensorReconnected",
-                                  QString("Modbus传感器恢复连接（失败计数: %1）").arg(m_consecutiveFails));
-                LOG_DEBUG("MdbWorker", "Modbus sensors reconnected");
-                m_connectionLostReported = false;
-            }
-            m_consecutiveFails = 0;
-        }
+        updateSensorStatus(3, false);
     }
 
     m_sampleCount++;
-    m_samplesCollected += 4;  // 4个传感器
+    m_samplesCollected += successCount;
 
-    // Emit statistics roughly every 10 seconds at 10Hz.
     if (m_sampleCount > 0 && m_sampleCount % 100 == 0) {
         emit statisticsUpdated(m_sampleCount, m_sampleRate);
+    }
+}
+
+void MdbWorker::updateSensorStatus(int sensorIndex, bool success)
+{
+    static const char* sensorNames[4] = {"上压力", "下压力", "扭矩", "位置"};
+
+    if (sensorIndex < 0 || sensorIndex >= 4) return;
+
+    if (success) {
+        if (m_sensorDisconnected[sensorIndex]) {
+            // 传感器恢复连接
+            m_sensorDisconnected[sensorIndex] = false;
+            LOG_DEBUG_STREAM("MdbWorker") << sensorNames[sensorIndex] << "传感器恢复连接";
+            emit eventOccurred("MdbSensorReconnected",
+                QString("%1传感器恢复连接").arg(sensorNames[sensorIndex]));
+        }
+        m_sensorFailCount[sensorIndex] = 0;
+    } else {
+        m_sensorFailCount[sensorIndex]++;
+        if (m_sensorFailCount[sensorIndex] >= SENSOR_DISCONNECT_THRESHOLD && !m_sensorDisconnected[sensorIndex]) {
+            // 传感器掉线
+            m_sensorDisconnected[sensorIndex] = true;
+            LOG_WARNING_STREAM("MdbWorker") << sensorNames[sensorIndex] << "传感器掉线（连续" << SENSOR_DISCONNECT_THRESHOLD << "次失败）";
+            emit eventOccurred("MdbSensorDisconnected",
+                QString("%1传感器掉线").arg(sensorNames[sensorIndex]));
+        }
     }
 }
 

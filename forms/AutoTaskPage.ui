@@ -207,7 +207,7 @@ QLabel#lbl_task_status, QLabel#lbl_current_step {
     font-weight: bold;
 }
 
-QLabel#lbl_depth, QLabel#lbl_target, QLabel#lbl_elapsed {
+QLabel#lbl_depth, QLabel#lbl_target, QLabel#lbl_depth_from_surface, QLabel#lbl_elapsed {
     color: #303133;
     font-size: 14px;
 }
@@ -264,6 +264,63 @@ QLabel#lbl_current_preset {
         </size>
        </property>
       </spacer>
+     </item>
+     <item>
+      <widget class="QLabel" name="lbl_mdb_status">
+       <property name="text">
+        <string>Modbus</string>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>80</width>
+         <height>24</height>
+        </size>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+       <property name="toolTip">
+        <string>Modbus传感器连接状态</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="lbl_motor_status">
+       <property name="text">
+        <string>电机</string>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>80</width>
+         <height>24</height>
+        </size>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+       <property name="toolTip">
+        <string>ZMotion控制器连接状态</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="lbl_vk701_status">
+       <property name="text">
+        <string>振动</string>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>80</width>
+         <height>24</height>
+        </size>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+       <property name="toolTip">
+        <string>VK701振动传感器连接状态</string>
+       </property>
+      </widget>
      </item>
     </layout>
    </item>
@@ -381,6 +438,11 @@ QLabel#lbl_current_preset {
           </column>
           <column>
            <property name="text">
+            <string>钻深</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
             <string>预设</string>
            </property>
           </column>
@@ -423,14 +485,14 @@ QLabel#lbl_current_preset {
              </property>
             </widget>
            </item>
-           <item row="1" column="0">
+           <item row="0" column="2">
             <widget class="QLabel" name="label_target">
              <property name="text">
               <string>目标深度:</string>
              </property>
             </widget>
            </item>
-           <item row="1" column="1">
+           <item row="0" column="3">
             <widget class="QLabel" name="lbl_target">
              <property name="text">
               <string>0.0 mm</string>
@@ -443,14 +505,34 @@ QLabel#lbl_current_preset {
              </property>
             </widget>
            </item>
-           <item row="2" column="0">
+           <item row="1" column="0">
+            <widget class="QLabel" name="label_depth_from_surface">
+             <property name="text">
+              <string>距土面深度:</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QLabel" name="lbl_depth_from_surface">
+             <property name="text">
+              <string>0.0 mm</string>
+             </property>
+             <property name="font">
+              <font>
+               <weight>75</weight>
+               <bold>true</bold>
+              </font>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="2">
             <widget class="QLabel" name="label_elapsed">
              <property name="text">
               <string>已用时间:</string>
              </property>
             </widget>
            </item>
-           <item row="2" column="1">
+           <item row="1" column="3">
             <widget class="QLabel" name="lbl_elapsed">
              <property name="text">
               <string>00:00</string>

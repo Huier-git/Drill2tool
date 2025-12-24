@@ -303,6 +303,15 @@ void AcquisitionManager::stopAll()
     // 等待队列完全处理，确保所有数据都写入数据库
     QMetaObject::invokeMethod(m_dbWriter, "flushQueue", Qt::BlockingQueuedConnection);
 
+    // 结束当前轮次，将状态更新为completed
+    if (m_currentRoundId > 0) {
+        QMetaObject::invokeMethod(m_dbWriter, "endCurrentRound", Qt::BlockingQueuedConnection);
+        int oldRoundId = m_currentRoundId;
+        m_currentRoundId = 0;
+        emit roundChanged(0);
+        LOG_DEBUG_STREAM("AcquisitionManager") << "Round" << oldRoundId << "ended with stopAll";
+    }
+
     m_isRunning = false;
     emit acquisitionStateChanged(false);
 

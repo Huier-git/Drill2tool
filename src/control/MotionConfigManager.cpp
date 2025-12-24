@@ -404,7 +404,13 @@ PenetrationConfig MotionConfigManager::getPenetrationConfig() const
 
     config.pulsesPerMm = params.pulsesPerMm;
     config.maxPulses = params.maxPosition;
-    config.depthLimits.safeDepthMm = params.safePosition;
+
+    // 正确计算深度限位（mm）
+    // maxPosition（H位置）= 13100000脉冲 = 最大深度（顶部）
+    // minPosition（A位置）= 0脉冲 = 最小深度（底部）
+    config.depthLimits.maxDepthMm = params.maxPosition / params.pulsesPerMm;  // 13100000/13086.9 = 1001mm
+    config.depthLimits.minDepthMm = params.minPosition / params.pulsesPerMm;  // 0/13086.9 = 0mm
+    config.depthLimits.safeDepthMm = params.safePosition / params.pulsesPerMm; // 13100000/13086.9 = 1001mm
 
     // 传递关键位置
     config.keyPositions = params.keyPositions;

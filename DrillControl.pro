@@ -155,9 +155,10 @@ INCLUDEPATH += $$PWD/thirdparty/qcustomplot/include
 SOURCES += $$PWD/thirdparty/qcustomplot/src/qcustomplot.cpp
 HEADERS += $$PWD/thirdparty/qcustomplot/include/qcustomplot.h
 
-# VK701采集卡
+# VK701采集卡 (使用QLibrary动态加载，无需链接lib)
+# DLL必须放在可执行文件目录: VK70xNMC_DAQ2.dll
+# 注意：不要添加静态链接，会与QLibrary动态加载冲突！
 INCLUDEPATH += $$PWD/thirdparty/vk701/include
-win32: LIBS += -L$$PWD/thirdparty/vk701/lib -lVK70XNMC_DAQ2
 
 # ZMotion运动控制
 INCLUDEPATH += $$PWD/thirdparty/zmotion/include
