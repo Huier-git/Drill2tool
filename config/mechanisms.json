@@ -1,7 +1,7 @@
 {
-  "_version": "2.1",
-  "_comment": "钻机机构运动参数配置文件",
-  "_last_modified": "2025-01-26",
+  "_version": "2.2",
+  "_comment": "钻机机构运动参数配置文件 - 已更新电机换算参数(4倍频模式)",
+  "_last_modified": "2025-12-25",
 
   "mechanisms": {
     "Fz": {
@@ -9,12 +9,27 @@
       "motor_id": 2,
       "connection_type": "ethercat",
       "control_mode": "position",
+
+      "_motor_params": {
+        "model": "647692",
+        "encoder_resolution": 4096,
+        "reduction_ratio": 113,
+        "quadrature_mode": 4,
+        "pulses_per_motor_rev": 16384,
+        "pulses_per_reducer_output": 1851392,
+        "transmission_chain": "电机 → 减速机(113:1) → 绳驱动(2:1) → 绕线轮(Ø91mm)",
+        "rope_drive_ratio": 2,
+        "wheel_diameter_mm": 91,
+        "wheel_circumference_mm": 285.885,
+        "pulses_per_wheel_rev": 3702784
+      },
+
+      "pulses_per_mm": 12952.01,
       "speed": 30857.0,
       "acceleration": 154285.0,
       "deceleration": 154285.0,
       "max_position": 13100000,
       "min_position": 0,
-      "pulses_per_mm": 13086.9,
       "safe_position": 13100000,
       "work_position": 0,
       "stable_threshold": 1.0,
@@ -41,6 +56,18 @@
       "motor_id": 7,
       "connection_type": "ethercat",
       "control_mode": "position",
+
+      "_motor_params": {
+        "model": "608154",
+        "encoder_resolution": 2048,
+        "reduction_ratio": 26,
+        "quadrature_mode": 4,
+        "pulses_per_motor_rev": 8192,
+        "pulses_per_output_rev": 212992,
+        "rated_torque_mNm": 3796.8
+      },
+
+      "pulses_per_degree": 591.64,
       "speed": 1000.0,
       "acceleration": 5000.0,
       "deceleration": 5000.0,
@@ -48,7 +75,6 @@
       "min_position": -1000000,
       "positions": 7,
       "angle_per_position": 51.43,
-      "pulses_per_degree": 591.11,
       "stable_threshold": 1.0,
       "stable_count": 5,
       "monitor_interval": 500,
@@ -69,6 +95,18 @@
       "motor_id": 6,
       "connection_type": "ethercat",
       "control_mode": "position",
+
+      "_motor_params": {
+        "model": "608154",
+        "encoder_resolution": 2048,
+        "reduction_ratio": 26,
+        "quadrature_mode": 4,
+        "pulses_per_motor_rev": 8192,
+        "pulses_per_output_rev": 212992,
+        "rated_torque_mNm": 3796.8
+      },
+
+      "pulses_per_degree": 591.64,
       "speed": 5000.0,
       "acceleration": 25000.0,
       "deceleration": 25000.0,
@@ -93,6 +131,18 @@
       "motor_id": 4,
       "connection_type": "ethercat",
       "control_mode": "torque",
+
+      "_motor_params": {
+        "model": "608142",
+        "encoder_resolution": 2048,
+        "reduction_ratio": 26,
+        "quadrature_mode": 4,
+        "pulses_per_motor_rev": 8192,
+        "pulses_per_output_rev": 212992,
+        "rated_torque_mNm": 3873.2
+      },
+
+      "pulses_per_degree": 591.64,
       "speed": 50000.0,
       "acceleration": 250000.0,
       "deceleration": 250000.0,
@@ -119,6 +169,18 @@
       "motor_id": 5,
       "connection_type": "ethercat",
       "control_mode": "position",
+
+      "_motor_params": {
+        "model": "651613",
+        "encoder_resolution": 2048,
+        "reduction_ratio": 36,
+        "quadrature_mode": 4,
+        "pulses_per_motor_rev": 8192,
+        "pulses_per_output_rev": 294912,
+        "rated_torque_mNm": 3672.0
+      },
+
+      "pulses_per_degree": 819.20,
       "speed": 10000.0,
       "acceleration": 50000.0,
       "deceleration": 50000.0,
@@ -126,7 +188,6 @@
       "min_position": -52000,
       "safe_position": 0,
       "work_position": -52000,
-      "pulses_per_degree": 144.44,
       "stable_threshold": 1.0,
       "stable_count": 5,
       "monitor_interval": 500,
@@ -186,6 +247,18 @@
       "motor_id": 1,
       "connection_type": "ethercat",
       "control_mode": "velocity",
+
+      "_motor_params": {
+        "model": "647695",
+        "encoder_resolution": 4096,
+        "reduction_ratio": 81,
+        "quadrature_mode": 4,
+        "pulses_per_motor_rev": 16384,
+        "pulses_per_output_rev": 1327104,
+        "rated_torque_mNm": 35397.0
+      },
+
+      "pulses_per_degree": 3686.40,
       "speed": 5.0,
       "acceleration": 25.0,
       "deceleration": 25.0,
@@ -208,6 +281,18 @@
       "motor_id": 3,
       "connection_type": "ethercat",
       "control_mode": "torque",
+
+      "_motor_params": {
+        "model": "651613",
+        "encoder_resolution": 2048,
+        "reduction_ratio": 36,
+        "quadrature_mode": 4,
+        "pulses_per_motor_rev": 8192,
+        "pulses_per_output_rev": 294912,
+        "rated_torque_mNm": 3672.0
+      },
+
+      "pulses_per_degree": 819.20,
       "speed": 2000.0,
       "acceleration": 10000.0,
       "deceleration": 10000.0,
