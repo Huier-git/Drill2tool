@@ -3,6 +3,7 @@
 #include "qeventloop.h"
 #include <QDebug>
 #include <QThread>
+#include <QDateTime>
 
 /*
  * Modbus TCP 设备映射说明（4个独立网关）：
@@ -109,6 +110,9 @@ void MdbWorker::readSensors()
         return;
     }
 
+    // 诊断：记录开始时间
+    qint64 startTimeUs = QDateTime::currentMSecsSinceEpoch() * 1000;
+
     QVector<quint16> values;
     int successCount = 0;
 
@@ -172,6 +176,14 @@ void MdbWorker::readSensors()
 
     m_sampleCount++;
     m_samplesCollected += successCount;
+
+    // 诊断：计算并记录执行时间
+    qint64 endTimeUs = QDateTime::currentMSecsSinceEpoch() * 1000;
+    qint64 elapsedMs = (endTimeUs - startTimeUs) / 1000;
+    if (m_sampleCount % 10 == 0) {  // 每10个样本输出一次
+        LOG_DEBUG_STREAM("MdbWorker") << "readSensors() #" << m_sampleCount
+                                      << " took" << elapsedMs << "ms (success:" << successCount << "/4)";
+    }
 
     if (m_sampleCount > 0 && m_sampleCount % 100 == 0) {
         emit statisticsUpdated(m_sampleCount, m_sampleRate);
@@ -419,7 +431,7 @@ bool MdbWorker::readFromDevice(int deviceIndex, int deviceId, int registerAddr, 
         return false;
     }
 
-    // 等待响应（最多2000ms）
+    // 等待响应（最多200ms - 缩短超时避免未连接传感器阻塞采样）
     if (!reply->isFinished()) {
         QEventLoop loop;
         QTimer timer;
@@ -428,7 +440,7 @@ bool MdbWorker::readFromDevice(int deviceIndex, int deviceId, int registerAddr, 
         connect(reply, &QModbusReply::finished, &loop, &QEventLoop::quit);
         connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
 
-        timer.start(2000);
+        timer.start(200);
         loop.exec();
 
         if (!reply->isFinished()) {
@@ -449,7 +461,12 @@ bool MdbWorker::readFromDevice(int deviceIndex, int deviceId, int registerAddr, 
             success = true;
         }
     } else {
-        LOG_WARNING_STREAM("MdbWorker") << "Read error from device" << deviceIndex << ":" << reply->errorString();
+        // 忽略连接关闭导致的错误（正常shutdown时会发生）
+        QString errorStr = reply->errorString();
+        if (!errorStr.contains("connection closure", Qt::CaseInsensitive) &&
+            !errorStr.contains("aborted", Qt::CaseInsensitive)) {
+            LOG_WARNING_STREAM("MdbWorker") << "Read error from device" << deviceIndex << ":" << errorStr;
+        }
     }
 
     reply->deleteLater();

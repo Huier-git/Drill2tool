@@ -195,22 +195,33 @@ int DbWriter::startNewRound(const QString &operatorName, const QString &note)
         qWarning() << "DbWriter not initialized";
         return -1;
     }
-    
+
+    // 调试：查看当前序列值
+    {
+        QSqlQuery seqQuery(m_db);
+        seqQuery.prepare("SELECT seq FROM sqlite_sequence WHERE name = 'rounds'");
+        if (seqQuery.exec() && seqQuery.next()) {
+            qDebug() << "[startNewRound] Current sequence before INSERT: seq =" << seqQuery.value(0).toInt();
+        } else {
+            qDebug() << "[startNewRound] No sequence entry exists (first round ever)";
+        }
+    }
+
     QSqlQuery query(m_db);
     query.prepare("INSERT INTO rounds (start_ts_us, operator_name, note) "
                   "VALUES (:start_ts, :operator, :note)");
     query.bindValue(":start_ts", getCurrentTimestampUs());
     query.bindValue(":operator", operatorName);
     query.bindValue(":note", note);
-    
+
     if (!query.exec()) {
         emit errorOccurred("Failed to create new round: " + query.lastError().text());
         return -1;
     }
-    
+
     m_currentRoundId = query.lastInsertId().toInt();
     clearWindowCache();
-    qDebug() << "New round started, ID:" << m_currentRoundId;
+    qDebug() << "New round started, ID:" << m_currentRoundId << "(from lastInsertId)";
     return m_currentRoundId;
 }
 
@@ -398,12 +409,29 @@ void DbWriter::resetToRound(int targetRound)
     int deletedRounds = query.numRowsAffected();
 
     // 重置 AUTOINCREMENT 序列，使下次 INSERT 从 targetRound 开始
-    query.prepare("UPDATE sqlite_sequence SET seq = ? WHERE name = 'rounds'");
-    query.addBindValue(targetRound - 1);
-    if (!query.exec()) {
-        m_db.rollback();
-        emit errorOccurred("Failed to reset sequence: " + query.lastError().text());
-        return;
+    // 先检查sqlite_sequence表中是否存在rounds条目
+    query.prepare("SELECT seq FROM sqlite_sequence WHERE name = 'rounds'");
+    if (!query.exec() || !query.next()) {
+        // 如果不存在，需要先插入一条
+        query.prepare("INSERT INTO sqlite_sequence (name, seq) VALUES ('rounds', ?)");
+        query.addBindValue(targetRound - 1);
+        if (!query.exec()) {
+            m_db.rollback();
+            emit errorOccurred("Failed to insert sequence: " + query.lastError().text());
+            return;
+        }
+        qDebug() << "Inserted sequence for rounds, seq =" << (targetRound - 1);
+    } else {
+        // 如果存在，更新seq值
+        query.prepare("UPDATE sqlite_sequence SET seq = ? WHERE name = 'rounds'");
+        query.addBindValue(targetRound - 1);
+        if (!query.exec()) {
+            m_db.rollback();
+            emit errorOccurred("Failed to reset sequence: " + query.lastError().text());
+            return;
+        }
+        int affectedRows = query.numRowsAffected();
+        qDebug() << "Updated sequence for rounds, seq =" << (targetRound - 1) << ", affected rows:" << affectedRows;
     }
 
     // 提交事务
@@ -411,6 +439,18 @@ void DbWriter::resetToRound(int targetRound)
         m_db.rollback();
         emit errorOccurred("Failed to commit transaction: " + m_db.lastError().text());
         return;
+    }
+
+    // 验证序列是否真的被重置（调试用）
+    {
+        QSqlQuery verifyQuery(m_db);
+        verifyQuery.prepare("SELECT seq FROM sqlite_sequence WHERE name = 'rounds'");
+        if (verifyQuery.exec() && verifyQuery.next()) {
+            int actualSeq = verifyQuery.value(0).toInt();
+            qDebug() << "✓ Sequence reset verified: actual seq =" << actualSeq << "(expected:" << (targetRound - 1) << ")";
+        } else {
+            qWarning() << "⚠ Failed to verify sequence reset!";
+        }
     }
 
     // 清除窗口缓存

@@ -385,13 +385,16 @@ void AcquisitionManager::startNewRound(const QString &operatorName, const QStrin
 
     m_currentRoundId = roundId;
 
+    // 同步设置时间基准，确保所有Worker在启动前都有统一的时间基准
     const qint64 baseTimestampUs = QDateTime::currentMSecsSinceEpoch() * 1000;
-    QMetaObject::invokeMethod(m_vibrationWorker, "setTimeBase", Qt::QueuedConnection,
+    QMetaObject::invokeMethod(m_vibrationWorker, "setTimeBase", Qt::BlockingQueuedConnection,
                               Q_ARG(qint64, baseTimestampUs));
-    QMetaObject::invokeMethod(m_mdbWorker, "setTimeBase", Qt::QueuedConnection,
+    QMetaObject::invokeMethod(m_mdbWorker, "setTimeBase", Qt::BlockingQueuedConnection,
                               Q_ARG(qint64, baseTimestampUs));
-    QMetaObject::invokeMethod(m_motorWorker, "setTimeBase", Qt::QueuedConnection,
+    QMetaObject::invokeMethod(m_motorWorker, "setTimeBase", Qt::BlockingQueuedConnection,
                               Q_ARG(qint64, baseTimestampUs));
+
+    LOG_DEBUG_STREAM("AcquisitionManager") << "Time base synchronized for all workers:" << baseTimestampUs;
 
     // 通知所有Worker新的轮次ID
     QMetaObject::invokeMethod(m_vibrationWorker, "setRoundId", Qt::QueuedConnection, Q_ARG(int, roundId));
@@ -428,23 +431,23 @@ void AcquisitionManager::endCurrentRound()
 
 void AcquisitionManager::resetCurrentRound(int targetRound)
 {
-    if (m_currentRoundId == 0) {
-        LOG_WARNING("AcquisitionManager", "No active round to reset");
-        return;
-    }
-
     LOG_DEBUG_STREAM("AcquisitionManager") << "Resetting to round" << targetRound;
 
-    // 先刷新队列，写入所有待处理的数据
-    QMetaObject::invokeMethod(m_dbWriter, "flushQueue", Qt::BlockingQueuedConnection);
+    // 如果有活动轮次，先处理队列数据
+    if (m_currentRoundId > 0) {
+        LOG_DEBUG("AcquisitionManager", "Active round detected, flushing queue before reset");
 
-    // 等待100ms确保Worker完全停止产生新数据
-    QThread::msleep(100);
+        // 先刷新队列，写入所有待处理的数据
+        QMetaObject::invokeMethod(m_dbWriter, "flushQueue", Qt::BlockingQueuedConnection);
 
-    // 再次清空队列（处理可能在flush期间产生的少量新数据）
-    QMetaObject::invokeMethod(m_dbWriter, "clearQueue", Qt::BlockingQueuedConnection);
+        // 等待100ms确保Worker完全停止产生新数据
+        QThread::msleep(100);
 
-    // 重置到目标轮次
+        // 再次清空队列（处理可能在flush期间产生的少量新数据）
+        QMetaObject::invokeMethod(m_dbWriter, "clearQueue", Qt::BlockingQueuedConnection);
+    }
+
+    // 重置到目标轮次（无论是否有活动轮次都可以执行）
     QMetaObject::invokeMethod(m_dbWriter, "resetToRound", Qt::BlockingQueuedConnection,
                               Q_ARG(int, targetRound));
 

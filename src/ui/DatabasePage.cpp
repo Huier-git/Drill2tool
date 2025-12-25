@@ -171,13 +171,9 @@ void DatabasePage::onRoundSelected()
     m_currentRoundId = ui->table_rounds->item(row, 0)->text().toInt();
     m_currentRoundDurationSec = ui->table_rounds->item(row, 0)->data(Qt::UserRole + 1).toLongLong();
 
-    // 获取第一个时间窗口的起始时间（用于查询计算）
-    QList<qint64> windows = m_querier->getWindowTimestamps(m_currentRoundId);
-    if (!windows.isEmpty()) {
-        m_currentRoundStartUs = windows.first();
-    } else {
-        m_currentRoundStartUs = ui->table_rounds->item(row, 0)->data(Qt::UserRole).toLongLong();
-    }
+    // 使用轮次的真实开始时间作为时间基准（而非第一个窗口的时间戳）
+    // 这样可以确保所有数据类型的时间轴对齐，无论单独查询还是一起查询
+    m_currentRoundStartUs = ui->table_rounds->item(row, 0)->data(Qt::UserRole).toLongLong();
 
     updateRoundInfo(m_currentRoundId, m_currentRoundDurationSec);
 }
