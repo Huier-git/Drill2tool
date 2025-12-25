@@ -1002,12 +1002,8 @@ void ControlPage::refreshUnitConfig()
         configs = mgr->getAllConfigs();
     }
 
-    const QString csvPath = QDir(configDirPath()).filePath("unit_conversions.csv");
-    QStringList warnings;
-    m_axisUnits = UnitConverter::loadAxisUnits(configs, csvPath, &warnings);
-    if (!warnings.isEmpty()) {
-        qWarning() << "[ControlPage] Unit conversion CSV warnings:" << warnings;
-    }
+    // 单位转换统一使用mechanisms.json配置
+    m_axisUnits = UnitConverter::loadAxisUnits(configs, QString(), nullptr);
 }
 
 AxisUnitInfo ControlPage::axisUnitInfo(int axisIndex) const

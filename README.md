@@ -74,7 +74,7 @@
 
 ### Earlier Today
 - Added a physical-unit toggle (mm/min or deg/min) for the ControlPage motor table; driver units shown in the status line.
-- Added `config/unit_conversions.csv` with optional `pulses_per_rev`, `reduction_ratio`, and `mm_per_rev` fields.
+- Unit conversions now use `config/mechanisms.json` directly (removed redundant `unit_conversions.csv`).
 - Added auto duration estimation in PlanVisualizer using `config/plan_step_map.json` and mechanism parameters.
 - Auto-computed durations are saved to `config/durations.json`.
 - Plan step mapping supports parallel ops per step (duration uses the slowest move).
@@ -91,8 +91,7 @@
 - Database path is shared between acquisition and queries (set at startup by AcquisitionManager).
 
 ## Configuration Files
-- `config/mechanisms.json`: mechanism parameters, key positions, limits, and control modes.
-- `config/unit_conversions.csv`: driver/physical conversion (pulses_per_unit or pulses_per_rev + reduction_ratio [+ mm_per_rev]).
+- `config/mechanisms.json`: mechanism parameters, key positions, limits, control modes, and unit conversions.
 - `config/plan_step_map.json`: plan step to axis mapping (supports parallel ops per step).
 - `config/durations.json`: computed plan durations used by planners and UI.
 - `config/auto_tasks/`: AutoTask JSON tasks and presets (user-provided).
